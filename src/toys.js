@@ -9,6 +9,8 @@ export const TIERS = {
   legendary: { label: "Legendary", color: "#ffb020", glow: "rgba(255,176,32,.9)" },
   mythic:    { label: "Mythic",    color: "#ff3d9a", glow: "rgba(255,61,154,.9)" },
   cosmic:    { label: "Cosmic",    color: "#00e5d0", glow: "rgba(0,229,208,.95)" },
+  prismatic: { label: "Prismatic", color: "#e94fff", glow: "rgba(233,79,255,.95)" },
+  divine:    { label: "Divine",    color: "#ffd000", glow: "rgba(255,208,0,1)" },
 };
 
 // `play` = one of 12 Fidget-Zone interactions:
@@ -73,6 +75,14 @@ export const TOYS = [
   { id: "saturn",    name: "Saturn Spinner",  emoji: "🪐",  value: 800, tier: "cosmic",    play: "flick",   parts: ["💫","🧊"] },
   { id: "comet",     name: "Comet Streak",    emoji: "☄️",  value: 1000,tier: "cosmic",    play: "combo",   parts: ["☄️","✨"] },
   { id: "alien",     name: "Alien Cube",      emoji: "👽",  value: 1100,tier: "cosmic",    play: "piano" },
+  // ---- Prismatic ----
+  { id: "prism",     name: "Prism Cube",      emoji: "🔶",  value: 1300,tier: "prismatic", play: "combo",   parts: ["🔶","✨","💠"] },
+  { id: "disco",     name: "Disco Orb",       emoji: "🪩",  value: 1500,tier: "prismatic", play: "flick",   parts: ["✨","💠","⭐"] },
+  { id: "amulet",    name: "Rainbow Amulet",  emoji: "🧿",  value: 1650,tier: "prismatic", play: "pet",     parts: ["🌈","✨","💫"] },
+  // ---- Divine ----
+  { id: "halo",      name: "Angel Halo",      emoji: "😇",  value: 1900,tier: "divine",    play: "pet",     parts: ["😇","✨","💛"] },
+  { id: "dove",      name: "Peace Dove",      emoji: "🕊️",  value: 2200,tier: "divine",    play: "shower",  parts: ["🕊️","✨","🌟"] },
+  { id: "infinity",  name: "Infinity Star",   emoji: "🌟",  value: 2600,tier: "divine",    play: "combo",   parts: ["🌟","💫","⭐"] },
 ];
 
 export const byId = (id) => TOYS.find((t) => t.id === id);
@@ -131,11 +141,13 @@ export const TONE_COLORS = {
 // Player avatar choices for the character picker.
 export const AVATARS = ["👧", "🧒", "👦", "🧑", "👩‍🦰", "🧑‍🦱", "👩‍🦱", "🐱", "🐰", "🦄", "🐶", "🐼"];
 
-// Base rarity weights (used for the shop): commons/uncommons dominate, top tiers scarce.
-const RARITY_WEIGHT = { common: 50, uncommon: 30, rare: 8, epic: 4, legendary: 1.6, mythic: 0.6, cosmic: 0.2 };
+// Base rarity weights (used for the shop). Rarer toys now show up MUCH more often
+// than before — rare-or-better is roughly 40% of shop stock so the good stuff is
+// genuinely reachable, while commons/uncommons still fill things out.
+const RARITY_WEIGHT = { common: 34, uncommon: 26, rare: 16, epic: 10, legendary: 6, mythic: 3, cosmic: 2, prismatic: 1, divine: 0.6 };
 // Foxy's TRADE OFFERS skew toward nicer toys — she's a generous trading buddy,
 // so rares/epics show up often and even legendaries+ aren't rare treats here.
-const FOXY_OFFER_WEIGHT = { common: 22, uncommon: 26, rare: 22, epic: 14, legendary: 9, mythic: 5, cosmic: 2 };
+const FOXY_OFFER_WEIGHT = { common: 22, uncommon: 26, rare: 22, epic: 14, legendary: 9, mythic: 5, cosmic: 2, prismatic: 1, divine: 0.5 };
 
 export function weightedToy(weights = RARITY_WEIGHT) {
   const total = TOYS.reduce((n, t) => n + weights[t.tier], 0);
@@ -181,6 +193,44 @@ export function makeFoxyOffer() {
     asks: 0,
     refusals: 0,
   };
+}
+
+// ---- YOUR turn: you offer first, Foxy trades something back ----------------
+// Pick a toy from a filtered pool, weighted toward nicer rarities.
+function weightedFrom(pool, weights = FOXY_OFFER_WEIGHT) {
+  const total = pool.reduce((n, t) => n + (weights[t.tier] || 0.1), 0);
+  let r = rand() * total;
+  for (const t of pool) { r -= (weights[t.tier] || 0.1); if (r <= 0) return t; }
+  return pool[pool.length - 1];
+}
+
+// When YOU make the opening offer (worth giveVal), Foxy responds with 1–3 toys
+// worth roughly giveVal * generosity — usually a fair-to-great deal for the player.
+export function makeFoxyReturn(giveVal) {
+  const roll = rand();
+  let mult;
+  if (roll < 0.38) mult = 1.12 + rand() * 0.28;      // generous — great for you
+  else if (roll < 0.82) mult = 0.95 + rand() * 0.22; // fair-ish
+  else mult = 0.80 + rand() * 0.13;                   // a stingier day
+  const target = Math.max(6, giveVal * mult);
+
+  const theirs = [];
+  let remaining = target;
+  for (let i = 0; i < 3; i++) {
+    const pool = TOYS.filter((t) => t.value <= remaining * 1.3);
+    if (!pool.length) break;
+    const t = weightedFrom(pool);
+    theirs.push(t);
+    remaining -= t.value;
+    if (remaining < target * 0.18) break;
+  }
+  if (!theirs.length) {
+    // giveVal tiny — hand over a modest toy so there's always something back
+    const cheap = TOYS.filter((t) => t.tier === "common");
+    theirs.push(cheap[Math.floor(rand() * cheap.length)]);
+  }
+  // On your turn Foxy is offering to YOU, so she always accepts her own offer.
+  return { theirs, wantValue: 0, acceptFactor: 1, asks: 0, refusals: 0, youFirst: true, responded: true };
 }
 
 // How Foxy feels about the value you're currently offering vs. what she wants.
@@ -229,11 +279,11 @@ export function sellPrice(toy) {
   return Math.max(1, Math.round(toy.value * 0.5));
 }
 
-// Shop stock: 4 distinct toys. Buying costs ~1.1x value now (friendlier prices).
+// Shop stock: 6 distinct toys. Buying costs ~0.85x value (friendly prices).
 export function makeShopStock() {
   const chosen = [];
   let guard = 0;
-  while (chosen.length < 4 && guard++ < 80) {
+  while (chosen.length < 6 && guard++ < 120) {
     const t = weightedToy();
     if (!chosen.some((c) => c.id === t.id)) chosen.push(t);
   }

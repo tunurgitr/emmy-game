@@ -10,29 +10,32 @@ No downloads, no accounts, no ads — it runs entirely in the browser and saves 
 
 ## ✨ Features
 
-### Trading
-- **Build your own trades.** Your buddy puts toys on the table and has a *hidden fair price*; you tap toys from your backpack to build your side, watch their **live mood** (😠 → 🤔 → 😊), then **Propose**.
-- **Accept / Decline / Ask for more.** "Ask for more" is push-your-luck — they might add a toy, politely decline, or playfully take one back.
+### Trading — take turns, back and forth
+- **You and your buddy take turns starting the trade.** One round they lay toys down with a *hidden fair price* and you build your side to match; the next round it's **your turn** — you offer some toys first and they trade you something back. A banner always shows whose turn it is.
+- **Live feedback.** On their turn, watch their **mood** (😠 → 🤔 → 😊); on your turn, they counter with real toys and the **deal meter** tells you if it's a good deal.
+- **Accept / Decline / Ask for more.** "Ask for more" is push-your-luck — they might sweeten the deal, politely decline, or playfully take one back.
 - **Two honest gauges:** the buddy's mood ("will they say yes?") and a separate **deal meter** ("is this good for *you*?"). The deal meter is **hideable** if you'd rather judge for yourself.
 
 ### Collection & rarities
-- **51 fidget toys** across **7 rarity tiers**: Common · Uncommon · Rare · Epic · Legendary · **Mythic** · **Cosmic**.
-- **📖 Rarity Guide** legend showing every tier's color, value range, and toys — undiscovered toys appear as ❔ silhouettes, with a "Collected X/51" tracker.
+- **57 fidget toys** across **9 rarity tiers**: Common · Uncommon · Rare · Epic · Legendary · **Mythic** · **Cosmic** · **Prismatic** · **Divine**.
+- **📖 Rarity Guide** legend showing every tier's color, value range, and toys — undiscovered toys appear as ❔ silhouettes, with a "Collected X/57" tracker.
 
 ### Mystery boxes 📦
 - Three boxes with **printed odds**: Sparkle (35🪙), Rainbow (90🪙), Galaxy (250🪙).
-- A **free daily box**, plus a **free Rainbow box every 5 trades**.
+- Start each new game with a **free welcome box**, plus a **free Rainbow box every 5 trades**.
 - A visible **🍀 Lucky Meter** pity system (guaranteed Rare+ every 7 boxes), an epic+ safety net, and a guaranteed-good first box.
 - Full **drop → shake → glow → burst → reveal** animation with a **NEW!** badge for first-time pulls.
 
-### The Fidget Zone 🎮
-Tap any toy to *play* with it. Each toy uses one of **12 distinct interactions**, themed with its own particles, colors, and sounds so no two feel the same:
+### The Fidget Zone 🎮 — now in real 3D
+Tap any toy to *play* with it — most toys open as a **real, lit 3D object** you can spin around with your finger, with glossy plastic, chrome, glass, plush, and holographic finishes and soft contact shadows. The 3D engine ([Three.js](https://threejs.org), procedural geometry only — no model files) is **lazy-loaded** the first time you open a toy, so the main game stays tiny, and it falls back to the 2D version automatically if a device can't do WebGL.
+
+Interactions include:
 
 | | | |
 |---|---|---|
-| **Pop-it grid** | **Flick spinner** (momentum) | **Stretch & boing** (hold) |
-| **Rapid-fire combo** (mash) | **Piano** (tap zones for notes) | **Wind-up crank** (drag in circles) |
-| **Bubble shower** (pop falling minis) | **Squeeze & burst** (hold till it pops) | **Petting** (stroke to purr) |
+| **Pop-it grid** (drag to pop a streak) | **Flick spinner** (momentum) | **Stretch & boing** (hold) |
+| **Rapid-fire combo** (mash) | **Piano** (tap zones for notes) | **Wind-up / twist** (drag) |
+| **Bubble shower** (pop falling minis) | **Squish** (hold to squish — it *always springs back*, never pops) | **Petting** (stroke to purr) |
 | **Stack tower** (stack till it topples) | **Snow-globe shake** (scrub & settle) | **Peel** (drag to reveal a surprise) |
 
 ### Selling — a friendly chat 💬
@@ -51,9 +54,10 @@ Tuned for iPad/touchscreens — big tap targets, no double-tap zoom lag, pointer
 
 ## 🎨 Design decisions
 
-- **Emoji + CSS art.** Toys and characters are emoji styled with CSS — cute, fast to iterate, zero asset files, works offline.
+- **3D toys, emoji everywhere else.** The Fidget Zone renders toys as procedural 3D models (real lighting/reflections, no asset files, generated at runtime so it works offline); the backpack, trade mat, and boxes stay emoji + CSS for speed. Three.js loads only when you open a toy.
+- **Nothing that squishes ever pops.** Squishy toys deform and spring back with a happy sparkle at max squish — no sad bursting.
 - **Kid-friendly, never predatory.** Mystery boxes use coins only (no real money), print their odds, always let you keep what you pull, use a *visible* pity meter, and have no dark patterns or FOMO timers.
-- **Trading is the heart.** The shop (buy at ~1.1× value) and boxes are coin *sinks*; trading and haggling are the best ways to grow your collection.
+- **Trading is the heart.** The shop (buy at ~0.85× value, with rarer toys showing up often) and boxes are coin *sinks*; trading and haggling are the best ways to grow your collection.
 - **Warm, encouraging tone.** The buddy's dialogue is cheerful and forgiving — declining or cancelling never has a penalty.
 - **Persistence.** Coins, inventory, collection, character, and settings are saved to `localStorage` (per domain).
 
@@ -61,7 +65,7 @@ Tuned for iPad/touchscreens — big tap targets, no double-tap zoom lag, pointer
 
 ## 🛠️ Tech & development
 
-Plain **HTML/CSS/JavaScript** (ES modules) bundled with **[Vite](https://vitejs.dev)** — no frameworks, no runtime dependencies.
+Plain **HTML/CSS/JavaScript** (ES modules) bundled with **[Vite](https://vitejs.dev)** — no frameworks. The only runtime dependency is **Three.js**, and it's dynamically imported into its own chunk that loads *only* when the Fidget Zone opens, so the base game bundle stays small.
 
 ```bash
 npm install
@@ -73,8 +77,9 @@ npm run preview  # preview the production build
 ### Project layout
 | Path | What |
 |---|---|
-| `game.html` + `src/game.js` | The main game (UI, state, boxes, fidget zone, chat) |
+| `game.html` + `src/game.js` | The main game (UI, state, turns, boxes, fidget zone, chat) |
 | `src/toys.js` | Toy catalog, rarity tiers, and trade/offer/box logic |
+| `src/fidget3d.js` | Lazy-loaded Three.js scene — procedural 3D toy archetypes |
 | `index.html` | Title screen |
 | `mockups.html`, `mockup-a.html`, `mockup-b.html` | Early design mockups (kept for reference) |
 | `.github/workflows/deploy.yml` | Auto-builds & deploys to GitHub Pages on push to `main` |

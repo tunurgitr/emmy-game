@@ -1,6 +1,6 @@
 import {
   TIERS, TOYS, byId, sum, reseed, evaluate, TONE_COLORS,
-  AVATARS, starterToys, makeFoxyOffer, foxyMood, askMoreOutcome, makeShopStock, sellPrice,
+  AVATARS, starterToys, makeFoxyOffer, makeFoxyReturn, foxyMood, askMoreOutcome, makeShopStock, sellPrice,
 } from "./toys.js";
 
 reseed();
@@ -101,6 +101,9 @@ function freshState() {
     foxyAvatar: "🦊",
     coins: 60,
     streak: 0,
+    // whose turn it is to START the trade: "foxy" offers first, "you" offer first.
+    // It alternates every round so trading goes back and forth.
+    turn: "foxy",
     // inventory is an array of INSTANCES so a specific copy can move into a trade
     inventory: starters.map((t) => ({ uid: uidCounter++, id: t.id })),
     offer: makeFoxyOffer(),
@@ -124,8 +127,9 @@ function load() {
     // restore uid counter above any saved uid
     const maxUid = s.inventory.reduce((m, it) => Math.max(m, it.uid), 0);
     uidCounter = maxUid + 1;
-    // a live offer/shop isn't worth persisting mid-trade; make fresh ones
-    s.offer = makeFoxyOffer();
+    // a live offer/shop isn't worth persisting mid-trade; make a fresh round
+    if (s.turn !== "you" && s.turn !== "foxy") s.turn = "foxy";
+    s.offer = s.turn === "you" ? emptyYourOffer() : makeFoxyOffer();
     s.give = [];
     if (!s.shop || !s.shop.length) s.shop = makeShopStock();
     if (!Array.isArray(s.discovered)) s.discovered = [];
@@ -134,12 +138,17 @@ function load() {
 }
 
 function save() {
-  const { avatar, foxyName, foxyAvatar, coins, streak, inventory, shop,
+  const { avatar, foxyName, foxyAvatar, coins, streak, turn, inventory, shop,
           freeBoxes, tradesTowardBox, luckyMeter, boxesSinceEpicPlus, totalBoxesOpened, discovered } = state;
   localStorage.setItem(SAVE_KEY, JSON.stringify({
-    avatar, foxyName, foxyAvatar, coins, streak, inventory, shop,
+    avatar, foxyName, foxyAvatar, coins, streak, turn, inventory, shop,
     freeBoxes, tradesTowardBox, luckyMeter, boxesSinceEpicPlus, totalBoxesOpened, discovered,
   }));
+}
+
+// A blank "your turn" offer: the player builds first, then Foxy responds.
+function emptyYourOffer() {
+  return { theirs: [], wantValue: 0, acceptFactor: 1, asks: 0, refusals: 0, youFirst: true, responded: false };
 }
 
 // mark a toy as discovered (for the "NEW!" badge + collection tracking)
@@ -170,14 +179,44 @@ function render() {
   $("foxyAvatar").textContent = state.foxyAvatar;
   $("foxyLabel").textContent = state.foxyName;
   $("shopTitle").textContent = state.foxyName + "'s";
-  $("tagline").textContent = `Build a trade ${state.foxyName} will accept! ${state.foxyAvatar}`;
 
-  // Foxy's toys
+  const yourTurn = state.turn === "you";
+  const responded = !!state.offer.responded;      // your-turn: has Foxy countered yet?
+  const locked = yourTurn && responded;           // offer is set; can't edit your side now
+  const F = state.foxyAvatar, name = state.foxyName;
+
+  // whose-turn banner + tagline + side labels
+  const badge = $("turnBadge");
+  if (yourTurn) {
+    badge.className = "turn-badge you";
+    badge.textContent = responded ? `${F} ${name} made you an offer!` : `🫵 Your turn — offer first!`;
+    $("tagline").textContent = responded
+      ? `Take the deal or say no thanks. ${F}`
+      : `Offer some toys and ${name} will trade you back! ${F}`;
+    $("theirLead").textContent = responded ? "trades you" : "will trade back";
+    $("theirSub").textContent = responded ? "you GET these toys" : "make your offer below 👇";
+    $("youLead").textContent = "You offer";
+    $("youSub").textContent = responded ? "your side is locked in" : "tap your toys below to offer them";
+  } else {
+    badge.className = "turn-badge";
+    badge.textContent = `${F} ${name}'s turn to offer`;
+    $("tagline").textContent = `Build a trade ${name} will accept! ${F}`;
+    $("theirLead").textContent = "gives you";
+    $("theirSub").textContent = "you GET these toys";
+    $("youLead").textContent = "You give up";
+    $("youSub").textContent = "tap your toys below to offer them";
+  }
+
+  // Foxy's side (top tray)
   const theirs = state.offer.theirs;
-  $("theirs").innerHTML = theirs.map((t) => toyCardHtml(t)).join("");
+  if (yourTurn && !responded) {
+    $("theirs").innerHTML = `<div class="hint">🎁 ${name} will put toys here once you offer!</div>`;
+  } else {
+    $("theirs").innerHTML = theirs.map((t) => toyCardHtml(t)).join("");
+  }
   $("getTotal").textContent = `🪙 ${sum(theirs)}`;
 
-  // Your give tray (tap to remove)
+  // Your give tray (tap to remove, unless locked)
   const gv = giveValue();
   $("giveTotal").textContent = `🪙 ${gv}`;
   const tray = $("giveTray");
@@ -186,29 +225,41 @@ function render() {
   } else {
     tray.innerHTML = state.give.map((uid) => {
       const toy = byId(invItem(uid).id);
-      return toyCardHtml(toy, { tap: true }).replace('data-toy', `data-give="${uid}" data-toy`);
+      return toyCardHtml(toy, { tap: !locked }).replace('data-toy', `data-give="${uid}" data-toy`);
     }).join("");
-    tray.querySelectorAll("[data-give]").forEach((el) => {
-      el.onclick = () => removeFromTray(Number(el.dataset.give));
-    });
+    if (!locked) {
+      tray.querySelectorAll("[data-give]").forEach((el) => {
+        el.onclick = () => removeFromTray(Number(el.dataset.give));
+      });
+    }
   }
 
-  // Foxy's mood about your current offer — unless a sell chat is happening.
+  // Foxy's speech bubble — unless a sell chat is happening.
   if (!chat) {
-    const mood = foxyMood(gv, state.offer.wantValue, state.offer.acceptFactor);
-    // idle "🦊" face follows the chosen character; emotion faces stay as-is
-    $("foxyMood").textContent = gv === 0 ? state.foxyAvatar : mood.face;
-    $("foxyLine").textContent = mood.line;
+    if (yourTurn && !responded) {
+      $("foxyMood").textContent = F;
+      $("foxyLine").textContent = gv === 0 ? "Whatcha got for me? 😄" : "Ooh, let me see... offer it! 👀";
+    } else if (yourTurn && responded) {
+      const e = evaluate(theirs, giveToys());
+      $("foxyMood").textContent = e.rating >= 4 ? "😄" : "😊";
+      $("foxyLine").textContent = "Here's my trade! Wanna do it? 🤝";
+    } else {
+      const mood = foxyMood(gv, state.offer.wantValue, state.offer.acceptFactor);
+      $("foxyMood").textContent = gv === 0 ? F : mood.face;
+      $("foxyLine").textContent = mood.line;
+    }
     $("chatButtons").innerHTML = "";
   }
 
   // "Good for YOU" meter (educational): compares what you get vs give
-  if (!state.give.length) {
-    // Nothing offered yet — don't imply it's a great deal.
+  const showDeal = state.give.length && !(yourTurn && !responded);
+  if (!showDeal) {
     $("needle").style.left = "50%";
-    $("verdict").innerHTML = `<span style="color:var(--muted)">🤷 Add toys to see your deal</span>`;
+    $("verdict").innerHTML = yourTurn && !responded
+      ? `<span style="color:var(--muted)">🎁 Offer toys to see ${name}'s trade</span>`
+      : `<span style="color:var(--muted)">🤷 Add toys to see your deal</span>`;
     $("stars").textContent = "☆☆☆☆☆";
-    $("values").innerHTML = `You get <b class="get">🪙${sum(theirs)}</b> &nbsp;·&nbsp; You give <b class="give">🪙0</b>`;
+    $("values").innerHTML = `You get <b class="get">🪙${sum(theirs)}</b> &nbsp;·&nbsp; You give <b class="give">🪙${gv}</b>`;
   } else {
     const e = evaluate(theirs, giveToys());
     const pctRaw = ((e.ratio - 0.5) / (2.0 - 0.5)) * 100;
@@ -218,11 +269,28 @@ function render() {
     $("values").innerHTML = `You get <b class="get">🪙${e.get}</b> &nbsp;·&nbsp; You give <b class="give">🪙${e.give}</b>`;
   }
 
-  // buttons
+  // buttons (labels/enabled depend on turn + phase)
   $("propose").disabled = state.give.length === 0;
-  const outOfAsks = state.offer.asks >= MAX_ASKS;
-  $("add").disabled = outOfAsks;
-  $("add").textContent = outOfAsks ? "🚫 No more asks" : "➕ Ask for more";
+  if (yourTurn && !responded) {
+    $("propose").textContent = `🎁 Offer to ${name}`;
+    $("decline").textContent = "👋 New trade";
+    $("add").style.display = "none";
+  } else if (yourTurn && responded) {
+    $("propose").textContent = "✅ Take the deal!";
+    $("propose").disabled = false;
+    $("decline").textContent = "👋 No deal";
+    $("add").style.display = "";
+    const outOfAsks = state.offer.asks >= MAX_ASKS;
+    $("add").disabled = outOfAsks;
+    $("add").textContent = outOfAsks ? "🚫 No more asks" : "➕ Ask for more";
+  } else {
+    $("propose").textContent = "🤝 Propose Trade";
+    $("decline").textContent = "👋 No thanks";
+    $("add").style.display = "";
+    const outOfAsks = state.offer.asks >= MAX_ASKS;
+    $("add").disabled = outOfAsks;
+    $("add").textContent = outOfAsks ? "🚫 No more asks" : "➕ Ask for more";
+  }
 
   renderBackpack();
   renderShop();
@@ -232,6 +300,12 @@ function render() {
 
 function renderBackpack() {
   const bag = $("backpack");
+  // Your offer is locked once Foxy has countered — take it or leave it.
+  if (mode === "trade" && state.turn === "you" && state.offer.responded) {
+    $("bagCount").textContent = `(${state.inventory.length} toys)`;
+    bag.innerHTML = `<span class="empty">${state.foxyAvatar} ${state.foxyName} made her offer! Tap <b>Take the deal</b> or <b>No deal</b> above. (Switch to 🎮 Play or 💰 Sell anytime.)</span>`;
+    return;
+  }
   // In play/sell modes every owned toy is tappable; in trade mode, ones already
   // on the table are hidden (they show in the give tray instead).
   const available = mode === "trade"
@@ -424,31 +498,16 @@ function sellCancel() {
 }
 
 // ---- core actions ----
-function newOffer() {
-  state.offer = makeFoxyOffer();
+// Flip who initiates and start a fresh round for that side.
+function flipTurn() { state.turn = state.turn === "foxy" ? "you" : "foxy"; }
+function newRound() {
   state.give = [];
+  state.offer = state.turn === "you" ? emptyYourOffer() : makeFoxyOffer();
   render();
 }
 
-function propose() {
-  if (!state.give.length) return;
-  const gv = giveValue();
-  const mood = foxyMood(gv, state.offer.wantValue, state.offer.acceptFactor);
-  if (!mood.accepts) {
-    state.offer.refusals = (state.offer.refusals || 0) + 1;
-    SFX.refuse();
-    if (state.offer.refusals >= 2) {
-      toast(`${state.foxyAvatar} ${state.foxyName} has a fresh trade for you!`);
-      state.streak = 0;
-      newOffer();
-    } else {
-      toast(`${mood.face} ${mood.line}`);
-      render();
-    }
-    return;
-  }
-
-  // Accepted! Swap toys: remove given from inventory, add Foxy's toys.
+// Complete an accepted trade (works for either turn): swap toys, pay coins, next round.
+function finishTrade() {
   const e = evaluate(state.offer.theirs, giveToys());
   state.inventory = state.inventory.filter((it) => !state.give.includes(it.uid));
   state.offer.theirs.forEach((t) => gainToy(t.id));
@@ -459,8 +518,7 @@ function propose() {
 
   // trade milestone -> free Rainbow Box every 5 trades
   state.tradesTowardBox++;
-  let milestone = false;
-  if (state.tradesTowardBox % 5 === 0) milestone = true;
+  const milestone = state.tradesTowardBox % 5 === 0;
 
   if (e.rating >= 4) {
     state.streak++;
@@ -474,25 +532,70 @@ function propose() {
   }
   state.shop = makeShopStock(); // rotate stock after each deal
   safetyNet();
-  newOffer();
+  flipTurn();
+  newRound();
   if (milestone) { toast("🎁 5 trades! Here's a free Rainbow Box!"); openBox("rainbow", true); }
+}
+
+function propose() {
+  const yourTurn = state.turn === "you";
+
+  // YOUR turn, first press: this is your opening offer → Foxy trades something back.
+  if (yourTurn && !state.offer.responded) {
+    if (!state.give.length) return;
+    state.offer = makeFoxyReturn(giveValue());
+    SFX.accept();
+    toast(`${state.foxyAvatar} ${state.foxyName} has a trade for you!`);
+    render();
+    return;
+  }
+
+  if (!state.give.length) return;
+
+  // FOXY's turn: your offer has to satisfy her hidden price.
+  if (!yourTurn) {
+    const gv = giveValue();
+    const mood = foxyMood(gv, state.offer.wantValue, state.offer.acceptFactor);
+    if (!mood.accepts) {
+      state.offer.refusals = (state.offer.refusals || 0) + 1;
+      SFX.refuse();
+      if (state.offer.refusals >= 2) {
+        toast(`${state.foxyAvatar} ${state.foxyName} wants to try something new!`);
+        state.streak = 0;
+        flipTurn();
+        newRound();
+      } else {
+        toast(`${mood.face} ${mood.line}`);
+        render();
+      }
+      return;
+    }
+  }
+
+  // Accepted (Foxy's price met, OR you took Foxy's return offer on your turn).
+  finishTrade();
 }
 
 function decline() {
   state.streak = 0;
   SFX.tap();
-  toast(`👋 ${state.foxyName} brings a new trade!`);
-  newOffer();
+  flipTurn();
+  toast(state.turn === "you"
+    ? `👋 Your turn — you offer first!`
+    : `👋 ${state.foxyName} offers you a trade!`);
+  newRound();
 }
 
 function askMore() {
   if (state.offer.asks >= MAX_ASKS) return;
+  // Only meaningful when there are toys on Foxy's side to sweeten.
+  if (!state.offer.theirs.length) return;
   const out = askMoreOutcome(state.offer);
   if (out.type === "added") SFX.add();
   else if (out.type === "removed" || out.type === "ended") SFX.refuse();
   else SFX.tap();
   toast(out.line);
-  if (out.type === "ended") { state.streak = 0; newOffer(); return; }
+  if (out.type === "ended") { state.streak = 0; flipTurn(); newRound(); return; }
   render();
 }
 
@@ -511,13 +614,13 @@ function buy(i) {
 // ==========================================================================
 const BOX_DEFS = {
   sparkle: { name: "Sparkle Box", emoji: "✨", cost: 35, color: "#7cc4ff",
-    weights: { common: 550, uncommon: 300, rare: 110, epic: 30, legendary: 8, mythic: 2, cosmic: 0 } },
+    weights: { common: 500, uncommon: 300, rare: 140, epic: 45, legendary: 12, mythic: 3, cosmic: 1, prismatic: 0, divine: 0 } },
   rainbow: { name: "Rainbow Box", emoji: "🌈", cost: 90, color: "#3d8bfd",
-    weights: { common: 250, uncommon: 350, rare: 250, epic: 100, legendary: 40, mythic: 9, cosmic: 1 } },
+    weights: { common: 200, uncommon: 340, rare: 270, epic: 120, legendary: 50, mythic: 14, cosmic: 5, prismatic: 1, divine: 0 } },
   galaxy:  { name: "Galaxy Box", emoji: "🌌", cost: 250, color: "#b558f6",
-    weights: { common: 0, uncommon: 300, rare: 350, epic: 220, legendary: 90, mythic: 34, cosmic: 6 } },
+    weights: { common: 0, uncommon: 260, rare: 330, epic: 230, legendary: 110, mythic: 44, cosmic: 18, prismatic: 6, divine: 2 } },
 };
-const RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "cosmic"];
+const RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "cosmic", "prismatic", "divine"];
 
 function rollRarity(weights, floorTier) {
   const entries = RARITY_ORDER
@@ -669,14 +772,23 @@ const TIPS = {
   piano:   "🎹 Tap different spots to play notes!",
   windup:  "🔄 Drag in circles to wind it up, then let go!",
   shower:  "👆 Tap to burst it — pop the falling pieces!",
-  squeeze: "✊ Press and HOLD to squeeze till it POPS!",
+  squeeze: "✊ Press and HOLD to squish — it springs right back!",
   pet:     "🫳 Gently stroke it back and forth...",
   stack:   "👆 Tap to stack them — how high can you go?",
   snow:    "↔️ Scrub fast to shake it all up!",
   peel:    "✊ Drag it to peel off a surprise!",
 };
 let fidgetToyObj = null;
-let fidgetCleanup = null; // teardown for the active interaction
+let fidgetCleanup = null; // teardown for the active emoji interaction
+let fidget3d = null;      // active 3D scene (if any)
+let use3d = localStorage.getItem("emmy.no3d") !== "1"; // can be disabled if WebGL fails
+const THREE_D_PLAYS = new Set(["grid", "flick", "squeeze", "pet", "stretch", "windup", "combo", "piano"]);
+
+// Emoji-particle burst wrapper the 3D scene can call (stage-relative 0..1 coords).
+function burstAt(stage, nx, ny, marks, n, spread) {
+  const r = stage.getBoundingClientRect();
+  burst(stage, nx * r.width, ny * r.height, marks, n, spread);
+}
 
 function openFidget(uid) {
   const it = invItem(uid);
@@ -687,13 +799,54 @@ function openFidget(uid) {
   $("fidgetTip").textContent = TIPS[type] || "👆 Play with your toy!";
   const stage = $("fidgetStage");
   if (fidgetCleanup) { fidgetCleanup(); fidgetCleanup = null; }
+  if (fidget3d) { fidget3d.dispose(); fidget3d = null; }
   stage.innerHTML = "";
-  fidgetCleanup = (FIDGETS[type] || FIDGETS.combo)(stage, fidgetToyObj) || null;
   $("fidget").classList.add("show");
   SFX.tap();
+
+  // Play types with a solid 3D archetype get the real 3D toy; particle-heavy
+  // ones (shower/snow/stack/peel) keep their themed 2D interaction.
+  const wants3d = use3d && THREE_D_PLAYS.has(type);
+  if (wants3d && (type === "grid" || type === "combo" || type === "piano")) {
+    $("fidgetTip").textContent = (TIPS[type] || "👆 Play!") + "  🔄 Drag to spin it around!";
+  }
+  if (wants3d) {
+    const toy = fidgetToyObj;
+    // lazy-load Three + the 3D module only when a toy is actually opened
+    import("./fidget3d.js").then((mod) => {
+      // guard: user may have closed/switched toys before the chunk arrived
+      if (!$("fidget").classList.contains("show") || fidgetToyObj !== toy) return;
+      try {
+        fidget3d = mod.createFidgetScene(stage, toy, {
+          tone, makeSustain, celebrate,
+          burst: (nx, ny, marks, n, spread) => burstAt(stage, nx, ny, marks, n, spread),
+          tierColor: TIERS[toy.tier].color,
+          parts: toy.parts,
+          baseFreq: toyFreq(toy),
+        });
+      } catch (err) {
+        console.warn("3D fidget failed, using 2D:", err);
+        use3d = false; localStorage.setItem("emmy.no3d", "1");
+        openEmojiFidget(stage, toy);
+      }
+    }).catch((err) => {
+      console.warn("3D module load failed, using 2D:", err);
+      use3d = false;
+      openEmojiFidget(stage, toy);
+    });
+  } else {
+    openEmojiFidget(stage, fidgetToyObj);
+  }
+}
+function openEmojiFidget(stage, toy) {
+  if (fidgetToyObj !== toy) return;
+  const type = toy.play || "combo";
+  stage.innerHTML = "";
+  fidgetCleanup = (FIDGETS[type] || FIDGETS.combo)(stage, toy) || null;
 }
 function closeFidget() {
   if (fidgetCleanup) { fidgetCleanup(); fidgetCleanup = null; }
+  if (fidget3d) { fidget3d.dispose(); fidget3d = null; }
   $("fidgetStage").innerHTML = "";
   $("fidget").classList.remove("show");
   fidgetToyObj = null;
@@ -1018,15 +1171,17 @@ const FIDGETS = {
     return () => {};
   },
 
-  // 8) SQUEEZE & BURST — hold to inflate (or implode) until it pops, then reform.
+  // 8) SQUEEZE — hold to squish; it deforms and SPRINGS BACK. Never pops or
+  //    disappears. At max squish it gives a happy sparkle shimmer as the reward.
   squeeze(stage, toy) {
     const el = bigToy(toy);
     stage.appendChild(el);
     const invert = !!toy.invert, base = toyFreq(toy), S = sig(toy), wave = sigWave(toy);
-    let holding = false, p = 0, raf = 0, snd = null, burstDone = false;
+    let holding = false, p = 0, raf = 0, snd = null, lastShimmer = 0;
     const escape = () => {
-      // marble never pops — it squirts out of your grip to a new spot
+      // marble squirts out of your grip to a new spot (also never pops)
       holding = false; if (snd) { snd.stop(); snd = null; }
+      cancelAnimationFrame(raf);
       tone(base, 0.18, { type: wave, vol: 0.18, slideTo: base * 3 });
       const sr = rectOf(stage);
       const nx = (Math.random() - 0.5) * (sr.width - 120);
@@ -1037,39 +1192,33 @@ const FIDGETS = {
     };
     const frame = () => {
       if (!holding) return;
-      p = Math.min(1, p + 0.018);
+      p = Math.min(1, p + 0.02);
       if (S.escape && p >= 0.6) { escape(); return; }
-      const sc = invert ? 1 - p * 0.7 : 1 + p * 0.9;
-      el.style.transform = `scale(${sc})`;
-      el.style.filter = `brightness(${1 + p * 0.5})`;
-      if (snd) { snd.setFreq(invert ? base - p * 120 : base + p * 300); snd.setVol(0.06 + p * 0.1); }
-      if (p >= 1 && !burstDone) { burstDone = true; doBurst(); }
-      else raf = requestAnimationFrame(frame);
-    };
-    const doBurst = () => {
-      holding = false; if (snd) { snd.stop(); snd = null; }
-      if (invert) {
-        tone(60, 0.3, { type: "sine", vol: 0.2, slideTo: 900 }); // black-hole implosion
-      } else {
-        // cheerful "pop!" — a happy little rising chime, not a sad deflate
-        tone(660, 0.1, { type: "sine", vol: 0.2, slideTo: 990 });
-        [880, 1175, 1319].forEach((f, i) => tone(f, 0.14, { type: "triangle", vol: 0.14, when: 0.05 + i * 0.06 }));
+      // squish: flatten a bit (or gently implode for the black hole), clamped so
+      // it always keeps its shape — no scale-to-zero, no burst.
+      const sy = invert ? 1 - p * 0.45 : 1 - p * 0.42;
+      const sx = invert ? 1 - p * 0.35 : 1 + p * 0.30;
+      el.style.transform = `scale(${sx}, ${sy})`;
+      el.style.filter = `brightness(${1 + p * 0.35})`;
+      if (snd) { snd.setFreq(invert ? base - p * 120 : base + p * 240); snd.setVol(0.06 + p * 0.1); }
+      const now = performance.now();
+      if (p > 0.82 && now - lastShimmer > 240) {
+        lastShimmer = now;
+        tone(880 + Math.random() * 300, 0.07, { type: "sine", vol: 0.12 });
+        const r = rectOf(stage);
+        burst(stage, r.width / 2, r.height / 2.4, partsOf(toy, ["✨", "⭐"]), 2, 90);
       }
-      el.style.transition = "transform .1s, opacity .1s"; el.style.transform = "scale(0)"; el.style.opacity = "0";
-      const r = rectOf(stage);
-      burst(stage, r.width / 2, r.height / 2, partsOf(toy, ["💥", "✨"]), 14, invert ? -220 : 260);
-      setTimeout(() => {
-        el.style.transition = ""; el.style.filter = ""; el.style.opacity = "1";
-        el.classList.remove("fx-wobble"); void el.offsetWidth; el.classList.add("fx-wobble");
-        el.style.transform = "";
-      }, 500);
+      raf = requestAnimationFrame(frame);
     };
-    el.onpointerdown = (e) => { holding = true; burstDone = false; p = 0; el.style.transition = "none"; el.style.transform = ""; snd = makeSustain(wave); el.setPointerCapture(e.pointerId); raf = requestAnimationFrame(frame); };
+    el.onpointerdown = (e) => { holding = true; p = 0; el.style.transition = "none"; el.style.transform = ""; snd = makeSustain(wave); el.setPointerCapture(e.pointerId); raf = requestAnimationFrame(frame); };
     const release = () => {
       if (!holding) return;
       holding = false; cancelAnimationFrame(raf);
-      if (snd) { snd.stop(); snd = null; }
-      el.style.transition = "transform .3s, filter .3s"; el.style.transform = ""; el.style.filter = "";
+      if (snd) { tone(360 + p * 200, 0.2, { type: "triangle", vol: 0.16, slideTo: base }); snd.stop(); snd = null; }
+      // spring back with a bouncy wobble — the toy stays whole
+      el.style.transition = "transform .35s cubic-bezier(.34,1.56,.64,1), filter .3s";
+      el.style.transform = ""; el.style.filter = "";
+      el.classList.remove("fx-wobble"); void el.offsetWidth; el.classList.add("fx-wobble");
     };
     el.onpointerup = release; el.onpointercancel = release;
     return () => { holding = false; cancelAnimationFrame(raf); if (snd) snd.stop(); };
@@ -1207,7 +1356,7 @@ const FIDGETS = {
 
 // ---- rarity guide ----
 function openGuide() {
-  const order = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "cosmic"];
+  const order = RARITY_ORDER;
   const found = new Set(state.discovered);
   const totalFound = TOYS.filter((x) => found.has(x.id)).length;
   $("guideList").innerHTML = order.map((tk) => {
@@ -1299,7 +1448,7 @@ $("mute").onclick = () => {
 };
 updateMuteBtn();
 
-// background music — cycles Off → 🎵1 (Bouncy) → 🎵2 (Dreamy) → 🎵3 (Playful) → Off
+// background music — cycles Off → 🎵1 (Bouncy) → 🎵2 (Jazzy) → 🎵3 (Playful) → Off
 function updateMusicBtn() {
   $("music").textContent = musicTrack === 0 ? "🔕" : "🎵" + musicTrack;
   $("music").style.opacity = musicTrack === 0 ? ".5" : "1";
