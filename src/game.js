@@ -50,6 +50,26 @@ const SFX = {
   shake:  () => { for (let i = 0; i < 4; i++) tone(300 + i * 60, 0.05, { type: "triangle", vol: 0.1, when: i * 0.05 }); },
 };
 
+// ---- gentle background music (generated, loops; respects mute) ----
+let musicOn = localStorage.getItem("emmy.music") !== "0"; // default on
+let musicTimer = 0, musicStep = 0, musicStarted = false;
+// a calm, sweet loop: a bouncy pentatonic melody over a soft two-chord bass
+const MEL  = [523, 659, 784, 659, 587, 784, 880, 784, 659, 587, 523, 659];
+const BASS = [131, 131, 165, 165, 147, 147, 196, 196];
+function musicTick() {
+  if (muted || !musicOn) return;
+  const n = MEL[musicStep % MEL.length];
+  tone(n, 0.32, { type: "triangle", vol: 0.045 });
+  if (musicStep % 2 === 0) tone(BASS[(musicStep / 2) % BASS.length], 0.7, { type: "sine", vol: 0.05 });
+  if (musicStep % 4 === 2) tone(n * 2, 0.18, { type: "sine", vol: 0.02 }); // sparkle harmony
+  musicStep++;
+}
+function startMusicLoop() {
+  if (musicStarted) return;
+  musicStarted = true;
+  musicTimer = setInterval(musicTick, 340);
+}
+
 const SAVE_KEY = "emmy.fidget.save.v2";
 const MAX_ASKS = 2;
 const $ = (id) => document.getElementById(id);
@@ -73,7 +93,7 @@ function freshState() {
     give: [],            // uids currently offered from inventory
     shop: makeShopStock(),
     // mystery-box tracking
-    lastFreeBoxDate: null,
+    freeBoxes: 1, // one welcome box for each new game (no daily boxes)
     tradesTowardBox: 0,
     luckyMeter: 0,
     boxesSinceEpicPlus: 0,
@@ -101,10 +121,10 @@ function load() {
 
 function save() {
   const { avatar, foxyName, foxyAvatar, coins, streak, inventory, shop,
-          lastFreeBoxDate, tradesTowardBox, luckyMeter, boxesSinceEpicPlus, totalBoxesOpened, discovered } = state;
+          freeBoxes, tradesTowardBox, luckyMeter, boxesSinceEpicPlus, totalBoxesOpened, discovered } = state;
   localStorage.setItem(SAVE_KEY, JSON.stringify({
     avatar, foxyName, foxyAvatar, coins, streak, inventory, shop,
-    lastFreeBoxDate, tradesTowardBox, luckyMeter, boxesSinceEpicPlus, totalBoxesOpened, discovered,
+    freeBoxes, tradesTowardBox, luckyMeter, boxesSinceEpicPlus, totalBoxesOpened, discovered,
   }));
 }
 
@@ -161,7 +181,7 @@ function render() {
 
   // Foxy's mood about your current offer — unless a sell chat is happening.
   if (!chat) {
-    const mood = foxyMood(gv, state.offer.wantValue);
+    const mood = foxyMood(gv, state.offer.wantValue, state.offer.acceptFactor);
     // idle "🦊" face follows the chosen character; emotion faces stay as-is
     $("foxyMood").textContent = gv === 0 ? state.foxyAvatar : mood.face;
     $("foxyLine").textContent = mood.line;
@@ -278,10 +298,11 @@ const SELL_LINES = {
     "Are you SURE about {toy}? …{c}? 🥺",
   ],
   raised: [
-    "Okay okay, {c}! You drive a hard bargain! 😆",
-    "Hmmm… fiiine, {c}! Just for you!",
-    "You're good at this! {c}!",
-    "Ooof, okay! {c}! My tail is twitching!",
+    "Yes! {c}, because you're awesome! 😆",
+    "Ooh great idea — {c}! 🎉",
+    "You're good at this! {c}! 🌟",
+    "Happy to! {c} it is! 😄",
+    "For you? Absolutely — {c}! 💛",
   ],
   refused: [
     "That's really my best — {c}! 🥺",
@@ -311,7 +332,7 @@ const pickLine = (key, toy, c) =>
 
 function rollInitialOffer(toy) {
   const precious = PRECIOUS.has(toy.tier);
-  const lo = precious ? 0.84 : 0.80;
+  const lo = precious ? 0.95 : 0.90; // more generous starting offers now
   return Math.max(1, Math.round(toy.value * (lo + Math.random() * 0.10)));
 }
 function startSell(uid) {
@@ -343,19 +364,19 @@ function sellHaggle() {
   chat.round++;
   const v = chat.toy.value, precious = PRECIOUS.has(chat.toy.tier);
   const roll = Math.random();
-  const genChance = precious ? 0.12 : 0.08;
+  const genChance = precious ? 0.18 : 0.14; // more likely to be extra generous
   if (roll < genChance) {
-    chat.offer = Math.round(v * (1.0 + Math.random() * 0.05));
+    chat.offer = Math.round(v * (1.12 + Math.random() * 0.08)); // pays OVER value
     chat.ended = true;
     SFX.buy();
     renderChat(pickLine("generous", chat.toy, chat.offer), true);
-  } else if (roll < genChance + 0.25) {
+  } else if (roll < genChance + 0.12) { // rarely holds firm now
     chat.ended = true;
     SFX.refuse();
     renderChat(pickLine("refused", chat.toy, chat.offer), false);
   } else {
-    const bump = chat.round === 1 ? (0.04 + Math.random() * 0.04) : (0.02 + Math.random() * 0.03);
-    chat.offer = Math.min(Math.round(v * 0.97), chat.offer + Math.round(v * bump));
+    const bump = chat.round === 1 ? (0.06 + Math.random() * 0.06) : (0.03 + Math.random() * 0.05);
+    chat.offer = Math.min(Math.round(v * 1.15), chat.offer + Math.round(v * bump));
     SFX.sell();
     if (chat.round >= 2) chat.ended = true;
     renderChat(pickLine("raised", chat.toy, chat.offer), true);
@@ -398,7 +419,7 @@ function newOffer() {
 function propose() {
   if (!state.give.length) return;
   const gv = giveValue();
-  const mood = foxyMood(gv, state.offer.wantValue);
+  const mood = foxyMood(gv, state.offer.wantValue, state.offer.acceptFactor);
   if (!mood.accepts) {
     state.offer.refusals = (state.offer.refusals || 0) + 1;
     SFX.refuse();
@@ -418,8 +439,8 @@ function propose() {
   state.inventory = state.inventory.filter((it) => !state.give.includes(it.uid));
   state.offer.theirs.forEach((t) => gainToy(t.id));
 
-  // Coins: small base + how much better than fair you did (capped).
-  const bonus = Math.min(30, 6 + Math.max(0, Math.round(e.net)));
+  // Coins: generous base + how much better than fair you did + streak bonus.
+  const bonus = Math.min(80, 15 + Math.max(0, Math.round(e.net)) + state.streak * 3);
   state.coins += bonus;
 
   // trade milestone -> free Rainbow Box every 5 trades
@@ -495,18 +516,15 @@ function rollRarity(weights, floorTier) {
   return pool[0][0];
 }
 
-function todayStr() { return new Date().toDateString(); }
-function freeBoxReady() { return state.lastFreeBoxDate !== todayStr(); }
-
 function renderBoxes() {
   const banner = $("boxBanner");
-  if (freeBoxReady()) {
+  if (state.freeBoxes > 0) {
     banner.className = "box-banner ready";
-    banner.textContent = "🎁 Your FREE daily box is ready — tap to open!";
-    banner.onclick = () => { state.lastFreeBoxDate = todayStr(); openBox("sparkle", true); };
+    banner.textContent = `🎁 You have ${state.freeBoxes} free box${state.freeBoxes === 1 ? "" : "es"} — tap to open!`;
+    banner.onclick = () => { state.freeBoxes--; openBox("sparkle", true); };
   } else {
     banner.className = "box-banner";
-    banner.textContent = "🎁 Free box opened! Come back tomorrow for another!";
+    banner.textContent = "✨ Earn free boxes by trading, or buy one below!";
     banner.onclick = null;
   }
   $("luckyFill").style.width = Math.min(100, (state.luckyMeter / 7) * 100) + "%";
@@ -713,10 +731,38 @@ function toyFreq(toy) {
 const partsOf = (toy, fallback) => (toy.parts && toy.parts.length ? toy.parts : fallback);
 const rectOf = (el) => el.getBoundingClientRect();
 
+// ---- Per-toy signature layer: gives every toy its own feel on top of its base
+// interaction (unique waveform + pitch + a few mechanic tweaks) so no two play alike.
+const WAVES = ["sine", "triangle", "square", "sawtooth"];
+const SIG = {
+  // grid
+  popit: { popMode: "toggle", wave: "sine" }, simple: { popMode: "refill", wave: "square" },
+  galaxy: { wave: "triangle" }, diamond: { wave: "sawtooth" },
+  // flick — each a different physics feel
+  spinner: { wave: "triangle", friction: 0.995 }, spinring: { wave: "square", friction: 0.93, detents: 8 },
+  yoyo: { wave: "sine", friction: 0.9 }, trophy: { wave: "sawtooth", friction: 0.9 },
+  saturn: { wave: "triangle", friction: 0.99, reverse: true },
+  // combo — different timing windows + waveforms
+  pushpop: { wave: "sine" }, cube: { wave: "square" }, clickpen: { wave: "square", windowMs: 250 },
+  boink: { wave: "sawtooth" }, comet: { wave: "triangle", threshold: 15 },
+  // stretch
+  stressball: { wave: "sine" }, noodle: { wave: "sawtooth", launch: true }, slinky: { wave: "square" }, snap: { wave: "triangle" },
+  // squeeze — marble squirts away instead of popping
+  marble: { wave: "sine", escape: true }, mochi: { wave: "sine" }, unicorn: { wave: "triangle" },
+  goojar: { wave: "square" }, phoenix: { wave: "sawtooth" }, blackhole: { wave: "sine" },
+  // piano scales already vary; give waveforms
+  cradle: { wave: "sine" }, musicbox: { wave: "sine" }, orb: { wave: "triangle" }, alien: { wave: "sawtooth" },
+  // snow settle speeds
+  sand: { wave: "square", settle: 2.6 }, wave: { wave: "sine", settle: 4 }, lavalamp: { wave: "sine", settle: 6 }, kaleido: { wave: "triangle", settle: 1.6 },
+};
+const sig = (toy) => SIG[toy.id] || {};
+const sigWave = (toy) => sig(toy).wave || WAVES[[...toy.id].reduce((h, c) => h + c.charCodeAt(0), 0) % 4];
+
 const FIDGETS = {
   // 1) POP-IT GRID
   grid(stage, toy) {
     const tier = TIERS[toy.tier], base = toyFreq(toy);
+    const wave = sigWave(toy), mode = sig(toy).popMode || "once";
     const cols = 4, rows = 4, size = 48;
     const g = document.createElement("div");
     g.className = "popgrid";
@@ -729,11 +775,18 @@ const FIDGETS = {
       b.style.setProperty("--bc", tier.color);
       const f = base + i * 25;
       b.onpointerdown = (e) => {
-        if (b.classList.contains("popped")) return;
+        if (b.classList.contains("popped")) {
+          if (mode === "toggle") { b.classList.remove("popped"); remaining++; tone(f * 0.6, 0.06, { type: wave, vol: 0.12 }); }
+          return;
+        }
         b.classList.add("popped");
-        tone(f, 0.09, { type: "sine", vol: 0.22, slideTo: f * 0.55 });
+        tone(f, 0.09, { type: wave, vol: 0.22, slideTo: f * 0.55 });
         const r = rectOf(stage);
         burst(stage, e.clientX - r.left, e.clientY - r.top, partsOf(toy, ["✨"]), 2, 50);
+        if (mode === "refill") { // endless: this bubble comes back on its own
+          setTimeout(() => b.classList.remove("popped"), 1200);
+          return;
+        }
         if (--remaining === 0) {
           SFX.celebrate();
           const r2 = rectOf(stage);
@@ -754,10 +807,11 @@ const FIDGETS = {
   flick(stage, toy) {
     const el = bigToy(toy);
     stage.appendChild(el);
-    const zen = toy.id === "spinring" || toy.id === "saturn";
-    const friction = zen ? 0.994 : 0.985;
+    const S = sig(toy);
+    const friction = S.friction ?? 0.985;
+    const dir = S.reverse ? -1 : 1;
     let angle = 0, vel = 0, dragging = false, lastX = 0, lastT = 0, raf = 0, lastLap = 0;
-    const snd = makeSustain("triangle");
+    const snd = makeSustain(sigWave(toy));
     const base = toyFreq(toy);
     const frame = () => {
       angle += vel; vel *= friction;
@@ -778,7 +832,7 @@ const FIDGETS = {
     };
     const end = () => { dragging = false; };
     el.onpointerup = end; el.onpointercancel = end;
-    el.onclick = () => { if (Math.abs(vel) < 1) vel += 15; };
+    el.onclick = () => { if (Math.abs(vel) < 1) vel += 15 * dir; };
     return () => { cancelAnimationFrame(raf); snd.stop(); };
   },
 
@@ -795,7 +849,7 @@ const FIDGETS = {
       if (snd) { snd.setFreq(base * 0.6 + (s - 1) * 360); snd.setVol(0.12); }
       raf = requestAnimationFrame(frame);
     };
-    el.onpointerdown = (e) => { holding = true; s = 1; el.style.transition = "none"; snd = makeSustain("sine"); el.setPointerCapture(e.pointerId); raf = requestAnimationFrame(frame); };
+    el.onpointerdown = (e) => { holding = true; s = 1; el.style.transition = "none"; snd = makeSustain(sigWave(toy)); el.setPointerCapture(e.pointerId); raf = requestAnimationFrame(frame); };
     const release = () => {
       if (!holding) return;
       holding = false; cancelAnimationFrame(raf);
@@ -813,11 +867,11 @@ const FIDGETS = {
   combo(stage, toy) {
     const el = bigToy(toy);
     stage.appendChild(el);
-    const base = toyFreq(toy);
+    const base = toyFreq(toy), wave = sigWave(toy), windowMs = sig(toy).windowMs ?? 620;
     let combo = 0, timer = 0, hue = 0;
     el.onpointerdown = () => {
       combo++;
-      tone(base + ((combo - 1) % 8) * 40, 0.12, { type: "square", vol: 0.16 });
+      tone(base + ((combo - 1) % 8) * 40, 0.12, { type: wave, vol: 0.16 });
       el.classList.remove("fx-pulse"); void el.offsetWidth; el.classList.add("fx-pulse");
       if (combo > 1) {
         const sr = rectOf(stage);
@@ -835,7 +889,7 @@ const FIDGETS = {
           [784, 659, 523, 392].forEach((f, i) => tone(f, 0.14, { type: "sine", vol: 0.16, when: i * 0.06 }));
         }
         combo = 0;
-      }, 620);
+      }, windowMs);
     };
     return () => { clearTimeout(timer); };
   },
@@ -954,11 +1008,23 @@ const FIDGETS = {
   squeeze(stage, toy) {
     const el = bigToy(toy);
     stage.appendChild(el);
-    const invert = !!toy.invert, base = toyFreq(toy);
+    const invert = !!toy.invert, base = toyFreq(toy), S = sig(toy), wave = sigWave(toy);
     let holding = false, p = 0, raf = 0, snd = null, burstDone = false;
+    const escape = () => {
+      // marble never pops — it squirts out of your grip to a new spot
+      holding = false; if (snd) { snd.stop(); snd = null; }
+      tone(base, 0.18, { type: wave, vol: 0.18, slideTo: base * 3 });
+      const sr = rectOf(stage);
+      const nx = (Math.random() - 0.5) * (sr.width - 120);
+      const ny = (Math.random() - 0.5) * (sr.height - 120);
+      el.style.transition = "transform .25s cubic-bezier(.3,1.6,.5,1)";
+      el.style.transform = `translate(${nx}px, ${ny}px)`;
+      burst(stage, sr.width / 2, sr.height / 2, partsOf(toy, ["💨", "✨"]), 4, 120);
+    };
     const frame = () => {
       if (!holding) return;
       p = Math.min(1, p + 0.018);
+      if (S.escape && p >= 0.6) { escape(); return; }
       const sc = invert ? 1 - p * 0.7 : 1 + p * 0.9;
       el.style.transform = `scale(${sc})`;
       el.style.filter = `brightness(${1 + p * 0.5})`;
@@ -968,7 +1034,13 @@ const FIDGETS = {
     };
     const doBurst = () => {
       holding = false; if (snd) { snd.stop(); snd = null; }
-      tone(invert ? 60 : 520, 0.3, { type: "sine", vol: 0.2, slideTo: invert ? 900 : 90 });
+      if (invert) {
+        tone(60, 0.3, { type: "sine", vol: 0.2, slideTo: 900 }); // black-hole implosion
+      } else {
+        // cheerful "pop!" — a happy little rising chime, not a sad deflate
+        tone(660, 0.1, { type: "sine", vol: 0.2, slideTo: 990 });
+        [880, 1175, 1319].forEach((f, i) => tone(f, 0.14, { type: "triangle", vol: 0.14, when: 0.05 + i * 0.06 }));
+      }
       el.style.transition = "transform .1s, opacity .1s"; el.style.transform = "scale(0)"; el.style.opacity = "0";
       const r = rectOf(stage);
       burst(stage, r.width / 2, r.height / 2, partsOf(toy, ["💥", "✨"]), 14, invert ? -220 : 260);
@@ -978,7 +1050,7 @@ const FIDGETS = {
         el.style.transform = "";
       }, 500);
     };
-    el.onpointerdown = (e) => { holding = true; burstDone = false; p = 0; el.style.transition = "none"; snd = makeSustain("sine"); el.setPointerCapture(e.pointerId); raf = requestAnimationFrame(frame); };
+    el.onpointerdown = (e) => { holding = true; burstDone = false; p = 0; el.style.transition = "none"; el.style.transform = ""; snd = makeSustain(wave); el.setPointerCapture(e.pointerId); raf = requestAnimationFrame(frame); };
     const release = () => {
       if (!holding) return;
       holding = false; cancelAnimationFrame(raf);
@@ -1052,7 +1124,7 @@ const FIDGETS = {
     stage.appendChild(el);
     const base = toyFreq(toy);
     const marks = partsOf(toy, ["✨", "❄️", "💫"]);
-    const settle = toy.id === "lavalamp" ? 6 : toy.id === "wave" ? 4 : 2.6;
+    const settle = sig(toy).settle ?? 2.6;
     let lastX = 0, lastSpawn = 0, active = false;
     const spawn = (n = 3) => {
       const sr = rectOf(stage);
@@ -1212,6 +1284,18 @@ $("mute").onclick = () => {
   if (!muted) SFX.tap();
 };
 updateMuteBtn();
+
+// background music toggle
+function updateMusicBtn() { $("music").textContent = musicOn ? "🎵" : "🔕"; $("music").style.opacity = musicOn ? "1" : ".5"; }
+$("music").onclick = () => {
+  musicOn = !musicOn;
+  localStorage.setItem("emmy.music", musicOn ? "1" : "0");
+  updateMusicBtn();
+  if (musicOn) { ac(); startMusicLoop(); SFX.tap(); }
+};
+updateMusicBtn();
+// Audio can only start after a user gesture — kick off the loop on the first tap.
+addEventListener("pointerdown", () => { ac(); if (musicOn) startMusicLoop(); }, { once: true });
 
 // deal-meter hide toggle
 let meterHidden = localStorage.getItem("emmy.meterHidden") === "1";

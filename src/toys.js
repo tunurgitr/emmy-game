@@ -166,17 +166,31 @@ export function makeFoxyOffer() {
   if (roll < 0.30) mult = 0.60 + rand() * 0.18;      // generous day (great deal!)
   else if (roll < 0.85) mult = 0.82 + rand() * 0.16; // fair-ish (break even)
   else mult = 1.02 + rand() * 0.12;                  // slightly greedy
+  // acceptFactor: she'll actually say YES once you offer wantValue * acceptFactor.
+  // It's usually WELL BELOW 1, and randomized per offer, so she very often accepts
+  // deals that come out better for the player — and how generous she is varies.
+  let af;
+  const r2 = rand();
+  if (r2 < 0.50) af = 0.62 + rand() * 0.16;   // super chill — accepts a low offer
+  else if (r2 < 0.85) af = 0.78 + rand() * 0.14;
+  else af = 0.92 + rand() * 0.10;             // occasionally wants closer to full
   return {
     theirs,
     wantValue: Math.max(5, Math.round(worth * mult)),
+    acceptFactor: af,
     asks: 0,
     refusals: 0,
   };
 }
 
 // How Foxy feels about the value you're currently offering vs. what she wants.
-// accepts === true only when you've matched her price.
-export function foxyMood(giveValue, wantValue) {
+// She accepts once giveValue >= wantValue * acceptFactor (acceptFactor usually < 1,
+// so she happily takes deals that are better for the player).
+export function foxyMood(giveValue, wantValue, acceptFactor = 1) {
+  const target = Math.max(1, wantValue * acceptFactor);
+  return foxyMoodAt(giveValue, target);
+}
+function foxyMoodAt(giveValue, wantValue) {
   const ratio = wantValue === 0 ? 2 : giveValue / wantValue;
   if (giveValue === 0) return { accepts: false, face: "🦊", line: "Ooh, what will you share with me? 😊", tone: "fair", ratio };
   if (ratio < 0.6)   return { accepts: false, face: "🦊", line: "Hehe, a little more and we've got a deal! 💛", tone: "bad",  ratio };
@@ -223,5 +237,5 @@ export function makeShopStock() {
     const t = weightedToy();
     if (!chosen.some((c) => c.id === t.id)) chosen.push(t);
   }
-  return chosen.map((t) => ({ id: t.id, price: Math.ceil(t.value * 1.1) }));
+  return chosen.map((t) => ({ id: t.id, price: Math.max(1, Math.round(t.value * 0.85)) }));
 }
