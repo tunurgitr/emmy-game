@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Look A: Card Duel — Emmy's Fidget Trading</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --pop:#ff4d94; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      min-height: 100vh; color: #3a2a55;
+      background: linear-gradient(160deg, #fff0fb 0%, #e5f0ff 55%, #eafff2 100%);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 16px; overflow-x: hidden;
+    }
+    .topbar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .home { text-decoration: none; color: #8a79a6; font-weight: 600; }
+    .coins { font-size: 22px; font-weight: 800; color: #b8860b; background: #fff6d6; padding: 6px 16px; border-radius: 999px; box-shadow: 0 4px 0 #e8cf7a; }
+    h1 { font-size: clamp(22px, 5vw, 36px); margin: 4px 0 2px; }
+    .streak { color: #8a79a6; font-size: 14px; margin-bottom: 10px; }
+
+    .arena { display: flex; gap: 18px; align-items: stretch; justify-content: center; flex-wrap: wrap; width: 100%; max-width: 900px; }
+    .side { flex: 1 1 300px; max-width: 380px; border-radius: 26px; padding: 18px; background: #fff; box-shadow: 0 12px 30px rgba(120,80,180,.18); position: relative; }
+    .side.you  { border: 4px solid #3d8bfd; }
+    .side.them { border: 4px solid var(--pop); }
+    .side h3 { text-align: center; font-size: 18px; margin-bottom: 4px; }
+    .side .who { text-align:center; font-size: 34px; }
+    .give-label { text-align:center; font-size: 13px; color:#9a8ab5; margin: 2px 0 12px; }
+
+    .toys { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; min-height: 150px; align-content: center; }
+    .toy {
+      width: 108px; border-radius: 18px; padding: 14px 8px 10px; text-align: center;
+      background: #f7f4ff; position: relative; animation: pop .35s ease;
+    }
+    @keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .toy .face { font-size: 46px; line-height: 1; filter: drop-shadow(0 3px 6px var(--g)); }
+    .toy .name { font-size: 12px; font-weight: 700; margin-top: 6px; }
+    .toy .val  { font-size: 12px; color: #b8860b; font-weight: 800; }
+    .toy .tier { position: absolute; top: 6px; left: 6px; font-size: 9px; text-transform: uppercase; letter-spacing:.5px; font-weight: 800; padding: 2px 6px; border-radius: 999px; color:#fff; }
+
+    .vs { display:flex; align-items:center; justify-content:center; font-size: 34px; font-weight: 900; color:#c9b8e6; }
+
+    .verdict { width: 100%; max-width: 620px; text-align: center; margin: 18px 0 6px; }
+    .verdict .emoji { font-size: 54px; }
+    .verdict .label { font-size: 26px; font-weight: 900; margin-top: -6px; }
+    .stars { font-size: 24px; letter-spacing: 3px; }
+    .values { color:#8a79a6; font-size: 15px; margin-top: 4px; }
+    .values b.get { color:#00a152; } .values b.give { color:#e5484d; }
+
+    .buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+    button {
+      font-family: inherit; font-weight: 800; font-size: 18px; cursor: pointer;
+      border: none; border-radius: 18px; padding: 16px 26px; color:#fff;
+      transition: transform .1s; box-shadow: 0 6px 0 rgba(0,0,0,.15);
+    }
+    button:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+    .btn-accept  { background: #00c853; }
+    .btn-decline { background: #f4433f; }
+    .btn-add     { background: #3d8bfd; }
+
+    /* celebration */
+    #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+    .flash { animation: flash .5s; }
+    @keyframes flash { 0%{ filter:brightness(1);} 50%{ filter:brightness(1.4);} 100%{ filter:brightness(1);} }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="home" href="/">← looks</a>
+    <div class="coins">🪙 <span id="coins">100</span></div>
+  </div>
+  <h1>🃏 Card Duel</h1>
+  <div class="streak">Good-trade streak: <b id="streak">0</b> 🔥</div>
+
+  <div class="arena">
+    <div class="side them" id="themSide">
+      <div class="who">🦊</div>
+      <h3>Foxy offers you</h3>
+      <div class="give-label">you GET these</div>
+      <div class="toys" id="theirs"></div>
+    </div>
+    <div class="vs">⇄</div>
+    <div class="side you" id="youSide">
+      <div class="who">🧒</div>
+      <h3>You give up</h3>
+      <div class="give-label">you GIVE these</div>
+      <div class="toys" id="yours"></div>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict"></div>
+
+  <div class="buttons">
+    <button class="btn-decline" id="decline">👎 Decline</button>
+    <button class="btn-add" id="add">➕ Ask for more</button>
+    <button class="btn-accept" id="accept">👍 Accept</button>
+  </div>
+
+  <canvas id="confetti"></canvas>
+  <script type="module" src="/src/mockup-a.js"></script>
+</body>
+</html>

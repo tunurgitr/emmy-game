@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Look B: Trade Table — Emmy's Fidget Trading</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #f2ecff;
+      min-height: 100vh; padding: 16px; overflow-x: hidden;
+      background: radial-gradient(circle at 50% 0%, #3a2170 0%, #1e1440 60%, #140d2b 100%);
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .topbar { width:100%; max-width: 860px; display:flex; justify-content:space-between; align-items:center; }
+    .home { text-decoration:none; color:#c9b8ff; font-weight:600; }
+    .coins { font-size: 22px; font-weight: 800; color:#ffdf6b; }
+    h1 { font-size: clamp(22px,5vw,34px); margin: 6px 0; text-shadow: 0 2px 12px #b558f6; }
+
+    .table {
+      width: 100%; max-width: 860px; margin-top: 10px; border-radius: 28px; padding: 20px;
+      background: linear-gradient(#5a3ea8, #43308a); box-shadow: inset 0 0 40px rgba(0,0,0,.4), 0 20px 40px rgba(0,0,0,.4);
+      border: 3px solid #7b5fd6;
+    }
+    .row-label { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color:#d9ccff; margin: 4px 2px; display:flex; justify-content:space-between; }
+    .toys { display:flex; gap: 12px; flex-wrap: wrap; min-height: 130px; align-items:center; padding: 8px; border-radius: 16px; background: rgba(0,0,0,.18); }
+    .toys.you { margin-top: 12px; }
+    .toy { width: 96px; border-radius: 16px; padding: 12px 6px 8px; text-align:center; background: rgba(255,255,255,.08); border: 2px solid var(--c); box-shadow: 0 0 16px var(--g); animation: rise .3s ease; }
+    @keyframes rise { from { transform: translateY(14px) scale(.7); opacity:0;} to { transform:none; opacity:1;} }
+    .toy .face { font-size: 42px; filter: drop-shadow(0 2px 6px var(--g)); }
+    .toy .name { font-size: 11px; font-weight:700; margin-top:4px; }
+    .toy .val  { font-size: 12px; color:#ffdf6b; font-weight:800; }
+
+    .divider { text-align:center; font-size: 26px; color:#c9b8ff; margin: 6px 0; }
+
+    .meterwrap { width:100%; max-width: 860px; margin: 16px 0 4px; text-align:center; }
+    .meter { height: 22px; border-radius: 999px; background: linear-gradient(90deg,#f4433f,#ffc107,#00c853); position: relative; box-shadow: inset 0 0 6px rgba(0,0,0,.5); }
+    .needle { position:absolute; top:-8px; width: 6px; height: 38px; background:#fff; border-radius: 4px; box-shadow: 0 0 8px #fff; transition: left .35s cubic-bezier(.2,1.4,.4,1); transform: translateX(-50%); }
+    .meter-ends { display:flex; justify-content:space-between; font-size:12px; color:#c9b8ff; margin-top: 6px; }
+    .verdict { font-size: 24px; font-weight: 900; margin-top: 8px; }
+    .verdict .em { font-size: 30px; }
+    .values { color:#d9ccff; font-size: 14px; }
+    .values b.get { color:#5dffb0; } .values b.give { color:#ff8a8a; }
+
+    .buttons { display:flex; gap: 14px; flex-wrap: wrap; justify-content:center; margin-top: 14px; }
+    button { font-family: inherit; font-weight: 800; font-size: 17px; cursor: pointer; border:none; border-radius: 16px; padding: 15px 24px; color:#fff; transition: transform .1s, filter .1s; box-shadow: 0 5px 0 rgba(0,0,0,.3); }
+    button:hover { filter: brightness(1.1); } button:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+    .btn-accept { background:#00c853; } .btn-decline { background:#f4433f; } .btn-add { background:#3d8bfd; }
+
+    .shelf { width:100%; max-width: 860px; margin-top: 22px; }
+    .shelf h3 { font-size: 15px; color:#d9ccff; margin-bottom: 8px; }
+    .shelf-items { display:flex; gap:8px; flex-wrap:wrap; }
+    .chip { font-size: 26px; background: rgba(255,255,255,.08); border-radius: 12px; padding: 6px 10px; position: relative; }
+    .chip .n { position:absolute; bottom:-4px; right:-4px; font-size:11px; background:#ffdf6b; color:#3a2170; font-weight:800; border-radius:999px; padding: 0 5px; }
+    #confetti { position: fixed; inset:0; pointer-events:none; z-index: 50; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="home" href="/">← looks</a>
+    <div class="coins">🪙 <span id="coins">100</span></div>
+  </div>
+  <h1>🪵 Trade Table</h1>
+
+  <div class="table">
+    <div class="row-label"><span>🦊 Foxy puts on the table (you GET)</span><span id="getTotal">🪙 0</span></div>
+    <div class="toys them" id="theirs"></div>
+    <div class="divider">⬇ trade for ⬆</div>
+    <div class="row-label"><span>🧒 You put on the table (you GIVE)</span><span id="giveTotal">🪙 0</span></div>
+    <div class="toys you" id="yours"></div>
+  </div>
+
+  <div class="meterwrap">
+    <div class="meter"><div class="needle" id="needle" style="left:50%"></div></div>
+    <div class="meter-ends"><span>😬 Bad for you</span><span>Fair</span><span>Amazing 🤩</span></div>
+    <div class="verdict" id="verdict"></div>
+    <div class="values" id="values"></div>
+  </div>
+
+  <div class="buttons">
+    <button class="btn-decline" id="decline">Decline</button>
+    <button class="btn-add" id="add">Add a toy</button>
+    <button class="btn-accept" id="accept">Accept</button>
+  </div>
+
+  <div class="shelf">
+    <h3>🏆 Your collection</h3>
+    <div class="shelf-items" id="shelf"><span style="color:#8a79b5">Accept trades to collect toys!</span></div>
+  </div>
+
+  <canvas id="confetti"></canvas>
+  <script type="module" src="/src/mockup-b.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Emmy's Fidget Trading — Start</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 22px; padding: 24px; text-align: center;
+      background: linear-gradient(160deg, #ffe0f6 0%, #dcecff 50%, #ddffe9 100%);
+    }
+    .toys-float { font-size: 46px; letter-spacing: 6px; animation: bob 2.5s ease-in-out infinite; }
+    @keyframes bob { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-10px);} }
+    h1 { font-size: clamp(30px, 8vw, 60px); color: #4a2b6b; text-shadow: 0 3px 0 #fff; }
+    p.sub { color: #6b5a86; font-size: 18px; max-width: 520px; }
+    a.play {
+      text-decoration: none; font-weight: 900; font-size: 26px; color: #fff;
+      background: #00c853; padding: 18px 46px; border-radius: 22px;
+      box-shadow: 0 8px 0 #00993f; transition: transform .1s;
+    }
+    a.play:active { transform: translateY(5px); box-shadow: 0 3px 0 #00993f; }
+    a.mock { color: #8a79a6; text-decoration: none; font-size: 14px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="toys-float">🫧 🌀 🧊 🌈 💎 🦄 👑</div>
+  <h1>Emmy's<br>Fidget Trading</h1>
+  <p class="sub">Trade fidget toys with Foxy the fox! 🦊 Accept the deal, decline it, or ask for more — and see how good each trade is!</p>
+  <a class="play" href="/game.html">▶ Play!</a>
+  <a class="mock" href="/mockups.html">(design mockups)</a>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Emmy's Fidget Trading</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --ink:#3a2a55; --muted:#8a79a6; --gold:#b8860b; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink);
+      min-height: 100vh; padding: 14px 14px 48px; overflow-x: hidden;
+      background: linear-gradient(160deg, #ffe0f6 0%, #dcecff 50%, #ddffe9 100%);
+      background-attachment: fixed;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* top bar */
+    .topbar { width: 100%; max-width: 740px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .topbar .left { display: flex; gap: 8px; }
+    .ghost { text-decoration: none; color: var(--muted); font-weight: 700; font-size: 13px; background: rgba(255,255,255,.55); border: none; cursor: pointer; padding: 6px 12px; border-radius: 999px; font-family: inherit; }
+    .ghost:hover { background: #fff; }
+    .stats { display: flex; gap: 10px; }
+    .pill { font-weight: 800; padding: 6px 14px; border-radius: 999px; font-size: 16px; box-shadow: 0 4px 0 rgba(0,0,0,.08); }
+    .coins  { color: var(--gold); background: #fff6d6; }
+    .streak { color: #e5484d; background: #ffe1e1; }
+
+    h1 { font-size: clamp(22px, 6vw, 38px); text-align: center; margin: 6px 0 2px; text-shadow: 0 2px 0 #fff; }
+    .tagline { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+
+    /* trade table */
+    .table { width: 100%; max-width: 740px; border-radius: 28px; padding: 16px; background: #fff; box-shadow: 0 16px 40px rgba(120,80,180,.22); border: 4px solid #ffd0ee; }
+    .who-row { display: flex; align-items: center; gap: 10px; margin: 2px 4px 8px; }
+    .who-row .avatar { font-size: 30px; }
+    .who-row .avatar.pick { cursor: pointer; border: none; background: #f6f2ff; border-radius: 12px; padding: 2px 6px; }
+    .who-row .avatar.pick:hover { background: #eee3ff; }
+    .who-row .label { font-weight: 800; font-size: 15px; }
+    .who-row .sub { color: var(--muted); font-size: 12px; }
+    .who-row .total { margin-left: auto; font-weight: 800; color: var(--gold); background: #fff6d6; padding: 4px 12px; border-radius: 999px; font-size: 14px; }
+
+    /* foxy speech bubble */
+    .bubble { display: inline-flex; align-items: center; gap: 6px; background: #fff3fb; border: 2px solid #ffd0ee; color: var(--ink); font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 14px; margin-left: 6px; }
+    .bubble .mood { font-size: 20px; }
+
+    .tray { display: flex; gap: 10px; flex-wrap: wrap; align-content: center; align-items: center; min-height: 116px; padding: 12px; border-radius: 18px; }
+    .tray.get  { border: 2px dashed #7ccf9e; background: #eefcf3; }
+    .tray.give { border: 2px dashed #7fb4f6; background: #eef5ff; }
+    .tray .hint { color: var(--muted); font-size: 14px; margin: auto; text-align: center; }
+
+    .toy { width: 92px; border-radius: 16px; padding: 12px 6px 8px; text-align: center; position: relative; background: #fff; border: 3px solid var(--c); box-shadow: 0 4px 12px var(--g); animation: pop .3s ease; }
+    @keyframes pop { from { transform: scale(.4) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+    .toy .face { font-size: 42px; line-height: 1; filter: drop-shadow(0 3px 5px var(--g)); }
+    .toy .name { font-size: 11px; font-weight: 800; margin-top: 6px; }
+    .toy .val  { font-size: 12px; color: var(--gold); font-weight: 800; }
+    .toy .tier { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font-size: 8px; text-transform: uppercase; letter-spacing: .5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; color: #fff; white-space: nowrap; }
+    .toy.tap { cursor: pointer; transition: transform .1s; }
+    .toy.tap:hover { transform: translateY(-4px); }
+    .toy.tap:active { transform: scale(.94); }
+
+    .divider { text-align: center; font-size: 20px; font-weight: 800; color: #c9a6e0; margin: 10px 0; }
+
+    /* meter */
+    .meterwrap { width: 100%; max-width: 740px; margin: 16px 0 6px; text-align: center; }
+    .meter-title { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .meter { height: 20px; border-radius: 999px; background: linear-gradient(90deg,#f4433f,#ffc107 50%,#00c853); position: relative; box-shadow: inset 0 1px 4px rgba(0,0,0,.25); }
+    .needle { position: absolute; top: -7px; width: 6px; height: 34px; background: #fff; border-radius: 4px; box-shadow: 0 0 0 2px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.3); transform: translateX(-50%); transition: left .4s cubic-bezier(.2,1.5,.4,1); }
+    .meter-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .verdict { font-size: clamp(18px, 4.5vw, 26px); font-weight: 900; margin-top: 10px; }
+    .stars { font-size: 20px; letter-spacing: 2px; margin-top: 2px; }
+    .values { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .values b.get { color: #00a152; } .values b.give { color: #e5484d; }
+
+    /* buttons */
+    .buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 14px; width: 100%; max-width: 740px; }
+    button.act { flex: 1 1 auto; min-width: 130px; font-family: inherit; font-weight: 800; font-size: 17px; cursor: pointer; border: none; border-radius: 18px; padding: 15px 16px; color: #fff; transition: transform .1s, filter .1s; box-shadow: 0 6px 0 rgba(0,0,0,.18); }
+    button.act:hover { filter: brightness(1.06); }
+    button.act:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+    button.act:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.5); transform: none; box-shadow: 0 6px 0 rgba(0,0,0,.12); }
+    .btn-decline { background: #f4433f; }
+    .btn-add     { background: #3d8bfd; }
+    .btn-propose { background: #00c853; }
+
+    /* sections */
+    .section { width: 100%; max-width: 740px; margin-top: 22px; background: rgba(255,255,255,.6); border-radius: 20px; padding: 14px 16px; }
+    .section h3 { font-size: 15px; margin-bottom: 10px; }
+    .section .empty { color: var(--muted); font-size: 14px; }
+    .grid { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* shop card */
+    .shopcard { width: 100px; border-radius: 16px; padding: 10px 6px 8px; text-align: center; background: #fff; border: 3px solid var(--c); box-shadow: 0 4px 12px var(--g); }
+    .shopcard .face { font-size: 36px; filter: drop-shadow(0 3px 5px var(--g)); }
+    .shopcard .name { font-size: 11px; font-weight: 800; margin: 4px 0; }
+    .buybtn { font-family: inherit; font-weight: 800; font-size: 12px; border: none; border-radius: 10px; padding: 6px 8px; color: #fff; background: #ff9800; cursor: pointer; width: 100%; }
+    .buybtn:disabled { opacity: .4; cursor: not-allowed; }
+    .buybtn:not(:disabled):active { transform: scale(.95); }
+
+    /* avatar picker overlay */
+    #picker { position: fixed; inset: 0; background: rgba(60,40,90,.55); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 80; padding: 20px; }
+    #picker.show { display: flex; }
+    .picker-box { background: #fff; border-radius: 26px; padding: 26px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(60,40,90,.4); }
+    .picker-box h2 { font-size: 24px; color: var(--ink); margin-bottom: 6px; }
+    .picker-box p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+    .avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .avatar-opt { font-size: 40px; background: #f6f2ff; border: 3px solid transparent; border-radius: 16px; padding: 10px 0; cursor: pointer; transition: transform .1s; }
+    .avatar-opt:hover { transform: scale(1.08); border-color: #ffb020; }
+
+    /* backpack mode toggle */
+    .modes { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .mode-btn { font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer; border: 2px solid #e5d8f7; background: #fff; color: var(--muted); border-radius: 999px; padding: 8px 14px; transition: all .12s; }
+    .mode-btn:hover { border-color: #c9a6e0; }
+    .mode-btn.active { background: #b558f6; border-color: #b558f6; color: #fff; }
+    .mode-hint { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .toy .sellbadge { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 800; color: #fff; background: #ff9800; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+
+    /* fidget play zone */
+    #fidget { position: fixed; inset: 0; background: rgba(40,20,70,.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 82; padding: 20px; }
+    #fidget.show { display: flex; }
+    .fidget-box { position: relative; background: linear-gradient(160deg,#fff,#f6f2ff); border-radius: 28px; padding: 24px; width: 100%; max-width: 440px; text-align: center; box-shadow: 0 20px 60px rgba(60,40,90,.45); }
+    .fidget-close { position: absolute; top: 12px; right: 14px; border: none; background: #f0e8ff; color: var(--muted); font-weight: 800; font-size: 16px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+    .fidget-close:hover { background: #e5d8f7; }
+    .fidget-name { font-size: 20px; font-weight: 900; color: var(--ink); margin-bottom: 6px; }
+    .fidget-stage { position: relative; height: 260px; display: flex; align-items: center; justify-content: center; user-select: none; touch-action: none; overflow: hidden; border-radius: 20px; }
+    .fidget-toy { font-size: 130px; cursor: pointer; line-height: 1; filter: drop-shadow(0 8px 16px rgba(120,80,180,.4)); user-select: none; -webkit-user-select: none; }
+    .fidget-tip { color: var(--muted); font-size: 14px; margin-top: 8px; font-weight: 700; }
+
+    /* pop-it grid */
+    .popgrid { display: grid; gap: 8px; }
+    .bubble { border: none; border-radius: 50%; cursor: pointer; background: radial-gradient(circle at 35% 30%, #fff, var(--bc) 70%); box-shadow: 0 4px 8px rgba(0,0,0,.18), inset 0 -3px 5px rgba(0,0,0,.15); transition: transform .07s; }
+    .bubble:active { transform: scale(.8); }
+    .bubble.popped { background: radial-gradient(circle at 50% 60%, rgba(0,0,0,.22), var(--bc) 75%); box-shadow: inset 0 4px 8px rgba(0,0,0,.4); transform: scale(.86) translateY(2px); cursor: default; }
+
+    /* floating combo number + particles */
+    .combo-num { position: absolute; font-weight: 900; font-size: 40px; pointer-events: none; animation: combo-fly .7s ease-out forwards; text-shadow: 0 2px 6px rgba(0,0,0,.2); }
+    @keyframes combo-fly { from{opacity:1;transform:translateY(0) scale(1);} to{opacity:0;transform:translateY(-70px) scale(1.6);} }
+    .ripple { position: absolute; border: 3px solid #b558f6; border-radius: 50%; pointer-events: none; width: 20px; height: 20px; transform: translate(-50%,-50%) scale(0); animation: ripple-out .5s ease-out forwards; }
+    @keyframes ripple-out { from{opacity:.8;transform:translate(-50%,-50%) scale(0);} to{opacity:0;transform:translate(-50%,-50%) scale(6);} }
+    .sparkle { position: absolute; font-size: 22px; pointer-events: none; animation: sparkle-fly .7s ease-out forwards; }
+    @keyframes sparkle-fly { from{opacity:1;transform:translate(0,0) scale(1);} to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.4);} }
+    /* one-shot combo pulse */
+    @keyframes fx-pulse { 0%{transform:scale(1);} 45%{transform:scale(1.35);} 100%{transform:scale(1);} }
+    .fx-pulse { animation: fx-pulse .18s ease; }
+    @keyframes fx-wobble { 0%{transform:scaleY(.7) scaleX(1.2);} 40%{transform:scaleY(1.15) scaleX(.9);} 70%{transform:scaleY(.95) scaleX(1.03);} 100%{transform:scale(1);} }
+    .fx-wobble { animation: fx-wobble .5s ease; }
+
+    /* rarity guide */
+    #guide { position: fixed; inset: 0; background: rgba(40,20,70,.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 84; padding: 20px; }
+    #guide.show { display: flex; }
+    .guide-box { position: relative; background: #fff; border-radius: 26px; padding: 24px; width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(60,40,90,.45); }
+    .guide-close { position: absolute; top: 12px; right: 14px; border: none; background: #f0e8ff; color: var(--muted); font-weight: 800; font-size: 16px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+    .guide-box h2 { font-size: 24px; color: var(--ink); margin-bottom: 6px; }
+    .guide-box p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+    .guide-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; margin-bottom: 8px; background: #faf8ff; border-left: 8px solid var(--c); }
+    .guide-row .g-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--g); flex-shrink: 0; }
+    .guide-row .g-info { flex: 1; text-align: left; }
+    .guide-row .g-label { font-weight: 900; color: var(--ink); font-size: 15px; }
+    .guide-row .g-meta { font-size: 12px; color: var(--muted); }
+    .guide-row .g-emojis { font-size: 18px; letter-spacing: 1px; }
+    .guide-row .g-count { font-weight: 800; font-size: 13px; color: var(--gold); background: #fff6d6; padding: 3px 10px; border-radius: 999px; flex-shrink: 0; }
+
+    /* toast */
+    #toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-90px); background: #fff; color: var(--ink); font-weight: 800; padding: 12px 20px; border-radius: 999px; box-shadow: 0 10px 30px rgba(120,80,180,.35); opacity: 0; transition: transform .35s, opacity .35s; z-index: 70; font-size: 15px; text-align: center; max-width: 90vw; }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+
+    /* ---- touch / iPad friendliness ---- */
+    html { -webkit-text-size-adjust: 100%; }
+    body { -webkit-tap-highlight-color: transparent; }
+    button, .toy.tap, .bubble, .shopcard, .avatar-opt { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+    /* bigger, comfier tap targets & layout on tablets */
+    @media (min-width: 700px) {
+      .table, .meterwrap, .buttons, .section, .topbar { max-width: 820px; }
+      h1 { font-size: 42px; }
+      .toy { width: 104px; }
+      .toy .face { font-size: 48px; }
+      button.act { font-size: 19px; padding: 18px; }
+      .mode-btn { font-size: 14px; padding: 10px 18px; }
+      .shopcard { width: 112px; }
+      .grid { gap: 12px; }
+    }
+    /* landscape iPad: use the extra width, keep everything on one comfortable column */
+    @media (min-width: 700px) and (orientation: landscape) {
+      body { padding-top: 20px; }
+      .fidget-box, .guide-box { max-width: 520px; }
+      .fidget-stage { height: 300px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="left">
+      <button class="ghost" id="guideBtn" title="Rarity guide">📖 Guide</button>
+      <button class="ghost" id="reset">↻ Start over</button>
+      <button class="ghost" id="mute" title="Sound on/off">🔊</button>
+    </div>
+    <div class="stats">
+      <div class="pill streak">🔥 <span id="streak">0</span></div>
+      <div class="pill coins">🪙 <span id="coins">0</span></div>
+    </div>
+  </div>
+
+  <h1>🎉 Emmy's Fidget Trading 🎉</h1>
+  <div class="tagline">Build a trade Foxy will accept! 🦊</div>
+
+  <div class="table">
+    <div class="who-row">
+      <span class="avatar">🦊</span>
+      <div>
+        <div class="label">Foxy gives you</div>
+        <div class="sub">you GET these toys</div>
+      </div>
+      <span class="total" id="getTotal">🪙 0</span>
+    </div>
+    <div class="tray get" id="theirs"></div>
+
+    <div class="who-row" style="margin-top:10px">
+      <span class="bubble"><span class="mood" id="foxyMood">🦊</span><span id="foxyLine">What will you give me?</span></span>
+    </div>
+
+    <div class="divider">⬇ you offer ⬆</div>
+
+    <div class="who-row">
+      <button class="avatar pick" id="playerAvatar" title="Change your character">🧒</button>
+      <div>
+        <div class="label">You give up</div>
+        <div class="sub">tap your toys below to offer them</div>
+      </div>
+      <span class="total" id="giveTotal">🪙 0</span>
+    </div>
+    <div class="tray give" id="giveTray"></div>
+  </div>
+
+  <div class="meterwrap">
+    <div class="meter-title">Is this a good deal for you?</div>
+    <div class="meter"><div class="needle" id="needle" style="left:50%"></div></div>
+    <div class="meter-ends"><span>😬 Bad for you</span><span>🙂 Fair</span><span>Amazing 🤩</span></div>
+    <div class="verdict" id="verdict"></div>
+    <div class="stars" id="stars"></div>
+    <div class="values" id="values"></div>
+  </div>
+
+  <div class="buttons">
+    <button class="act btn-decline" id="decline">👋 No thanks</button>
+    <button class="act btn-add" id="add">➕ Ask for more</button>
+    <button class="act btn-propose" id="propose">🤝 Propose Trade</button>
+  </div>
+
+  <div class="section">
+    <h3>🎒 Your Backpack <span id="bagCount" style="color:var(--muted);font-weight:600;font-size:13px"></span></h3>
+    <div class="modes" id="modes">
+      <button class="mode-btn active" data-mode="trade">🤝 Add to trade</button>
+      <button class="mode-btn" data-mode="play">🎮 Play with it</button>
+      <button class="mode-btn" data-mode="sell">💰 Sell for coins</button>
+    </div>
+    <div class="mode-hint" id="modeHint">Tap a toy to add it to your trade offer.</div>
+    <div class="grid" id="backpack"></div>
+  </div>
+
+  <div class="section">
+    <h3>🛒 Foxy's Shop <button class="ghost" id="restock" style="margin-left:6px">🔄 New stock (🪙10)</button></h3>
+    <div class="grid" id="shop"></div>
+  </div>
+
+  <div id="picker">
+    <div class="picker-box">
+      <h2>Pick your character!</h2>
+      <p>Who do you want to be? (You can change it later.)</p>
+      <div class="avatar-grid" id="avatarGrid"></div>
+    </div>
+  </div>
+
+  <div id="fidget">
+    <div class="fidget-box">
+      <button class="fidget-close" id="fidgetClose">✕</button>
+      <div class="fidget-name" id="fidgetName"></div>
+      <div class="fidget-stage" id="fidgetStage"></div>
+      <div class="fidget-tip" id="fidgetTip">👆 Play with your toy!</div>
+    </div>
+  </div>
+
+  <div id="guide">
+    <div class="guide-box">
+      <button class="guide-close" id="guideClose">✕</button>
+      <h2>📖 Rarity Guide</h2>
+      <p>The rarer the toy, the more it's worth! Rare toys are much harder to find. 💎</p>
+      <div id="guideList"></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <canvas id="confetti"></canvas>
+  <script type="module" src="/src/game.js"></script>
+</body>
+</html>
