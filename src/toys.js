@@ -11,61 +11,68 @@ export const TIERS = {
   cosmic:    { label: "Cosmic",    color: "#00e5d0", glow: "rgba(0,229,208,.95)" },
 };
 
-// `play` = how the toy behaves in the tap-to-play Fidget Zone:
-//   pop | spin | squish | click | shake  (more added below)
+// `play` = one of 12 Fidget-Zone interactions:
+//   grid | flick | stretch | combo | piano | windup | shower | squeeze | pet | stack | snow | peel
+// `parts` = optional themed particle emoji for that toy (defaults per interaction otherwise).
 export const TOYS = [
   // ---- Common ----
-  { id: "popit",     name: "Pop It",          emoji: "🫧",  value: 8,   tier: "common",    play: "pop" },
-  { id: "simple",    name: "Simple Dimple",   emoji: "🟣",  value: 10,  tier: "common",    play: "pop" },
-  { id: "marble",    name: "Squishy Ball",    emoji: "🔵",  value: 12,  tier: "common",    play: "squish" },
-  { id: "bubble",    name: "Bubble Wrap",     emoji: "🧼",  value: 14,  tier: "common",    play: "pop" },
-  { id: "stressball",name: "Stress Ball",     emoji: "🎾",  value: 11,  tier: "common",    play: "squish" },
-  { id: "pebble",    name: "Worry Stone",     emoji: "🪨",  value: 9,   tier: "common",    play: "shake" },
-  { id: "pushpop",   name: "Push Popper",     emoji: "🔴",  value: 13,  tier: "common",    play: "pop" },
-  { id: "beadring",  name: "Bead Ring",       emoji: "⭕",  value: 15,  tier: "common",    play: "spin" },
-  { id: "putty",     name: "Silly Putty",     emoji: "🟩",  value: 16,  tier: "common",    play: "squish" },
+  { id: "popit",     name: "Pop It",          emoji: "🫧",  value: 8,   tier: "common",    play: "grid" },
+  { id: "simple",    name: "Simple Dimple",   emoji: "🟣",  value: 10,  tier: "common",    play: "grid" },
+  { id: "marble",    name: "Squishy Ball",    emoji: "🔵",  value: 12,  tier: "common",    play: "squeeze", parts: ["💧","🔵"] },
+  { id: "bubble",    name: "Bubble Wrap",     emoji: "🧇",  value: 14,  tier: "common",    play: "shower" },
+  { id: "stressball",name: "Stress Ball",     emoji: "🎾",  value: 11,  tier: "common",    play: "stretch" },
+  { id: "pebble",    name: "Worry Stone",     emoji: "🪨",  value: 9,   tier: "common",    play: "pet" },
+  { id: "pushpop",   name: "Push Popper",     emoji: "🔴",  value: 13,  tier: "common",    play: "combo" },
+  { id: "beadring",  name: "Bead Ring",       emoji: "🔮",  value: 15,  tier: "common",    play: "pet" },
+  { id: "putty",     name: "Silly Putty",     emoji: "🟩",  value: 16,  tier: "common",    play: "peel" },
+  { id: "noodle",    name: "Stretchy Noodle", emoji: "🍜",  value: 17,  tier: "common",    play: "stretch" },
+  { id: "stickyhand",name: "Sticky Hand",     emoji: "🖐️",  value: 14,  tier: "common",    play: "peel" },
   // ---- Uncommon ----
-  { id: "spinner",   name: "Fidget Spinner",  emoji: "🌀",  value: 24,  tier: "uncommon",  play: "spin" },
-  { id: "cube",      name: "Infinity Cube",   emoji: "🧊",  value: 28,  tier: "uncommon",  play: "click" },
-  { id: "tangle",    name: "Tangle",          emoji: "🔗",  value: 26,  tier: "uncommon",  play: "shake" },
-  { id: "gear",      name: "Spinny Gears",    emoji: "⚙️",  value: 32,  tier: "uncommon",  play: "spin" },
-  { id: "clickpen",  name: "Clicky Pen",      emoji: "🖊️",  value: 30,  tier: "uncommon",  play: "click" },
-  { id: "dice",      name: "Fidget Dice",     emoji: "🎲",  value: 34,  tier: "uncommon",  play: "click" },
-  { id: "mochi",     name: "Mochi Squish",    emoji: "🍡",  value: 36,  tier: "uncommon",  play: "squish" },
-  { id: "snap",      name: "Snap Bracelet",   emoji: "⌚",  value: 22,  tier: "uncommon",  play: "shake" },
-  { id: "maze",      name: "Marble Maze",     emoji: "🟨",  value: 38,  tier: "uncommon",  play: "shake" },
+  { id: "spinner",   name: "Fidget Spinner",  emoji: "🌀",  value: 24,  tier: "uncommon",  play: "flick" },
+  { id: "cube",      name: "Infinity Cube",   emoji: "🧊",  value: 28,  tier: "uncommon",  play: "combo" },
+  { id: "tangle",    name: "Tangle",          emoji: "🔗",  value: 26,  tier: "uncommon",  play: "windup" },
+  { id: "gear",      name: "Spinny Gears",    emoji: "⚙️",  value: 32,  tier: "uncommon",  play: "windup" },
+  { id: "clickpen",  name: "Clicky Pen",      emoji: "🖊️",  value: 30,  tier: "uncommon",  play: "combo" },
+  { id: "dice",      name: "Fidget Dice",     emoji: "🎲",  value: 34,  tier: "uncommon",  play: "stack" },
+  { id: "mochi",     name: "Mochi Squish",    emoji: "🍡",  value: 36,  tier: "uncommon",  play: "squeeze", parts: ["🍡","🌸"] },
+  { id: "snap",      name: "Snap Bracelet",   emoji: "⌚",  value: 22,  tier: "uncommon",  play: "stretch" },
+  { id: "maze",      name: "Marble Maze",     emoji: "🟨",  value: 38,  tier: "uncommon",  play: "pet" },
+  { id: "chimes",    name: "Wacky Chimes",    emoji: "🎐",  value: 40,  tier: "uncommon",  play: "windup" },
   // ---- Rare ----
-  { id: "slinky",    name: "Rainbow Slinky",  emoji: "🌈",  value: 55,  tier: "rare",      play: "shake" },
-  { id: "magnet",    name: "Magnet Balls",    emoji: "🧲",  value: 60,  tier: "rare",      play: "click" },
-  { id: "boink",     name: "Springy Boink",   emoji: "🎈",  value: 48,  tier: "rare",      play: "squish" },
-  { id: "sand",      name: "Kinetic Sand",    emoji: "⏳",  value: 52,  tier: "rare",      play: "squish" },
-  { id: "cradle",    name: "Newton's Cradle", emoji: "🎱",  value: 64,  tier: "rare",      play: "click" },
-  { id: "wave",      name: "Liquid Motion",   emoji: "🌊",  value: 68,  tier: "rare",      play: "shake" },
-  { id: "spinring",  name: "Spinner Ring",    emoji: "💍",  value: 58,  tier: "rare",      play: "spin" },
+  { id: "slinky",    name: "Rainbow Slinky",  emoji: "🌈",  value: 55,  tier: "rare",      play: "stretch" },
+  { id: "magnet",    name: "Magnet Balls",    emoji: "🧲",  value: 60,  tier: "rare",      play: "stack", parts: ["⚫","✨"] },
+  { id: "boink",     name: "Springy Boink",   emoji: "🎈",  value: 48,  tier: "rare",      play: "combo" },
+  { id: "sand",      name: "Kinetic Sand",    emoji: "⏳",  value: 52,  tier: "rare",      play: "snow", parts: ["✨","🟤"] },
+  { id: "cradle",    name: "Newton's Cradle", emoji: "🎱",  value: 64,  tier: "rare",      play: "piano" },
+  { id: "wave",      name: "Liquid Motion",   emoji: "🌊",  value: 68,  tier: "rare",      play: "snow", parts: ["💧","🔵","🟣"] },
+  { id: "spinring",  name: "Spinner Ring",    emoji: "💍",  value: 58,  tier: "rare",      play: "flick" },
+  { id: "yoyo",      name: "Trick Yo-Yo",     emoji: "🪀",  value: 62,  tier: "rare",      play: "flick" },
   // ---- Epic ----
-  { id: "galaxy",    name: "Galaxy Pop It",   emoji: "🌌",  value: 95,  tier: "epic",      play: "pop" },
-  { id: "unicorn",   name: "Unicorn Squish",  emoji: "🦄",  value: 110, tier: "epic",      play: "squish" },
-  { id: "robot",     name: "Robot Spinner",   emoji: "🤖",  value: 130, tier: "epic",      play: "spin" },
-  { id: "lavalamp",  name: "Lava Lamp",       emoji: "🔮",  value: 120, tier: "epic",      play: "shake" },
-  { id: "musicbox",  name: "Music Box",       emoji: "🎵",  value: 105, tier: "epic",      play: "click" },
-  { id: "kaleido",   name: "Kaleidoscope",    emoji: "🔭",  value: 140, tier: "epic",      play: "spin" },
+  { id: "galaxy",    name: "Galaxy Pop It",   emoji: "🌌",  value: 95,  tier: "epic",      play: "grid",    parts: ["⭐","🌟","💫"] },
+  { id: "unicorn",   name: "Unicorn Squish",  emoji: "🦄",  value: 110, tier: "epic",      play: "squeeze", parts: ["🌈","⭐","🦄"] },
+  { id: "robot",     name: "Robot Spinner",   emoji: "🤖",  value: 130, tier: "epic",      play: "windup",  parts: ["🔩","⚡","💨"] },
+  { id: "lavalamp",  name: "Lava Lamp",       emoji: "🫙",  value: 120, tier: "epic",      play: "snow",    parts: ["🔴","🟠","🟣"] },
+  { id: "musicbox",  name: "Music Box",       emoji: "🎵",  value: 105, tier: "epic",      play: "piano" },
+  { id: "kaleido",   name: "Kaleidoscope",    emoji: "🔭",  value: 140, tier: "epic",      play: "snow",    parts: ["🔺","🔷","⭐","🟡"] },
+  { id: "goojar",    name: "Goo Jar",         emoji: "🧴",  value: 115, tier: "epic",      play: "squeeze", parts: ["🟢","💚","✨"] },
   // ---- Legendary ----
-  { id: "diamond",   name: "Diamond Fidget",  emoji: "💎",  value: 200, tier: "legendary", play: "click" },
-  { id: "crown",     name: "Golden Crown",    emoji: "👑",  value: 250, tier: "legendary", play: "shake" },
-  { id: "trophy",    name: "Trophy Spinner",  emoji: "🏆",  value: 230, tier: "legendary", play: "spin" },
-  { id: "chest",     name: "Treasure Chest",  emoji: "🎁",  value: 280, tier: "legendary", play: "click" },
-  { id: "lamp",      name: "Magic Lamp",      emoji: "🪔",  value: 300, tier: "legendary", play: "shake" },
+  { id: "diamond",   name: "Diamond Fidget",  emoji: "💎",  value: 200, tier: "legendary", play: "grid",    parts: ["💎","✨"] },
+  { id: "crown",     name: "Golden Crown",    emoji: "👑",  value: 250, tier: "legendary", play: "stack",   parts: ["👑","🪙"] },
+  { id: "trophy",    name: "Trophy Spinner",  emoji: "🏆",  value: 230, tier: "legendary", play: "flick",   parts: ["🎊","🏆"] },
+  { id: "chest",     name: "Treasure Chest",  emoji: "🎁",  value: 280, tier: "legendary", play: "peel",    parts: ["🪙","💎","👑"] },
+  { id: "lamp",      name: "Magic Lamp",      emoji: "🪔",  value: 300, tier: "legendary", play: "windup",  parts: ["💨","✨","🧞"] },
+  { id: "orb",       name: "Crystal Orb",     emoji: "🔷",  value: 240, tier: "legendary", play: "piano" },
   // ---- Mythic ----
-  { id: "phoenix",   name: "Phoenix Popper",  emoji: "🔥",  value: 380, tier: "mythic",    play: "pop" },
-  { id: "rainbowd",  name: "Rainbow Dragon",  emoji: "🐉",  value: 460, tier: "mythic",    play: "shake" },
-  { id: "fairy",     name: "Fairy Dust",      emoji: "✨",  value: 420, tier: "mythic",    play: "pop" },
-  { id: "mermaid",   name: "Mermaid Tail",    emoji: "🧜‍♀️", value: 500, tier: "mythic",    play: "squish" },
+  { id: "phoenix",   name: "Phoenix Popper",  emoji: "🔥",  value: 380, tier: "mythic",    play: "squeeze", parts: ["🔥","🪶","🐣"] },
+  { id: "rainbowd",  name: "Rainbow Dragon",  emoji: "🐉",  value: 460, tier: "mythic",    play: "pet",     parts: ["🌈","❤️","✨"] },
+  { id: "fairy",     name: "Fairy Dust",      emoji: "✨",  value: 420, tier: "mythic",    play: "shower",  parts: ["✨","⭐","🧚"] },
+  { id: "mermaid",   name: "Mermaid Tail",    emoji: "🧜‍♀️", value: 500, tier: "mythic",    play: "peel",    parts: ["🐚","🫧","🦪"] },
   // ---- Cosmic ----
-  { id: "blackhole", name: "Black Hole Cube", emoji: "🕳️",  value: 720, tier: "cosmic",    play: "spin" },
-  { id: "star",      name: "Shooting Star",   emoji: "⭐",  value: 900, tier: "cosmic",    play: "squish" },
-  { id: "saturn",    name: "Saturn Spinner",  emoji: "🪐",  value: 800, tier: "cosmic",    play: "spin" },
-  { id: "comet",     name: "Comet Streak",    emoji: "☄️",  value: 1000,tier: "cosmic",    play: "shake" },
-  { id: "alien",     name: "Alien Cube",      emoji: "👽",  value: 1100,tier: "cosmic",    play: "click" },
+  { id: "blackhole", name: "Black Hole Cube", emoji: "🕳️",  value: 720, tier: "cosmic",    play: "squeeze", parts: ["🌌","⭐","💫"], invert: true },
+  { id: "star",      name: "Shooting Star",   emoji: "⭐",  value: 900, tier: "cosmic",    play: "shower",  parts: ["⭐","🌠","💫"] },
+  { id: "saturn",    name: "Saturn Spinner",  emoji: "🪐",  value: 800, tier: "cosmic",    play: "flick",   parts: ["💫","🧊"] },
+  { id: "comet",     name: "Comet Streak",    emoji: "☄️",  value: 1000,tier: "cosmic",    play: "combo",   parts: ["☄️","✨"] },
+  { id: "alien",     name: "Alien Cube",      emoji: "👽",  value: 1100,tier: "cosmic",    play: "piano" },
 ];
 
 export const byId = (id) => TOYS.find((t) => t.id === id);
@@ -124,19 +131,22 @@ export const TONE_COLORS = {
 // Player avatar choices for the character picker.
 export const AVATARS = ["👧", "🧒", "👦", "🧑", "👩‍🦰", "🧑‍🦱", "👩‍🦱", "🐱", "🐰", "🦄", "🐶", "🐼"];
 
-// Rarity weights so Foxy mostly offers modest toys. Rare+ are genuinely scarce
-// now — commons/uncommons dominate, and the top tiers are a real treat.
+// Base rarity weights (used for the shop): commons/uncommons dominate, top tiers scarce.
 const RARITY_WEIGHT = { common: 50, uncommon: 30, rare: 8, epic: 4, legendary: 1.6, mythic: 0.6, cosmic: 0.2 };
+// Foxy's TRADE OFFERS skew toward nicer toys — she's a generous trading buddy,
+// so rares/epics show up often and even legendaries+ aren't rare treats here.
+const FOXY_OFFER_WEIGHT = { common: 22, uncommon: 26, rare: 22, epic: 14, legendary: 9, mythic: 5, cosmic: 2 };
 
-export function weightedToy() {
-  const total = TOYS.reduce((n, t) => n + RARITY_WEIGHT[t.tier], 0);
+export function weightedToy(weights = RARITY_WEIGHT) {
+  const total = TOYS.reduce((n, t) => n + weights[t.tier], 0);
   let r = rand() * total;
   for (const t of TOYS) {
-    r -= RARITY_WEIGHT[t.tier];
+    r -= weights[t.tier];
     if (r <= 0) return t;
   }
   return TOYS[0];
 }
+export const foxyOfferToy = () => weightedToy(FOXY_OFFER_WEIGHT);
 
 // The toys the player owns when they first start.
 export function starterToys() {
@@ -146,8 +156,8 @@ export function starterToys() {
 // Foxy's offer: the toys she puts down, plus a HIDDEN fair price she wants back.
 // wantValue is what you must match (in coin value) for her to say yes.
 export function makeFoxyOffer() {
-  const theirs = [weightedToy()];
-  if (rand() > 0.5) theirs.push(weightedToy());
+  const theirs = [foxyOfferToy()];
+  if (rand() > 0.5) theirs.push(foxyOfferToy());
   const worth = sum(theirs);
   // Foxy is friendly and mostly asks for a fair-or-generous price now, so the
   // player usually breaks even or comes out ahead (game is easier).
@@ -205,7 +215,7 @@ export function sellPrice(toy) {
   return Math.max(1, Math.round(toy.value * 0.5));
 }
 
-// Shop stock: 4 distinct toys. Buying costs ~1.3x value, so trading is smarter.
+// Shop stock: 4 distinct toys. Buying costs ~1.1x value now (friendlier prices).
 export function makeShopStock() {
   const chosen = [];
   let guard = 0;
@@ -213,5 +223,5 @@ export function makeShopStock() {
     const t = weightedToy();
     if (!chosen.some((c) => c.id === t.id)) chosen.push(t);
   }
-  return chosen.map((t) => ({ id: t.id, price: Math.ceil(t.value * 1.3) }));
+  return chosen.map((t) => ({ id: t.id, price: Math.ceil(t.value * 1.1) }));
 }

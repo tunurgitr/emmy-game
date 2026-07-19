@@ -163,6 +163,61 @@
 
     #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
 
+    /* chat / haggle buttons in Foxy's speech bubble */
+    .chat-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chat-buttons:empty { display: none; }
+    .chat-btn { flex: 1 1 auto; min-width: 110px; font-family: inherit; font-weight: 800; font-size: 15px; cursor: pointer; border: none; border-radius: 14px; padding: 12px 14px; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.15); transition: transform .1s; }
+    .chat-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.15); }
+    .chat-btn.deal { background: #00c853; } .chat-btn.hag { background: #ff9800; } .chat-btn.no { background: #9aa; }
+    .bubble .offer { font-size: 18px; font-weight: 900; color: var(--gold); }
+    .bubble .offer.bump { animation: fx-pulse .25s ease; }
+
+    /* meter hide */
+    .meter-toggle { display: inline-block; margin-bottom: 8px; }
+    #meterBody.hidden { display: none; }
+
+    /* mystery boxes */
+    .box-banner { background: #fff6d6; color: #7a5c00; font-weight: 800; font-size: 14px; padding: 10px 14px; border-radius: 14px; margin-bottom: 10px; text-align: center; }
+    .box-banner.ready { background: #d6ffe0; color: #0a7a3a; cursor: pointer; }
+    .lucky-wrap { margin-bottom: 12px; }
+    .lucky-label { font-size: 13px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+    .lucky-bar { height: 14px; background: #e5d8f7; border-radius: 999px; overflow: hidden; }
+    .lucky-fill { height: 100%; background: linear-gradient(90deg,#7cd88f,#3d8bfd); border-radius: 999px; transition: width .3s; }
+    .box-grid { align-items: stretch; }
+    .boxcard { flex: 1 1 150px; max-width: 210px; border-radius: 20px; padding: 14px; text-align: center; background: #fff; border: 3px solid var(--c); box-shadow: 0 6px 18px var(--g); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .boxcard .bx { font-size: 52px; animation: bob 2.6s ease-in-out infinite; }
+    @keyframes bob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
+    .boxcard .bname { font-weight: 900; font-size: 15px; }
+    .boxcard .bodds { font-size: 11px; color: var(--muted); line-height: 1.35; }
+    .boxbuy { font-family: inherit; font-weight: 800; font-size: 14px; border: none; border-radius: 12px; padding: 10px 12px; color: #fff; background: #b558f6; cursor: pointer; width: 100%; }
+    .boxbuy:disabled { opacity: .4; cursor: not-allowed; }
+    .boxbuy:not(:disabled):active { transform: scale(.96); }
+
+    /* box opening overlay */
+    #boxOpen { position: fixed; inset: 0; background: rgba(20,10,40,.94); display: none; align-items: center; justify-content: center; z-index: 90; }
+    #boxOpen.show { display: flex; }
+    .box-stage { text-align: center; position: relative; width: 100%; max-width: 420px; padding: 20px; }
+    .box-emoji { font-size: 120px; line-height: 1; }
+    .box-emoji.drop { animation: box-drop .5s cubic-bezier(.3,1.4,.5,1); }
+    @keyframes box-drop { from{transform:translateY(-60vh);} 60%{transform:translateY(0);} 80%{transform:translateY(-4vh);} to{transform:translateY(0);} }
+    .box-emoji.shaking { animation: box-shake .18s ease-in-out infinite; }
+    @keyframes box-shake { 0%,100%{transform:rotate(0);} 25%{transform:rotate(-9deg) translateX(-5px);} 75%{transform:rotate(9deg) translateX(5px);} }
+    .box-reveal { margin-top: 6px; min-height: 40px; color: #fff; }
+    .box-reveal .rtoy { font-size: 110px; display: inline-block; animation: reveal-in .5s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes reveal-in { from{transform:scale(0) rotate(-40deg);opacity:0;} to{transform:scale(1);opacity:1;} }
+    .box-reveal .rname { font-size: 24px; font-weight: 900; margin-top: 4px; }
+    .box-reveal .rpill { display: inline-block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #fff; padding: 4px 12px; border-radius: 999px; margin-top: 6px; }
+    .box-reveal .rnew { display: inline-block; background: #ffd54a; color: #7a5c00; font-weight: 900; padding: 3px 10px; border-radius: 999px; margin-left: 8px; animation: fx-pulse .5s ease infinite; }
+    .box-banner-big { font-size: 30px; font-weight: 900; margin-top: 8px; animation: slam-in .35s cubic-bezier(.2,1.6,.4,1); }
+    @keyframes slam-in { from{transform:scale(3);opacity:0;} to{transform:scale(1);opacity:1;} }
+    .box-actions { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+    .box-actions button { font-family: inherit; font-weight: 800; font-size: 16px; border: none; border-radius: 16px; padding: 14px 22px; color: #fff; cursor: pointer; }
+    .box-glow { position: absolute; inset: 0; pointer-events: none; border-radius: 30px; transition: box-shadow .2s; }
+
+    #foxyEditor { position: fixed; inset: 0; background: rgba(40,20,70,.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 84; padding: 20px; }
+    #foxyEditor.show { display: flex; }
+    #foxyNameInput { width: 100%; margin-top: 14px; padding: 12px 14px; border: 2px solid #e5d8f7; border-radius: 14px; font-family: inherit; font-size: 16px; text-align: center; }
+
     /* ---- touch / iPad friendliness ---- */
     html { -webkit-text-size-adjust: 100%; }
     body { -webkit-tap-highlight-color: transparent; }
@@ -203,21 +258,22 @@
   </div>
 
   <h1>🎉 Emmy's Fidget Trading 🎉</h1>
-  <div class="tagline">Build a trade Foxy will accept! 🦊</div>
+  <div class="tagline" id="tagline">Build a trade Foxy will accept! 🦊</div>
 
   <div class="table">
     <div class="who-row">
-      <span class="avatar">🦊</span>
+      <button class="avatar pick" id="foxyAvatar" title="Change your trading buddy">🦊</button>
       <div>
-        <div class="label">Foxy gives you</div>
+        <div class="label"><span id="foxyLabel">Foxy</span> gives you</div>
         <div class="sub">you GET these toys</div>
       </div>
       <span class="total" id="getTotal">🪙 0</span>
     </div>
     <div class="tray get" id="theirs"></div>
 
-    <div class="who-row" style="margin-top:10px">
+    <div class="who-row" id="foxyBubbleRow" style="margin-top:10px; flex-direction:column; align-items:stretch; gap:8px;">
       <span class="bubble"><span class="mood" id="foxyMood">🦊</span><span id="foxyLine">What will you give me?</span></span>
+      <div class="chat-buttons" id="chatButtons"></div>
     </div>
 
     <div class="divider">⬇ you offer ⬆</div>
@@ -234,12 +290,15 @@
   </div>
 
   <div class="meterwrap">
-    <div class="meter-title">Is this a good deal for you?</div>
-    <div class="meter"><div class="needle" id="needle" style="left:50%"></div></div>
-    <div class="meter-ends"><span>😬 Bad for you</span><span>🙂 Fair</span><span>Amazing 🤩</span></div>
-    <div class="verdict" id="verdict"></div>
-    <div class="stars" id="stars"></div>
-    <div class="values" id="values"></div>
+    <button class="ghost meter-toggle" id="meterToggle">🙈 Hide deal meter</button>
+    <div id="meterBody">
+      <div class="meter-title">Is this a good deal for you?</div>
+      <div class="meter"><div class="needle" id="needle" style="left:50%"></div></div>
+      <div class="meter-ends"><span>😬 Bad for you</span><span>🙂 Fair</span><span>Amazing 🤩</span></div>
+      <div class="verdict" id="verdict"></div>
+      <div class="stars" id="stars"></div>
+      <div class="values" id="values"></div>
+    </div>
   </div>
 
   <div class="buttons">
@@ -260,8 +319,18 @@
   </div>
 
   <div class="section">
-    <h3>🛒 Foxy's Shop <button class="ghost" id="restock" style="margin-left:6px">🔄 New stock (🪙10)</button></h3>
+    <h3>🛒 <span id="shopTitle">Foxy's</span> Shop <button class="ghost" id="restock" style="margin-left:6px">🔄 New stock (🪙10)</button></h3>
     <div class="grid" id="shop"></div>
+  </div>
+
+  <div class="section">
+    <h3>📦 Mystery Boxes</h3>
+    <div class="box-banner" id="boxBanner"></div>
+    <div class="lucky-wrap">
+      <div class="lucky-label">🍀 Lucky Meter — <span id="luckyText"></span></div>
+      <div class="lucky-bar"><div class="lucky-fill" id="luckyFill"></div></div>
+    </div>
+    <div class="grid box-grid" id="boxes"></div>
   </div>
 
   <div id="picker">
@@ -287,6 +356,25 @@
       <h2>📖 Rarity Guide</h2>
       <p>The rarer the toy, the more it's worth! Rare toys are much harder to find. 💎</p>
       <div id="guideList"></div>
+    </div>
+  </div>
+
+  <div id="foxyEditor">
+    <div class="picker-box">
+      <button class="guide-close" id="foxyEditClose">✕</button>
+      <h2>Your Trading Buddy</h2>
+      <p>Pick a character and give them a name!</p>
+      <div class="avatar-grid" id="foxyGrid"></div>
+      <input type="text" id="foxyNameInput" maxlength="14" placeholder="Name" />
+      <button class="act btn-propose" id="foxySave" style="width:100%;margin-top:14px">Save</button>
+    </div>
+  </div>
+
+  <div id="boxOpen">
+    <div class="box-stage">
+      <div class="box-emoji" id="boxEmoji">📦</div>
+      <div class="box-reveal" id="boxReveal"></div>
+      <div class="box-actions" id="boxActions"></div>
     </div>
   </div>
 
