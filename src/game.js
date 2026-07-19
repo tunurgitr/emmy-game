@@ -50,24 +50,35 @@ const SFX = {
   shake:  () => { for (let i = 0; i < 4; i++) tone(300 + i * 60, 0.05, { type: "triangle", vol: 0.1, when: i * 0.05 }); },
 };
 
-// ---- gentle background music (generated, loops; respects mute) ----
-let musicOn = localStorage.getItem("emmy.music") !== "0"; // default on
-let musicTimer = 0, musicStep = 0, musicStarted = false;
-// a calm, sweet loop: a bouncy pentatonic melody over a soft two-chord bass
-const MEL  = [523, 659, 784, 659, 587, 784, 880, 784, 659, 587, 523, 659];
-const BASS = [131, 131, 165, 165, 147, 147, 196, 196];
+// ---- background music: 3 selectable tracks (generated, loop; respects mute) ----
+// 0 = off. Each track has its own tempo, timbre, and a long-ish pattern (0 = rest)
+// so it doesn't feel as repetitive. Melody + bass loop on independent lengths.
+const TRACKS = [
+  { name: "Bouncy", tempo: 300, wave: "triangle",
+    mel: [523, 0, 659, 784, 880, 784, 659, 0, 587, 659, 784, 0, 988, 880, 784, 659, 587, 0, 523, 0],
+    bass: [131, 0, 196, 0, 165, 0, 196, 0, 147, 0, 220, 0] },
+  { name: "Dreamy", tempo: 560, wave: "sine",
+    mel: [440, 0, 0, 523, 0, 494, 0, 587, 0, 0, 523, 0, 659, 0, 587, 0, 494, 0, 440, 0, 0, 0],
+    bass: [110, 0, 0, 0, 131, 0, 0, 0, 98, 0, 0, 0] },
+  { name: "Playful", tempo: 360, wave: "triangle",
+    mel: [698, 523, 587, 698, 0, 880, 784, 659, 587, 523, 0, 659, 587, 494, 523, 440, 0, 587, 523, 0],
+    bass: [175, 0, 0, 233, 0, 0, 196, 0, 0, 175, 0, 0] },
+];
+let musicTrack = Math.max(0, Math.min(3, parseInt(localStorage.getItem("emmy.music") ?? "1", 10) || 0));
+let musicTimer = 0, musicStep = 0;
 function musicTick() {
-  if (muted || !musicOn) return;
-  const n = MEL[musicStep % MEL.length];
-  tone(n, 0.32, { type: "triangle", vol: 0.045 });
-  if (musicStep % 2 === 0) tone(BASS[(musicStep / 2) % BASS.length], 0.7, { type: "sine", vol: 0.05 });
-  if (musicStep % 4 === 2) tone(n * 2, 0.18, { type: "sine", vol: 0.02 }); // sparkle harmony
+  if (muted || musicTrack === 0) return;
+  const t = TRACKS[musicTrack - 1];
+  const n = t.mel[musicStep % t.mel.length];
+  if (n) tone(n, (t.tempo / 1000) * 0.8, { type: t.wave, vol: 0.045 });
+  const b = t.bass[musicStep % t.bass.length];
+  if (b) tone(b, (t.tempo / 1000) * 1.6, { type: "sine", vol: 0.05 });
   musicStep++;
 }
-function startMusicLoop() {
-  if (musicStarted) return;
-  musicStarted = true;
-  musicTimer = setInterval(musicTick, 340);
+function scheduleMusic() {
+  clearInterval(musicTimer); musicTimer = 0;
+  if (musicTrack === 0) return;
+  musicTimer = setInterval(musicTick, TRACKS[musicTrack - 1].tempo);
 }
 
 const SAVE_KEY = "emmy.fidget.save.v2";
@@ -1285,17 +1296,22 @@ $("mute").onclick = () => {
 };
 updateMuteBtn();
 
-// background music toggle
-function updateMusicBtn() { $("music").textContent = musicOn ? "🎵" : "🔕"; $("music").style.opacity = musicOn ? "1" : ".5"; }
+// background music — cycles Off → 🎵1 (Bouncy) → 🎵2 (Dreamy) → 🎵3 (Playful) → Off
+function updateMusicBtn() {
+  $("music").textContent = musicTrack === 0 ? "🔕" : "🎵" + musicTrack;
+  $("music").style.opacity = musicTrack === 0 ? ".5" : "1";
+  $("music").title = musicTrack === 0 ? "Music off (tap to cycle songs)" : "Music: " + TRACKS[musicTrack - 1].name;
+}
 $("music").onclick = () => {
-  musicOn = !musicOn;
-  localStorage.setItem("emmy.music", musicOn ? "1" : "0");
+  musicTrack = (musicTrack + 1) % 4;
+  localStorage.setItem("emmy.music", String(musicTrack));
   updateMusicBtn();
-  if (musicOn) { ac(); startMusicLoop(); SFX.tap(); }
+  ac(); scheduleMusic();
+  if (musicTrack) SFX.tap();
 };
 updateMusicBtn();
-// Audio can only start after a user gesture — kick off the loop on the first tap.
-addEventListener("pointerdown", () => { ac(); if (musicOn) startMusicLoop(); }, { once: true });
+// Audio can only start after a user gesture — kick off on the first tap anywhere.
+addEventListener("pointerdown", () => { ac(); scheduleMusic(); }, { once: true });
 
 // deal-meter hide toggle
 let meterHidden = localStorage.getItem("emmy.meterHidden") === "1";
