@@ -95,6 +95,7 @@ function makeShape(shape, look, ctx) {
     case "yoyo":    return shapeYoyo(look, track);
     case "gears":   return shapeGears(look, track);
     case "cube":    return shapeCube(look, track);
+    case "pen":     return shapePen(look, track);
     case "coil":    return shapeCoil(look, track);
     case "tangle":  return shapeTangle(look, track);
     case "blob":    return shapeBlob(look, track);
@@ -140,7 +141,31 @@ function shapePopit(look, track) {
     const c = new Color(look.colors[i % look.colors.length]); inst.setColorAt(i, c); baseColor.push(c.clone()); popped.push(false); i++;
   }
   inst.instanceMatrix.needsUpdate = true; group.add(inst);
+  // Galaxy Pop It (and any starry pop-it) gets a sprinkle of glowing stars ✨
+  if (look.params && look.params.stars) {
+    const starGeo = track(new SphereGeometry(0.06, 8, 6));
+    const starMat = track(new MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff3c0, emissiveIntensity: 0.9, roughness: 0.4 }));
+    for (let s = 0; s < 14; s++) { const st = new Mesh(starGeo, starMat); st.scale.setScalar(0.6 + Math.random() * 0.9); st.position.set((Math.random() - 0.5) * 2.4, 0.45 + Math.random() * 0.8, (Math.random() - 0.5) * 2.4); group.add(st); }
+  }
   return { group, handles: { bubbles: { inst, cols, rows, gap, r, baseColor, popped } } };
+}
+
+// CLICKY PEN — a real pen: body, grip, cone tip + nib, top clicker button, clip.
+function shapePen(look, track) {
+  const group = new Group();
+  const bodyMat = track(makeMat(look.finish, col(look, 0)));
+  const gripMat = track(makeMat("silicone", col(look, 2, "#22262e")));
+  const metal = track(makeMat("chrome"));
+  const btnMat = track(makeMat("gloss", col(look, 1, "#e63946")));
+  const body = new Mesh(track(new CylinderGeometry(0.16, 0.16, 1.9, 20)), bodyMat); group.add(body);
+  const grip = new Mesh(track(new CylinderGeometry(0.17, 0.15, 0.5, 20)), gripMat); grip.position.y = -0.75; group.add(grip);
+  const cone = new Mesh(track(new ConeGeometry(0.16, 0.45, 20)), gripMat); cone.position.y = -1.17; group.add(cone);
+  const nib = new Mesh(track(new ConeGeometry(0.04, 0.18, 10)), metal); nib.position.y = -1.44; group.add(nib);
+  const collar = new Mesh(track(new CylinderGeometry(0.17, 0.17, 0.1, 20)), metal); collar.position.y = 0.95; group.add(collar);
+  const button = new Mesh(track(new CylinderGeometry(0.12, 0.12, 0.3, 16)), btnMat); button.position.y = 1.14; group.add(button);
+  const clip = new Mesh(track(new BoxGeometry(0.05, 0.62, 0.13)), metal); clip.position.set(0.18, 0.68, 0); group.add(clip);
+  group.rotation.set(0.15, 0, 0.32);
+  return { group, handles: { main: group, spin: group } };
 }
 
 function shapeSpinner(look, track) {

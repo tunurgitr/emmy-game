@@ -28,7 +28,7 @@ export const TOYS = [
   { id: "pebble",    name: "Worry Stone",     emoji: "🪨",  value: 9,   tier: "common",    play: "pet",     model3d: { shape: "ball", finish: "matte", colors: ["#8a94a6","#6b7280"] } },
   { id: "pushpop",   name: "Push Popper",     emoji: "🔴",  value: 13,  tier: "common",    play: "grid",    model3d: { shape: "popit", finish: "silicone", colors: ["#4caf78","#ffe14d"] } },
   { id: "beadring",  name: "Bead Ring",       emoji: "🔮",  value: 15,  tier: "common",    play: "flick",   model3d: { shape: "beads", finish: "gloss", colors: ["#ff5da2","#ffe14d","#3d8bfd","#4caf78"] } },
-  { id: "putty",     name: "Silly Putty",     emoji: "🟩",  value: 16,  tier: "common",    play: "peel",    model3d: { shape: "blob", finish: "goo", colors: ["#ffb6c1","#ff8ac8"] } },
+  { id: "putty",     name: "Silly Putty",     emoji: "🟩",  value: 16,  tier: "common",    play: "squish",  parts: ["💗","✨"], model3d: { shape: "blob", finish: "goo", colors: ["#ffb6c1","#ff8ac8"] } },
   { id: "noodle",    name: "Stretchy Noodle", emoji: "🍜",  value: 17,  tier: "common",    play: "stretch", model3d: { shape: "capsule", finish: "silicone", colors: ["#ff5da2","#ffe14d"] } },
   { id: "stickyhand",name: "Sticky Hand",     emoji: "🖐️",  value: 14,  tier: "common",    play: "stretch", model3d: { shape: "capsule", finish: "goo", colors: ["#7cfc00","#b8ff70"] } },
   // ---- Uncommon ----
@@ -36,7 +36,7 @@ export const TOYS = [
   { id: "cube",      name: "Infinity Cube",   emoji: "🧊",  value: 28,  tier: "uncommon",  play: "cube",    model3d: { shape: "cube", finish: "chrome", colors: ["#8a94a6","#3d8bfd"] } },
   { id: "tangle",    name: "Tangle",          emoji: "🔗",  value: 26,  tier: "uncommon",  play: "tangle",  model3d: { shape: "tangle", finish: "gloss", colors: ["#ff5da2","#ffe14d","#3d8bfd","#4caf78"] } },
   { id: "gear",      name: "Spinny Gears",    emoji: "⚙️",  value: 32,  tier: "uncommon",  play: "flick",   model3d: { shape: "gears", finish: "chrome", colors: ["#b0b8c4","#ffb020"] } },
-  { id: "clickpen",  name: "Clicky Pen",      emoji: "🖊️",  value: 30,  tier: "uncommon",  play: "piano",   model3d: { shape: "capsule", finish: "gloss", colors: ["#3d8bfd","#c0c8d0","#22262e"] } },
+  { id: "clickpen",  name: "Clicky Pen",      emoji: "🖊️",  value: 30,  tier: "uncommon",  play: "cube",    model3d: { shape: "pen", finish: "gloss", colors: ["#3d8bfd","#e63946","#22262e"] } },
   { id: "dice",      name: "Fidget Dice",     emoji: "🎲",  value: 34,  tier: "uncommon",  play: "cube",    model3d: { shape: "cube", finish: "gloss", colors: ["#ffffff","#22262e","#e63946"], params: { pips: true } } },
   { id: "mochi",     name: "Mochi Squish",    emoji: "🍡",  value: 36,  tier: "uncommon",  play: "squish",  parts: ["🍡","🌸"], model3d: { shape: "ball", finish: "silicone", colors: ["#ffd1dc","#fff0f5"], cute: true } },
   { id: "snap",      name: "Snap Bracelet",   emoji: "⌚",  value: 22,  tier: "uncommon",  play: "stretch", model3d: { shape: "capsule", finish: "gloss", colors: ["#ff5da2","#ffe14d","#3d8bfd"] } },
@@ -48,11 +48,11 @@ export const TOYS = [
   { id: "boink",     name: "Springy Boink",   emoji: "🎈",  value: 48,  tier: "rare",      play: "coil",    model3d: { shape: "coil", finish: "gloss", colors: ["#7c5cff","#6ee7f0"] } },
   { id: "sand",      name: "Kinetic Sand",    emoji: "⏳",  value: 52,  tier: "rare",      play: "snow", parts: ["✨","🟤"], model3d: { shape: "blob", finish: "matte", colors: ["#e0c9a6","#d4b483"] } },
   { id: "cradle",    name: "Newton's Cradle", emoji: "🎱",  value: 64,  tier: "rare",      play: "piano",   model3d: { shape: "cradle", finish: "chrome", colors: ["#c0c8d0","#22262e"] } },
-  { id: "wave",      name: "Liquid Motion",   emoji: "🌊",  value: 68,  tier: "rare",      play: "snow", parts: ["💧","🔵","🟣"], model3d: { shape: "orb", finish: "glass", colors: ["#3d8bfd","#ff5da2","#ffffff"] } },
+  { id: "wave",      name: "Liquid Motion",   emoji: "🌊",  value: 68,  tier: "rare",      play: "flick", parts: ["💧","🔵","🟣"], model3d: { shape: "orb", finish: "glass", colors: ["#3d8bfd","#ff5da2","#ffffff"] } },
   { id: "spinring",  name: "Spinner Ring",    emoji: "💍",  value: 58,  tier: "rare",      play: "flick",   model3d: { shape: "ring", finish: "chrome", colors: ["#c0c8d0","#ffd700"] } },
   { id: "yoyo",      name: "Trick Yo-Yo",     emoji: "🪀",  value: 62,  tier: "rare",      play: "flick",   model3d: { shape: "yoyo", finish: "gloss", colors: ["#e63946","#ffffff","#ffd700"] } },
   // ---- Epic ----
-  { id: "galaxy",    name: "Galaxy Pop It",   emoji: "🌌",  value: 95,  tier: "epic",      play: "grid",    parts: ["⭐","🌟","💫"], model3d: { shape: "popit", finish: "holo", colors: ["#2b1a5e","#7c5cff","#3d8bfd","#ff5da2"] } },
+  { id: "galaxy",    name: "Galaxy Pop It",   emoji: "🌌",  value: 95,  tier: "epic",      play: "grid",    parts: ["⭐","🌟","💫"], model3d: { shape: "popit", finish: "holo", colors: ["#2b1a5e","#7c5cff","#3d8bfd","#ff5da2"], params: { stars: true } } },
   { id: "unicorn",   name: "Unicorn Squish",  emoji: "🦄",  value: 110, tier: "epic",      play: "squish",  parts: ["🌈","⭐","🦄"], model3d: { shape: "ball", finish: "plush", colors: ["#ffd1dc","#e6ccff","#bfeaff","#fff8dc"], cute: true } },
   { id: "robot",     name: "Robot Spinner",   emoji: "🤖",  value: 130, tier: "epic",      play: "flick",   parts: ["🔩","⚡","💨"], model3d: { shape: "spinner", finish: "chrome", colors: ["#8a94a6","#00e5ff","#22262e"] } },
   { id: "lavalamp",  name: "Lava Lamp",       emoji: "🫙",  value: 120, tier: "epic",      play: "snow",    parts: ["🔴","🟠","🟣"], model3d: { shape: "capsule", finish: "glass", colors: ["#ff4500","#ff8c00","#4b0082"] } },
@@ -188,17 +188,17 @@ export function makeFoxyOffer() {
   // player usually breaks even or comes out ahead (game is easier).
   let mult;
   const roll = rand();
-  if (roll < 0.30) mult = 0.60 + rand() * 0.18;      // generous day (great deal!)
-  else if (roll < 0.85) mult = 0.82 + rand() * 0.16; // fair-ish (break even)
-  else mult = 1.02 + rand() * 0.12;                  // slightly greedy
+  if (roll < 0.45) mult = 0.55 + rand() * 0.17;      // often a great deal for you
+  else if (roll < 0.90) mult = 0.72 + rand() * 0.16; // fair/good
+  else mult = 0.95 + rand() * 0.10;                  // rarely near full price
   // acceptFactor: she'll actually say YES once you offer wantValue * acceptFactor.
   // It's usually WELL BELOW 1, and randomized per offer, so she very often accepts
   // deals that come out better for the player — and how generous she is varies.
   let af;
   const r2 = rand();
-  if (r2 < 0.50) af = 0.62 + rand() * 0.16;   // super chill — accepts a low offer
-  else if (r2 < 0.85) af = 0.78 + rand() * 0.14;
-  else af = 0.92 + rand() * 0.10;             // occasionally wants closer to full
+  if (r2 < 0.55) af = 0.55 + rand() * 0.15;   // super chill — accepts a low offer
+  else if (r2 < 0.88) af = 0.70 + rand() * 0.15;
+  else af = 0.86 + rand() * 0.10;             // occasionally wants closer to full
   return {
     theirs,
     wantValue: Math.max(5, Math.round(worth * mult)),
@@ -222,9 +222,9 @@ function weightedFrom(pool, weights = FOXY_OFFER_WEIGHT) {
 export function makeFoxyReturn(giveVal) {
   const roll = rand();
   let mult;
-  if (roll < 0.38) mult = 1.12 + rand() * 0.28;      // generous — great for you
-  else if (roll < 0.82) mult = 0.95 + rand() * 0.22; // fair-ish
-  else mult = 0.80 + rand() * 0.13;                   // a stingier day
+  if (roll < 0.50) mult = 1.15 + rand() * 0.30;      // generous — great for you
+  else if (roll < 0.90) mult = 1.0 + rand() * 0.20;  // fair/good
+  else mult = 0.90 + rand() * 0.10;                   // rarely stingy (still ~fair)
   const target = Math.max(6, giveVal * mult);
 
   const theirs = [];
