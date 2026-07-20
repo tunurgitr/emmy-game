@@ -17,8 +17,10 @@ No downloads, no accounts, no ads — it runs entirely in the browser and saves 
 - **Two honest gauges:** the buddy's mood ("will they say yes?") and a separate **deal meter** ("is this good for *you*?"). The deal meter is **hideable** if you'd rather judge for yourself.
 
 ### Collection & rarities
-- **57 fidget toys** across **9 rarity tiers**: Common · Uncommon · Rare · Epic · Legendary · **Mythic** · **Cosmic** · **Prismatic** · **Divine**.
-- **📖 Rarity Guide** legend showing every tier's color, value range, and toys — undiscovered toys appear as ❔ silhouettes, with a "Collected X/57" tracker.
+- **67 fidget toys** across **9 rarity tiers**: Common · Uncommon · Rare · Epic · Legendary · **Mythic** · **Cosmic** · **Prismatic** · **Divine**.
+- Every toy has its **own 3D model and its own way to play** — a rainbow slinky really is a rainbow coil you stretch, a spinner spins, a squishmallow squishes, a tangle twists, gears mesh, a Newton's cradle clicks.
+- The **3D model is previewed right on every card** (backpack, trade mat, shop, and box reveals).
+- **📖 Rarity Guide** legend showing every tier's color, value range, and toys — undiscovered toys appear as ❔ silhouettes, with a "Collected X/67" tracker.
 
 ### Mystery boxes 📦
 - Three boxes with **printed odds**: Sparkle (35🪙), Rainbow (90🪙), Galaxy (250🪙).
@@ -26,17 +28,19 @@ No downloads, no accounts, no ads — it runs entirely in the browser and saves 
 - A visible **🍀 Lucky Meter** pity system (guaranteed Rare+ every 7 boxes), an epic+ safety net, and a guaranteed-good first box.
 - Full **drop → shake → glow → burst → reveal** animation with a **NEW!** badge for first-time pulls.
 
-### The Fidget Zone 🎮 — now in real 3D
-Tap any toy to *play* with it — most toys open as a **real, lit 3D object** you can spin around with your finger, with glossy plastic, chrome, glass, plush, and holographic finishes and soft contact shadows. The 3D engine ([Three.js](https://threejs.org), procedural geometry only — no model files) is **lazy-loaded** the first time you open a toy, so the main game stays tiny, and it falls back to the 2D version automatically if a device can't do WebGL.
+### The Fidget Zone 🎮 — real 3D, one play style per toy
+Tap any toy to *play* with it — most toys open as a **real, lit 3D object** you can spin around with your finger, with silicone, glossy plastic, chrome, glass, goo, plush, metal, and holographic finishes plus soft contact shadows. Every toy's model is built to look like the real thing (from ~20 procedural archetypes) and each maps to the interaction that actually fits it. The 3D engine ([Three.js](https://threejs.org), procedural geometry only — no model files) is **lazy-loaded**, and it falls back to a 2D version automatically if a device can't do WebGL.
 
 Interactions include:
 
 | | | |
 |---|---|---|
-| **Pop-it grid** (drag to pop a streak) | **Flick spinner** (momentum) | **Stretch & boing** (hold) |
-| **Rapid-fire combo** (mash) | **Piano** (tap zones for notes) | **Wind-up / twist** (drag) |
-| **Bubble shower** (pop falling minis) | **Squish** (hold to squish — it *always springs back*, never pops) | **Petting** (stroke to purr) |
-| **Stack tower** (stack till it topples) | **Snow-globe shake** (scrub & settle) | **Peel** (drag to reveal a surprise) |
+| **Pop-it grid** (drag to pop a streak) | **Flick to spin** (spinners, rings, gears, yo-yos) | **Squish** (hold — always springs back, never pops) |
+| **Stretch & snap** (noodles, bracelets) | **Coil stretch** (slinky boing) | **Twist** (tangles & chains) |
+| **Tap-to-flip cube** (mash for a combo) | **Piano** (tap zones for notes) | **Petting** (stroke to purr — cute critters) |
+| **Bubble shower** (pop falling minis) | **Snow-globe shake** (scrub & settle) | **Peel** (drag to reveal a surprise) |
+
+Squishy and plushie toys get **cute kawaii faces** (like the beloved Mochi Squish) — mochi, unicorn, rainbow dragon, mermaid, axolotl, jellyfish, and more.
 
 ### Selling — a friendly chat 💬
 Selling is a mini-conversation, not a vending machine. Your buddy makes a personal offer (~85% of value, a little random, extra excited for rare toys); you can **Deal**, ask **"Can you do better?"** (haggle up toward ~97%, with a rare generous jackpot), or **Keep it**.

@@ -165,7 +165,7 @@ function toyCardHtml(toy, { tap = false, cls = "" } = {}) {
   return `
     <div class="toy ${tap ? "tap" : ""} ${cls}" style="--c:${tier.color};--g:${tier.glow}" data-toy="${toy.id}">
       <span class="tier" style="background:${tier.color}">${tier.label}</span>
-      <div class="face">${toy.emoji}</div>
+      <div class="face" data-thumb="${toy.id}">${toy.emoji}</div>
       <div class="name">${toy.name}</div>
       <div class="val">🪙 ${toy.value}</div>
     </div>`;
@@ -295,6 +295,7 @@ function render() {
   renderBackpack();
   renderShop();
   renderBoxes();
+  hydrateThumbs();
   save();
 }
 
@@ -345,7 +346,7 @@ function renderShop() {
     const afford = state.coins >= s.price;
     return `
       <div class="shopcard" style="--c:${tier.color};--g:${tier.glow}">
-        <div class="face">${toy.emoji}</div>
+        <div class="face" data-thumb="${toy.id}">${toy.emoji}</div>
         <div class="name">${toy.name}</div>
         <button class="buybtn" data-shop="${i}" ${afford ? "" : "disabled"}>🪙 ${s.price}</button>
       </div>`;
@@ -729,7 +730,7 @@ function playBoxOpen(b, toy, rarity, isNew, key) {
       emo.style.display = "none";
       const big = idxRank(rarity) >= 3;
       rev.innerHTML = `
-        <div class="rtoy" style="filter:drop-shadow(0 0 30px ${tier.color})">${toy.emoji}</div>
+        <div class="rtoy" data-thumb="${toy.id}" style="filter:drop-shadow(0 0 30px ${tier.color})">${toy.emoji}</div>
         <div class="rname">${toy.name}${isNew ? '<span class="rnew">NEW!</span>' : ""}</div>
         <div class="rpill" style="background:${tier.color}">${tier.label}</div>
         <div style="color:#ffd54a;font-weight:800;margin-top:6px">🪙 ${toy.value}</div>
@@ -737,6 +738,8 @@ function playBoxOpen(b, toy, rarity, isNew, key) {
       // reveal sound: longer fanfare for higher tiers
       const notes = [523, 659, 784, 1047, 1319].slice(0, Math.min(5, 2 + idxRank(rarity)));
       notes.forEach((f, i) => tone(f, 0.18, { type: "triangle", vol: 0.18, when: i * 0.09 }));
+      // show the 3D model in the reveal too
+      if (use3d) { const cached = thumbCache.get(toy.id); const rt = rev.querySelector('[data-thumb]'); if (cached && rt) applyThumb(rt, cached); else requestThumb(toy); }
       if (big) { celebrate(); SFX.celebrate(); }
       acts.innerHTML = `
         <button style="background:#00c853" data-act="keep">Keep it! 🎒</button>
@@ -765,29 +768,70 @@ function setMode(m) {
 
 // Each toy's `play` type maps to one of TWELVE distinct interactions.
 const TIPS = {
-  grid:    "👆 Pop all the bubbles!",
+  grid:    "👆 Pop the bubbles — drag across to pop a whole row!",
   flick:   "↔️ Drag across it to spin — faster = louder!",
-  stretch: "✊ Press and HOLD to stretch, let go to boing!",
-  combo:   "⚡ Tap as FAST as you can for a combo!",
+  squish:  "✊ Press and HOLD to squish — it springs right back!",
+  cube:    "👆 Tap it to flip and bounce — mash for a combo!",
+  coil:    "✊ Press and HOLD to stretch it out, let go to boing!",
+  tangle:  "↔️ Drag to twist it into new shapes!",
+  stretch: "✊ Press and HOLD to stretch, let go to snap back!",
   piano:   "🎹 Tap different spots to play notes!",
-  windup:  "🔄 Drag in circles to wind it up, then let go!",
-  shower:  "👆 Tap to burst it — pop the falling pieces!",
-  squeeze: "✊ Press and HOLD to squish — it springs right back!",
   pet:     "🫳 Gently stroke it back and forth...",
-  stack:   "👆 Tap to stack them — how high can you go?",
+  shower:  "👆 Tap to burst it — pop the falling pieces!",
   snow:    "↔️ Scrub fast to shake it all up!",
+  stack:   "👆 Tap to stack them — how high can you go?",
   peel:    "✊ Drag it to peel off a surprise!",
+  // legacy interactions kept for the 2D fallback:
+  combo:   "⚡ Tap as FAST as you can for a combo!",
+  windup:  "🔄 Drag in circles to wind it up, then let go!",
+  squeeze: "✊ Press and HOLD to squish — it springs right back!",
 };
 let fidgetToyObj = null;
 let fidgetCleanup = null; // teardown for the active emoji interaction
 let fidget3d = null;      // active 3D scene (if any)
 let use3d = localStorage.getItem("emmy.no3d") !== "1"; // can be disabled if WebGL fails
-const THREE_D_PLAYS = new Set(["grid", "flick", "squeeze", "pet", "stretch", "windup", "combo", "piano"]);
+const THREE_D_PLAYS = new Set(["grid", "flick", "squish", "cube", "coil", "tangle", "stretch", "pet", "piano"]);
 
 // Emoji-particle burst wrapper the 3D scene can call (stage-relative 0..1 coords).
 function burstAt(stage, nx, ny, marks, n, spread) {
   const r = stage.getBoundingClientRect();
   burst(stage, nx * r.width, ny * r.height, marks, n, spread);
+}
+
+// ---- 3D card thumbnails: render each toy's 3D model once, cache, show on cards.
+let thumbMod = null, thumbModPromise = null;
+const thumbCache = new Map();   // toy id -> dataURL (null = failed, don't retry)
+function loadThumbMod() {
+  if (thumbMod) return Promise.resolve(thumbMod);
+  if (!thumbModPromise) thumbModPromise = import("./fidget3d.js").then((m) => (thumbMod = m)).catch(() => null);
+  return thumbModPromise;
+}
+function applyThumb(el, url) {
+  if (!url || el.dataset.thumbDone) return;
+  el.dataset.thumbDone = "1";
+  el.innerHTML = `<img class="thumb3d" src="${url}" alt="" draggable="false">`;
+}
+function requestThumb(toy) {
+  const id = toy.id;
+  if (thumbCache.has(id)) return; // done or in-flight-resolved (null cached too)
+  thumbCache.set(id, null); // reserve so we don't double-render; overwrite on success
+  loadThumbMod().then((m) => {
+    if (!m || !m.renderThumbnail) return;
+    let url = null;
+    try { url = m.renderThumbnail(toy, 128, TIERS[toy.tier].color); } catch { url = null; }
+    thumbCache.set(id, url);
+    if (url) document.querySelectorAll(`[data-thumb="${id}"]`).forEach((el) => applyThumb(el, url));
+  });
+}
+// After a render, swap emoji faces for cached 3D thumbs and request any missing.
+function hydrateThumbs() {
+  if (!use3d) return;
+  if ($("fidget").classList.contains("show")) return; // don't disturb a live scene
+  document.querySelectorAll("[data-thumb]").forEach((el) => {
+    const id = el.dataset.thumb, url = thumbCache.get(id);
+    if (url) applyThumb(el, url);
+    else if (!thumbCache.has(id)) { const t = byId(id); if (t) requestThumb(t); }
+  });
 }
 
 function openFidget(uid) {
@@ -807,7 +851,7 @@ function openFidget(uid) {
   // Play types with a solid 3D archetype get the real 3D toy; particle-heavy
   // ones (shower/snow/stack/peel) keep their themed 2D interaction.
   const wants3d = use3d && THREE_D_PLAYS.has(type);
-  if (wants3d && (type === "grid" || type === "combo" || type === "piano")) {
+  if (wants3d && (type === "grid" || type === "cube" || type === "piano")) {
     $("fidgetTip").textContent = (TIPS[type] || "👆 Play!") + "  🔄 Drag to spin it around!";
   }
   if (wants3d) {
@@ -1353,6 +1397,12 @@ const FIDGETS = {
     return () => { if (snd) snd.stop(); };
   },
 };
+// The 3D engine is the primary experience; these aliases give the newer play
+// types a sensible themed interaction if a device falls back to 2D (no WebGL).
+FIDGETS.squish = FIDGETS.squeeze;
+FIDGETS.coil   = FIDGETS.stretch;
+FIDGETS.cube   = FIDGETS.combo;
+FIDGETS.tangle = FIDGETS.windup;
 
 // ---- rarity guide ----
 function openGuide() {
