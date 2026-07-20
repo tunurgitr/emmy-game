@@ -96,6 +96,7 @@ function makeShape(shape, look, ctx) {
     case "gears":   return shapeGears(look, track);
     case "cube":    return shapeCube(look, track);
     case "pen":     return shapePen(look, track);
+    case "hand":    return shapeHand(look, track);
     case "coil":    return shapeCoil(look, track);
     case "tangle":  return shapeTangle(look, track);
     case "blob":    return shapeBlob(look, track);
@@ -114,16 +115,23 @@ function makeShape(shape, look, ctx) {
   }
 }
 
-// cute kawaii face on the +Z front of a mesh of the given radius
-function addFace(group, track, r, y = 0) {
-  const eyeGeo = track(new SphereGeometry(0.11 * r, 16, 12));
-  const eyeMat = track(new MeshStandardMaterial({ color: 0x2a2440, roughness: 0.35 }));
-  for (const dx of [-0.32, 0.32]) { const e = new Mesh(eyeGeo, eyeMat); e.position.set(dx * r, y + 0.16 * r, 0.94 * r); e.scale.set(1, 1.25, 0.6); group.add(e); }
-  const cheekGeo = track(new SphereGeometry(0.12 * r, 14, 10));
+// cute kawaii face sitting ON the +Z front surface of a sphere of radius r,
+// centered at (0, cy, 0). Features are placed on the sphere so nothing embeds.
+function addFace(group, track, r, cy = 0, zScale = 1) {
+  const eyeMat = track(new MeshStandardMaterial({ color: 0x2a2440, roughness: 0.3 }));
+  // put a feature at spherical (ax across, ay up) sitting proud of the surface
+  const put = (mesh, ax, ay, out = 1.0) => {
+    const z = Math.sqrt(Math.max(0.04, 1 - ax * ax - ay * ay));
+    mesh.position.set(ax * r, cy + ay * r, z * r * zScale + 0.02 * r);
+    group.add(mesh);
+  };
+  const eyeGeo = track(new SphereGeometry(0.12 * r, 16, 12));
+  for (const dx of [-0.3, 0.3]) { const e = new Mesh(eyeGeo, eyeMat); e.scale.set(1, 1.25, 0.7); put(e, dx, 0.15); }
+  const cheekGeo = track(new SphereGeometry(0.13 * r, 14, 10));
   const cheekMat = track(new MeshStandardMaterial({ color: 0xff9ec2, roughness: 0.8, transparent: true, opacity: 0.85 }));
-  for (const dx of [-0.52, 0.52]) { const ch = new Mesh(cheekGeo, cheekMat); ch.position.set(dx * r, y - 0.02 * r, 0.9 * r); ch.scale.set(1, 0.6, 0.35); group.add(ch); }
-  const sm = new Mesh(track(new TorusGeometry(0.14 * r, 0.03 * r, 8, 16, Math.PI)), eyeMat);
-  sm.position.set(0, y - 0.04 * r, 0.95 * r); sm.rotation.z = Math.PI; group.add(sm);
+  for (const dx of [-0.5, 0.5]) { const ch = new Mesh(cheekGeo, cheekMat); ch.scale.set(1, 0.6, 0.4); put(ch, dx, -0.05); }
+  const sm = new Mesh(track(new TorusGeometry(0.15 * r, 0.032 * r, 8, 18, Math.PI)), eyeMat);
+  sm.rotation.z = Math.PI; put(sm, 0, -0.08);
 }
 
 function shapePopit(look, track) {
@@ -268,10 +276,40 @@ function shapeTangle(look, track) {
 
 function shapeBall(look, track) {
   const group = new Group();
-  const ball = new Mesh(track(new SphereGeometry(1.1, 48, 36)), track(makeMat(look.finish, col(look, 0))));
+  const P = look.params || {}, r = 1.1;
+  const ball = new Mesh(track(new SphereGeometry(r, 48, 36)), track(makeMat(look.finish, col(look, 0))));
+  if (P.ovoid) ball.scale.set(0.92, 1.12, 0.92);
   group.add(ball);
-  if (look.cute) addFace(group, track, 1.1);
-  return { group, handles: { main: ball } };
+  if (P.horn) { // unicorn horn — gold spiral cone on top
+    const gold = track(makeMat("metal", "#ffd76a"));
+    const horn = new Mesh(track(new ConeGeometry(0.2, 0.7, 16)), gold); horn.position.set(0, r + 0.3, 0.18); horn.rotation.x = 0.12; group.add(horn);
+    for (let i = 0; i < 3; i++) { const ring = new Mesh(track(new TorusGeometry(0.15 - i * 0.035, 0.028, 8, 16)), gold); ring.position.set(0, r + 0.12 + i * 0.22, 0.17); ring.rotation.x = Math.PI / 2; group.add(ring); }
+  }
+  if (P.ears) { // ears + a pastel mane tuft
+    const earGeo = track(new ConeGeometry(0.17, 0.36, 12)), earMat = track(makeMat(look.finish, col(look, 1, "#ffffff")));
+    for (const dx of [-0.55, 0.55]) { const ear = new Mesh(earGeo, earMat); ear.position.set(dx, r * 0.88, 0.05); ear.rotation.z = dx < 0 ? 0.4 : -0.4; group.add(ear); }
+    const tuft = new Mesh(track(new SphereGeometry(0.3, 16, 12)), track(makeMat(look.finish, col(look, 2, "#bfeaff")))); tuft.position.set(0, r + 0.05, -0.32); tuft.scale.set(1, 0.8, 0.7); group.add(tuft);
+  }
+  if (P.pit) { // avocado — brown pit (with the face) on the front of the green body
+    const pit = new Mesh(track(new SphereGeometry(0.52, 24, 18)), track(makeMat("gloss", "#7a4a24"))); pit.position.set(0, -0.05, 0.6); group.add(pit);
+    addFace(pit, track, 0.52);
+  } else if (look.cute) {
+    addFace(group, track, r, P.ovoid ? -0.02 : 0);
+  }
+  return { group, handles: { main: group } };
+}
+
+// STICKY HAND — a little hand on a long stretchy strand.
+function shapeHand(look, track) {
+  const group = new Group();
+  const mat = track(makeMat(look.finish, col(look, 0)));
+  const strand = new Mesh(track(new CylinderGeometry(0.08, 0.08, 2.0, 10)), mat); strand.position.y = 0.75; group.add(strand);
+  const palm = new Mesh(track(new SphereGeometry(0.42, 22, 16)), mat); palm.scale.set(1.05, 1.1, 0.5); palm.position.y = -0.45; group.add(palm);
+  const fGeo = track(new CapsuleGeometry(0.09, 0.34, 4, 8));
+  for (let i = 0; i < 4; i++) { const f = new Mesh(fGeo, mat); f.position.set((i - 1.5) * 0.2, -0.95, 0.02); group.add(f); }
+  const thumb = new Mesh(track(new CapsuleGeometry(0.09, 0.26, 4, 8)), mat); thumb.position.set(-0.46, -0.5, 0.02); thumb.rotation.z = 1.05; group.add(thumb);
+  group.rotation.set(0.1, 0, 0.12);
+  return { group, handles: { main: group } };
 }
 
 function shapeBlob(look, track) {
@@ -287,6 +325,17 @@ function shapeBlob(look, track) {
 
 function shapeCapsule(look, track) {
   const group = new Group();
+  const P = look.params || {};
+  if (P.lava) { // lava lamp: glass bottle + metal base/cap + floating goo blobs
+    const glass = new Mesh(track(new CapsuleGeometry(0.5, 1.5, 10, 24)), track(makeMat("glass", col(look, 0, "#ff6a00")))); group.add(glass);
+    const metal = track(makeMat("metal", "#caa85a"));
+    const base = new Mesh(track(new CylinderGeometry(0.42, 0.55, 0.32, 20)), metal); base.position.y = -1.2; group.add(base);
+    const cap = new Mesh(track(new CylinderGeometry(0.28, 0.4, 0.28, 20)), metal); cap.position.y = 1.2; group.add(cap);
+    const bcols = [col(look, 1, "#ff8c00"), col(look, 2, "#ff2d6a"), "#ffcf3a"];
+    const blobs = [];
+    for (let i = 0; i < 4; i++) { const b = new Mesh(track(new SphereGeometry(0.2 + (i % 2) * 0.09, 16, 12)), track(makeMat("goo", bcols[i % bcols.length]))); b.position.set(i % 2 ? 0.12 : -0.12, -0.75 + i * 0.5, 0); b.scale.set(1, 1.25, 1); group.add(b); blobs.push(b); }
+    return { group, handles: { main: group, spin: group, lavaBlobs: blobs, spinAxis: "y" } };
+  }
   const cap = new Mesh(track(new CapsuleGeometry(0.42, 1.5, 8, 20)), track(makeMat(look.finish, col(look, 0))));
   group.add(cap);
   if (look.colors[1]) { for (let i = 0; i < 3; i++) { const band = new Mesh(track(new TorusGeometry(0.43, 0.06, 10, 24)), track(makeMat(look.finish, look.colors[(i + 1) % look.colors.length]))); band.rotation.x = Math.PI / 2; band.position.y = (i - 1) * 0.45; group.add(band); } }
@@ -337,6 +386,13 @@ function shapeOrb(look, track) {
   const group = new Group();
   const glass = new Mesh(track(new SphereGeometry(1.1, 40, 30)), track(makeMat("glass", col(look, 0))));
   group.add(glass);
+  const P = look.params || {};
+  if (P.bubbles) { // liquid-motion: colorful droplets that swirl when you spin it
+    const bcols = [col(look, 1, "#ffffff"), col(look, 2, col(look, 0)), col(look, 0)];
+    const bubbles = [];
+    for (let i = 0; i < 8; i++) { const b = new Mesh(track(new SphereGeometry(0.12 + Math.random() * 0.14, 14, 10)), track(makeMat("gloss", bcols[i % bcols.length]))); b.position.set((Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.2); group.add(b); bubbles.push(b); }
+    return { group, handles: { main: group, spin: group, bubbles } };
+  }
   const core = new Mesh(track(new IcosahedronGeometry(0.6, 1)), track(makeMat(look.finish === "glass" ? "holo" : look.finish, col(look, 1, col(look, 0))))); group.add(core);
   return { group, handles: { main: core, spin: group, glass } };
 }
@@ -374,12 +430,18 @@ function shapeTrophy(look, track) {
 function shapeChest(look, track) {
   const group = new Group();
   const wood = track(makeMat("gloss", col(look, 0, "#8b5a2b"))), gold = track(makeMat("metal", col(look, 1, "#ffd700")));
-  const base = new Mesh(track(new RoundedBoxGeometry(1.6, 0.9, 1.1, 3, 0.08)), wood); base.position.y = -0.15; group.add(base);
-  const lid = new Group(); lid.position.set(0, 0.3, -0.55);
-  const lidMesh = new Mesh(track(new CylinderGeometry(0.55, 0.55, 1.6, 24, 1, false, 0, Math.PI)), wood); lidMesh.rotation.z = Math.PI / 2; lid.add(lidMesh); lid.rotation.x = -0.5; group.add(lid);
-  const strap = new Mesh(track(new BoxGeometry(1.65, 0.12, 1.15)), gold); strap.position.y = -0.15; group.add(strap);
-  const lock = new Mesh(track(new BoxGeometry(0.24, 0.3, 0.12)), gold); lock.position.set(0, 0.05, 0.56); group.add(lock);
-  group.rotation.set(0.15, -0.5, 0);
+  const base = new Mesh(track(new RoundedBoxGeometry(1.7, 0.85, 1.05, 3, 0.06)), wood); base.position.y = -0.2; group.add(base);
+  // glowing gold treasure peeking out of the open top
+  const loot = new Mesh(track(new SphereGeometry(0.55, 18, 12)), track(makeMat("metal", "#ffdf5a"))); loot.scale.set(1.3, 0.35, 0.8); loot.position.set(0, 0.15, 0); group.add(loot);
+  // lid hinged open at the back-top edge
+  const lidPivot = new Object3D(); lidPivot.position.set(0, 0.2, -0.52); group.add(lidPivot);
+  const lid = new Mesh(track(new RoundedBoxGeometry(1.72, 0.38, 1.08, 3, 0.06)), wood); lid.position.set(0, 0.05, 0.52); lidPivot.add(lid);
+  const lidStrap = new Mesh(track(new BoxGeometry(0.16, 0.42, 1.12)), gold); lidStrap.position.set(0, 0.05, 0.52); lidPivot.add(lidStrap);
+  lidPivot.rotation.x = -0.85; // open
+  // gold straps + lock on the base
+  for (const x of [-0.6, 0.6]) { const s = new Mesh(track(new BoxGeometry(0.16, 0.9, 1.1)), gold); s.position.set(x, -0.2, 0); group.add(s); }
+  const lock = new Mesh(track(new BoxGeometry(0.26, 0.3, 0.1)), gold); lock.position.set(0, -0.28, 0.55); group.add(lock);
+  group.rotation.set(0.12, -0.5, 0);
   return { group, handles: { main: group } };
 }
 
@@ -439,7 +501,7 @@ function biGrid({ handles, group, opts }) {
 
 function biFlick({ handles, group, opts }) {
   const spin = handles.gears ? null : (handles.spin || handles.main || group);
-  const gears = handles.gears;
+  const gears = handles.gears, axis = handles.spinAxis || "z", lava = handles.lavaBlobs;
   let vel = 0, angle = 0, dragging = false, lastX = 0, lastT = 0, lastLap = 0;
   const snd = opts.makeSustain ? opts.makeSustain("triangle") : null; const base = opts.baseFreq || 300;
   return {
@@ -449,7 +511,8 @@ function biFlick({ handles, group, opts }) {
     onUp() { dragging = false; },
     update() {
       angle += vel; if (!dragging) vel *= 0.985; if (Math.abs(vel) < 0.0006) vel = 0;
-      if (gears) { gears.forEach((g) => { g.mesh.rotation.z = angle * g.dir * (0.62 / g.r); }); } else { spin.rotation.z = angle; }
+      if (gears) { gears.forEach((g) => { g.mesh.rotation.z = angle * g.dir * (0.62 / g.r); }); } else { spin.rotation[axis] = angle; }
+      if (lava) lava.forEach((b, i) => { b.position.y = (-0.75 + i * 0.5) + Math.sin(angle * 0.6 + i * 1.7) * 0.28; });
       const speed = Math.min(1, Math.abs(vel) * 3);
       if (snd) { snd.setFreq(base * 0.5 + speed * 520); snd.setVol(speed * 0.12); }
       if (Math.abs(angle - lastLap) > Math.PI * 2) { lastLap = angle; if (speed > 0.15) opts.tone && opts.tone(1200, 0.05, { type: "sine", vol: 0.06 }); }
@@ -520,12 +583,19 @@ function biStretch({ handles, group, opts }) {
 
 function biTangle({ handles, group, opts }) {
   const segs = handles.tangleSegs; const base = opts.baseFreq || 300;
+  // Each joint has its own resting angle; dragging smoothly reshapes the whole
+  // chain (coils/uncoils) instead of the old flaily sine wobble.
+  const rest = segs ? segs.map((_, i) => Math.sin(i * 1.3) * 0.6) : [];
   let twist = 0, lastX = 0, lastNotch = 0;
-  const apply = () => { if (segs) segs.forEach((s, i) => { s.next.rotation.x = Math.sin(i * 1.3 + twist) * (0.6 + twist * 0.15); }); else group.rotation.z = twist; };
+  const apply = () => {
+    if (segs) segs.forEach((s, i) => { s.next.rotation.x = Math.max(-1.45, Math.min(1.45, rest[i] + twist * 0.28)); });
+    group.rotation.y = twist * 0.15;
+  };
   return {
     mode: "drag", interactive: [group],
     onDown(hit, e) { lastX = e.clientX; },
-    onMove(e) { const dx = e.clientX - lastX; lastX = e.clientX; twist += dx * 0.012; apply(); if (Math.abs(twist - lastNotch) > 0.35) { lastNotch = twist; opts.tone && opts.tone(base, 0.03, { type: "square", vol: 0.1 }); } },
+    onMove(e) { const dx = e.clientX - lastX; lastX = e.clientX; twist += dx * 0.01; apply();
+      if (Math.abs(twist - lastNotch) > 0.35) { lastNotch = twist; opts.tone && opts.tone(base + (twist % 3) * 40, 0.04, { type: "square", vol: 0.1 }); } },
     onUp() {}, update() { return false; }, dispose() {},
   };
 }
@@ -543,22 +613,44 @@ function biPet({ handles, group, opts }) {
   };
 }
 
-function biPiano({ handles, group, opts }) {
-  const balls = handles.balls; const main = handles.main || group;
-  const scale = [523, 587, 659, 784, 880, 523, 659, 784];
+function biPiano({ handles, group, opts, toy }) {
+  const balls = handles.balls, main = handles.main || group;
+  // Newton's cradle: tap anywhere adds energy; the two end balls swing in
+  // antiphase and CLACK as they meet in the middle — the real toy motion.
+  if (balls && toy && toy.id === "cradle") {
+    const N = balls.length, base = opts.baseFreq || 300;
+    let energy = 0, t = 0, prevS = 0;
+    return {
+      mode: "tap", interactive: [group],
+      onDown() { energy = Math.min(1, energy + 0.55); opts.tone && opts.tone(base * 1.2, 0.05, { type: "sine", vol: 0.12 }); },
+      update(dt) {
+        if (energy < 0.004) { return false; }
+        t += dt * 4.2; const s = Math.sin(t) * energy * 0.75;
+        balls[0].pivot.rotation.z = Math.min(0, s);
+        balls[N - 1].pivot.rotation.z = Math.max(0, s);
+        if (Math.sign(s) !== Math.sign(prevS) && Math.abs(s) < 0.06) { opts.tone && opts.tone(680 + Math.random() * 60, 0.04, { type: "square", vol: 0.14 }); }
+        prevS = s; energy *= (1 - dt * 0.22);
+        return true;
+      },
+      dispose() {},
+    };
+  }
+  // Chimes / harp / faceted orb: tap a ball (or a zone) to play a note; it swings.
+  const scale = [523, 587, 659, 698, 784, 880, 988, 1047];
   let bounce = 0, bounceV = 0;
   return {
     mode: "tap", interactive: [group],
     onDown(hit, e, n) {
-      let note;
-      if (balls && hit && hit.object) { let idx = balls.findIndex((b) => hit.object.parent === b.pivot); if (idx < 0) idx = 0; note = scale[idx % scale.length]; const b = balls[idx]; if (b) b.kick = (idx < balls.length / 2 ? -1 : 1) * 0.6; }
+      let note, idx = -1;
+      if (balls && hit && hit.object) idx = balls.findIndex((b) => hit.object === b.pivot || hit.object.parent === b.pivot);
+      if (idx >= 0) { note = scale[idx % scale.length]; balls[idx].kick = (Math.random() < 0.5 ? -1 : 1) * 0.5; }
       else { const i = Math.floor(((n ? n.x : 0) * 0.5 + 0.5) * scale.length) % scale.length; note = scale[i]; bounceV += 3; }
-      opts.tone && opts.tone(note, 0.35, { type: "triangle", vol: 0.2 });
+      opts.tone && opts.tone(note, 0.4, { type: "triangle", vol: 0.2 });
       opts.burst && opts.burst(0.5, 0.4, opts.parts || ["🎵", "✨"], 2, 80);
     },
     update(dt) {
       let busy = false;
-      if (balls) balls.forEach((b) => { if (b.kick == null) b.kick = 0; b.ang = b.ang || 0; b.angV = (b.angV || 0) + ((b.kick - b.ang) * 60 - b.angV * 6) * dt; b.ang += b.angV * dt; b.pivot.rotation.z = b.ang; b.kick *= 0.9; if (Math.abs(b.kick) > 0.01 || Math.abs(b.angV) > 0.01) busy = true; });
+      if (balls) balls.forEach((b) => { b.kick = b.kick || 0; b.ang = b.ang || 0; b.angV = (b.angV || 0) + ((b.kick - b.ang) * 55 - b.angV * 5) * dt; b.ang += b.angV * dt; b.pivot.rotation.z = b.ang; b.kick *= 0.9; if (Math.abs(b.kick) > 0.01 || Math.abs(b.angV) > 0.01) busy = true; });
       bounceV += -bounce * 90 * dt - bounceV * 6 * dt; bounce += bounceV * dt; main.scale.setScalar(1 + Math.max(0, bounce) * 0.1); if (Math.abs(bounceV) > 0.02) busy = true;
       return busy;
     },
@@ -568,18 +660,23 @@ function biPiano({ handles, group, opts }) {
 
 function biCube({ handles, group, opts }) {
   const main = handles.main || group; const base = opts.baseFreq || 330;
-  let combo = 0, timer = 0, bounce = 0, bounceV = 0, spinV = 0;
+  let combo = 0, timer = 0, bounce = 0, bounceV = 0;
+  // real quarter-turn flips: every tap adds 90° to X or Y and we ease toward it.
+  let rxT = group.rotation.x, ryT = group.rotation.y;
   return {
     mode: "tap", interactive: [group],
     onDown() {
-      bounceV += 3.2; spinV += 0.6; combo++;
+      bounceV += 3.4; combo++;
+      if (Math.random() < 0.5) rxT += Math.PI / 2; else ryT += Math.PI / 2; // a visible flip
       opts.tone && opts.tone(base + ((combo - 1) % 8) * 40, 0.12, { type: "square", vol: 0.16 });
       clearTimeout(timer); timer = setTimeout(() => { if (combo >= 3) { opts.celebrate && opts.celebrate(); opts.burst && opts.burst(0.5, 0.5, opts.parts || ["✨", "🌟", "💥"], Math.min(20, combo * 2), 240); } combo = 0; }, 620);
     },
     update(dt) {
       bounceV += -bounce * 90 * dt - bounceV * 6 * dt; bounce += bounceV * dt; main.scale.setScalar(1 + Math.max(0, bounce) * 0.12);
-      group.rotation.y += spinV * dt; spinV *= 0.92; if (Math.abs(spinV) < 0.02) spinV = 0;
-      return Math.abs(bounceV) > 0.02 || Math.abs(bounce) > 0.002 || spinV !== 0;
+      const k = Math.min(1, dt * 11);
+      group.rotation.x += (rxT - group.rotation.x) * k; group.rotation.y += (ryT - group.rotation.y) * k;
+      const flipping = Math.abs(rxT - group.rotation.x) > 0.002 || Math.abs(ryT - group.rotation.y) > 0.002;
+      return Math.abs(bounceV) > 0.02 || Math.abs(bounce) > 0.002 || flipping;
     },
     dispose() { clearTimeout(timer); },
   };
@@ -624,7 +721,20 @@ export function createFidgetScene(stageEl, toy, opts = {}) {
   camera.position.set(0, radius * 0.5, dist); camera.lookAt(0, 0, 0);
   camera.near = Math.max(0.05, dist - radius * 3); camera.far = dist + radius * 4; camera.updateProjectionMatrix();
 
-  const behavior = makeBehavior(toy.play, { handles, group, look, opts });
+  const behavior = makeBehavior(toy.play, { handles, group, look, opts, toy });
+
+  // High-tier flair: rarer toys get an orbiting sparkle aura + a gentle idle
+  // shimmer so legendary/mythic/cosmic/prismatic/divine feel extra special.
+  const tierRank = opts.tierRank || 0;
+  let auraGroup = null; const auraPts = [];
+  if (tierRank >= 4) {
+    auraGroup = new Group(); scene.add(auraGroup);
+    const n = Math.min(12, 4 + (tierRank - 3) * 2);
+    const sgeo = track(new SphereGeometry(radius * 0.05, 8, 6));
+    const smat = track(new MeshStandardMaterial({ color: 0xffffff, emissive: new Color(tierColor), emissiveIntensity: 1.2, roughness: 0.4 }));
+    for (let i = 0; i < n; i++) { const p = new Mesh(sgeo, smat); const a = (i / n) * Math.PI * 2; auraPts.push({ p, a, yb: (Math.random() - 0.5) * radius * 1.6, rr: radius * (1.35 + Math.random() * 0.35), sp: 0.4 + Math.random() * 0.5 }); auraGroup.add(p); }
+  }
+  let lastSpark = 0;
 
   let running = true, awakeUntil = 0, raf = 0, lastT = perfNow();
   const wake = (ms = 500) => { awakeUntil = Math.max(awakeUntil, perfNow() + ms); if (!raf) raf = requestAnimationFrame(frame); };
@@ -632,7 +742,13 @@ export function createFidgetScene(stageEl, toy, opts = {}) {
   function frame() {
     raf = 0; if (!running) return;
     const now = perfNow(), dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
-    const busy = behavior.update ? behavior.update(dt, now) : false;
+    let busy = behavior.update ? behavior.update(dt, now) : false;
+    if (auraGroup) {
+      const t = now / 1000;
+      auraPts.forEach((o) => { const a = o.a + t * o.sp; o.p.position.set(Math.cos(a) * o.rr, o.yb + Math.sin(t * 1.5 + o.a) * radius * 0.25, Math.sin(a) * o.rr); });
+      if (tierRank >= 6 && now - lastSpark > 1500) { lastSpark = now; opts.burst && opts.burst(0.5, 0.4, opts.parts || ["✨", "⭐"], 2, 140); }
+      busy = true; // keep the shimmer alive
+    }
     rnd.render(scene, camera);
     if (busy || now < awakeUntil) raf = requestAnimationFrame(frame);
   }
@@ -680,7 +796,7 @@ export function createFidgetScene(stageEl, toy, opts = {}) {
       window.removeEventListener("resize", onResize);
       behavior.dispose && behavior.dispose();
       cv.onpointerdown = cv.onpointermove = cv.onpointerup = cv.onpointercancel = null;
-      scene.remove(pivot);
+      scene.remove(pivot); if (auraGroup) scene.remove(auraGroup);
       for (const o of disposables) { try { o.dispose && o.dispose(); } catch {} }
       if (cv.parentNode === stageEl) stageEl.removeChild(cv);
     },

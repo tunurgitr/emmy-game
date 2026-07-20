@@ -247,7 +247,10 @@
 
     /* ---- touch / iPad friendliness ---- */
     html { -webkit-text-size-adjust: 100%; }
-    body { -webkit-tap-highlight-color: transparent; }
+    /* Stop iOS/iPad from selecting text or popping the callout menu when you
+       tap-and-hold a toy to play with it. Inputs stay selectable below. */
+    body { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
     button, .toy.tap, .bubble, .shopcard, .avatar-opt { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
     /* bigger, comfier tap targets & layout on tablets */
     @media (min-width: 700px) {

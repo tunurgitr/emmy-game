@@ -619,7 +619,9 @@ const BOX_DEFS = {
   rainbow: { name: "Rainbow Box", emoji: "🌈", cost: 90, color: "#3d8bfd",
     weights: { common: 200, uncommon: 340, rare: 270, epic: 120, legendary: 50, mythic: 14, cosmic: 5, prismatic: 1, divine: 0 } },
   galaxy:  { name: "Galaxy Box", emoji: "🌌", cost: 250, color: "#b558f6",
-    weights: { common: 0, uncommon: 260, rare: 330, epic: 230, legendary: 110, mythic: 44, cosmic: 18, prismatic: 6, divine: 2 } },
+    weights: { common: 0, uncommon: 240, rare: 320, epic: 240, legendary: 120, mythic: 52, cosmic: 24, prismatic: 12, divine: 4 } },
+  divine:  { name: "Divine Box", emoji: "👑", cost: 600, color: "#ffd000",
+    weights: { common: 0, uncommon: 0, rare: 120, epic: 210, legendary: 230, mythic: 170, cosmic: 130, prismatic: 90, divine: 50 } },
 };
 const RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "cosmic", "prismatic", "divine"];
 
@@ -854,6 +856,9 @@ function openFidget(uid) {
   if (wants3d && (type === "grid" || type === "cube" || type === "piano")) {
     $("fidgetTip").textContent = (TIPS[type] || "👆 Play!") + "  🔄 Drag to spin it around!";
   }
+  if (wants3d && fidgetToyObj.id === "cradle") {
+    $("fidgetTip").textContent = "👆 Tap the balls to set them swinging — clack clack! 🔄 Drag to turn it";
+  }
   if (wants3d) {
     const toy = fidgetToyObj;
     // lazy-load Three + the 3D module only when a toy is actually opened
@@ -865,6 +870,7 @@ function openFidget(uid) {
           tone, makeSustain, celebrate,
           burst: (nx, ny, marks, n, spread) => burstAt(stage, nx, ny, marks, n, spread),
           tierColor: TIERS[toy.tier].color,
+          tierRank: RARITY_ORDER.indexOf(toy.tier),
           parts: toy.parts,
           baseFreq: toyFreq(toy),
         });

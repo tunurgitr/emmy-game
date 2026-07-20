@@ -23,7 +23,7 @@ No downloads, no accounts, no ads — it runs entirely in the browser and saves 
 - **📖 Rarity Guide** legend showing every tier's color, value range, and toys — undiscovered toys appear as ❔ silhouettes, with a "Collected X/67" tracker.
 
 ### Mystery boxes 📦
-- Three boxes with **printed odds**: Sparkle (35🪙), Rainbow (90🪙), Galaxy (250🪙).
+- Four boxes with **printed odds**: Sparkle (35🪙), Rainbow (90🪙), Galaxy (250🪙), and the **Divine Box** (600🪙) — 100% Rare-or-better with the best shot at Prismatic and Divine toys.
 - Start each new game with a **free welcome box**, plus a **free Rainbow box every 5 trades**.
 - A visible **🍀 Lucky Meter** pity system (guaranteed Rare+ every 7 boxes), an epic+ safety net, and a guaranteed-good first box.
 - Full **drop → shake → glow → burst → reveal** animation with a **NEW!** badge for first-time pulls.
