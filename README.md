@@ -92,7 +92,7 @@ Plug in any standard gamepad: left stick walks, right stick looks, **A** interac
 | **🐹 Whack-a-Mole** · **🏀 Hoop Shot** | **🪙 Coin Pusher** — drop coins, the bar shoves the pile off the edge |
 | **🎈 Balloon Darts** — swipe to throw darts at drifting balloons | **🎳 Bowling** — swipe to roll, curve with a sideways swipe, strikes pay big |
 | **🕺 Dance Floor** — rhythm game on a lit dance floor (tap pads or arrow keys) | **🧗 Rock Wall** — FREE: tap the glowing holds to climb to the bell |
-| **🦆 Shooting Gallery** — ducks, targets and gold stars glide by on rails | **🔨 Strongman Hammer** — time the power meter, ring the bell |
+| **🦆 Duck Pond Toss** — toss soft beanbags to splash the ducks, targets and gold stars gliding by | **🔨 Strongman Hammer** — time the power meter, ring the bell |
 | **🍾 Ring Toss** — toss rings onto bottle necks (gold bottle = 10) | **🧠 Memory Match** — flip 3D tiles, find all 8 pairs |
 | **⚽ Penalty Kick** — swipe past a diving goalie in front of a cheering crowd | |
 

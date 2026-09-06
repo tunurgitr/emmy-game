@@ -8,16 +8,16 @@ const baseScene = (bg = 0x0b0620) => { const s = new THREE.Scene(); s.background
 const std = (ctrl, scene) => ({ ...ctrl, dispose() { ctrl.dispose && ctrl.dispose(); disposeScene(scene); } });
 
 // ==========================================================================
-//  🦆 SHOOTING GALLERY — ducks and targets glide by on rails; tap to hit them.
+//  🦆 DUCK POND TOSS — ducks and targets glide by on rails; toss soft beanbags to splash them.
 // ==========================================================================
 export const gallery = {
-  id: "gallery", name: "Shooting Gallery", emoji: "🦆", cost: 2, color: 0x8d6e63, cabinet: "gallery", payout: "up to 90 🎟️",
-  tip: "👆 Tap the ducks and targets as they slide past! Gold stars are worth 5. 40 seconds.",
+  id: "gallery", name: "Duck Pond Toss", emoji: "🦆", cost: 2, color: 0x26c6da, cabinet: "gallery", payout: "up to 90 🎟️",
+  tip: "👆 Tap a duck or target as it floats past to toss a beanbag and SPLASH it! Gold stars are worth 5. 40 seconds.",
   create(api) {
     const scene = baseScene(0x2a1a0a); lightScene(scene, { ambient: 0.9, pos: [2, 6, 5] });
     const camera = fpCamera(api.W, api.H, [0, 1.6, 3.4], [0, 1.6, -2], 58);
     const parts = makeParticles(scene);
-    scene.add(box(7, 4.2, 0.2, mat.wood(0x6d4c41), 0, 2.2, -3)); const back = textPlane(["🎯 SHOOTING GALLERY 🦆"], 5, 0.7, { bg: "#ffd54a", color: "#4a2b00", size: 100 }); back.position.set(0, 4.05, -2.85); scene.add(back);
+    scene.add(box(7, 4.2, 0.2, mat.wood(0x6d4c41), 0, 2.2, -3)); const back = textPlane(["🦆 DUCK POND TOSS 💦"], 5, 0.7, { bg: "#ffd54a", color: "#4a2b00", size: 100 }); back.position.set(0, 4.05, -2.85); scene.add(back);
     for (let i = 0; i < 3; i++) scene.add(box(6.4, 0.06, 0.4, mat.std(0x3e2723), 0, 0.9 + i * 0.9, -2.6 + i * 0.15));
     scene.add(box(3.0, 0.9, 0.8, mat.wood(0x8d5a2b), 0, 0.45, 2.4));
     const water = box(6.6, 0.08, 0.5, mat.gloss(0x26c6da, { transparent: true, opacity: 0.8 }), 0, 0.8, -2.55); scene.add(water);
@@ -28,22 +28,26 @@ export const gallery = {
       else if (kind === "target") { [[0.28, 0xffffff], [0.2, 0xef5350], [0.12, 0xffffff], [0.05, 0xef5350]].forEach(([r, c], i) => g.add(cyl(r, r, 0.03 + i * 0.01, mat.gloss(c), 24, 0, 0.3, 0).rotateX(Math.PI / 2))); }
       else { const s = new THREE.Shape(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.12 : 0.28, a = (i / 10) * Math.PI * 2 - Math.PI / 2; i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); } const st = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: 0.05, bevelEnabled: false }), mat.gloss(0xffd54a, { emissive: 0xffb300, emissiveIntensity: 0.4 })); st.position.y = 0.3; g.add(st); }
       g.position.set(-rail.dir * 3.6, rail.y, rail.z); scene.add(g); targets.push({ g, rail, kind, v: kind === "star" ? 5 : kind === "target" ? 2 : 1, alive: true }); };
-    const gun = new THREE.Group(); gun.position.set(0.35, -0.35, -1); gun.scale.setScalar(0.4); camera.add(gun); scene.add(camera); gun.add(box(0.16, 0.16, 0.9, mat.wood(0x8d5a2b))); gun.add(cyl(0.035, 0.035, 0.6, mat.metal(0x555), 10, 0, 0.08, -0.5).rotateX(Math.PI / 2));
+    // a soft beanbag in hand; tossing it arcs toward the target and splashes
+    const bag = new THREE.Group(); bag.position.set(0.35, -0.35, -1); camera.add(bag); scene.add(camera); const bagM = sphere(0.09, mat.std(0xef5350, { roughness: 1 })); bagM.scale.set(1.2, 0.7, 1.2); bag.add(bagM); bag.add(torus(0.05, 0.012, mat.std(0xffd54a), 0, 0.06, 0).rotateX(Math.PI / 2));
+    const bags = [];
     return std({
       scene, camera,
       onDown(p) {
-        if (over) return; api.sfx.laser(); gun.position.z = -0.85;
+        if (over) return; api.sfx.whoosh(); bag.position.y = -0.5;
         const hit = p.ray.intersectObjects(targets.filter((t) => t.alive).map((t) => t.g), true)[0];
-        if (hit) { let o = hit.object, t = null; while (o) { t = targets.find((q) => q.g === o); if (t) break; o = o.parent; } if (t) { t.alive = false; hits += t.v; parts.burst(t.g.position.clone().setY(t.g.position.y + 0.3), t.kind === "star" ? 0xffd54a : 0xffffff, 24, 3); scene.remove(t.g); (t.kind === "star" ? api.sfx.win : api.sfx.ding)(); api.setTip(t.kind === "star" ? "⭐ GOLD STAR! +5" : t.kind === "target" ? "Bullseye! +2" : "Quack! +1"); } }
-        else api.sfx.tap();
+        const to = hit ? hit.point.clone() : p.ray.ray.at(6, new THREE.Vector3()); const from = bag.getWorldPosition(new THREE.Vector3());
+        const fb = bagM.clone(); fb.material = bagM.material; scene.add(fb); bags.push({ m: fb, from, to, k: 0, target: hit ? targets.find((q) => { let o = hit.object; while (o) { if (o === q.g) return true; o = o.parent; } return false; }) : null });
       },
       onKey(k) { if (k === " ") this.onDown({ ray: new THREE.Raycaster(camera.position, camera.getWorldDirection(new THREE.Vector3())) }); },
       update(dt) {
-        if (over) return; time -= dt; parts.update(dt); gun.position.z = approach(gun.position.z, -1, 14, dt);
+        if (over) return; time -= dt; parts.update(dt); bag.position.y = approach(bag.position.y, -0.35, 12, dt);
+        for (let i = bags.length - 1; i >= 0; i--) { const b = bags[i]; b.k = Math.min(1, b.k + dt * 3.2); b.m.position.lerpVectors(b.from, b.to, b.k); b.m.position.y += Math.sin(b.k * Math.PI) * 0.5; b.m.rotation.x += dt * 8;
+          if (b.k >= 1) { scene.remove(b.m); bags.splice(i, 1); const t = b.target; if (t && t.alive) { t.alive = false; hits += t.v; parts.burst(t.g.position.clone().setY(t.g.position.y + 0.3), t.kind === "star" ? 0xffd54a : 0x9fdfff, 30, 3); scene.remove(t.g); (t.kind === "star" ? api.sfx.win : api.sfx.splash)(); api.setTip(t.kind === "star" ? "⭐ GOLD STAR! +5" : t.kind === "target" ? "SPLASH! Bullseye +2" : "Splash! Quack! +1"); } else { api.sfx.splash(); parts.burst(b.to, 0x9fdfff, 12, 2); api.setTip("Splash… missed!"); } } }
         spawnT -= dt; if (spawnT <= 0) { spawnT = rnd(0.45, 0.9); mk(pick(rails)); }
         for (let i = targets.length - 1; i >= 0; i--) { const t = targets[i]; t.g.position.x += t.rail.dir * t.rail.sp * dt; t.g.position.y = t.rail.y + Math.sin(performance.now() / 300 + i) * 0.02; if (Math.abs(t.g.position.x) > 3.7) { scene.remove(t.g); targets.splice(i, 1); } }
         api.setScore(`🎯 ${hits}   ${fmtT(time)}`);
-        if (time <= 0) { over = true; const tix = clamp(hits * 2, 0, 90); api.finish(tix, hits >= 30 ? "🦆 Sharpshooter!" : "Good shooting!", `${hits} points → ${tix} tickets`); }
+        if (time <= 0) { over = true; const tix = clamp(hits * 2, 0, 90); api.finish(tix, hits >= 30 ? "🦆 Splash champion!" : "Splashy fun!", `${hits} points → ${tix} tickets`); }
       },
     }, scene);
   },
