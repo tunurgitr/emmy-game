@@ -9,14 +9,16 @@
 //    world.exitGame() → camera returns to third-person
 //    world.keys — Set of held keys (shared with games)
 // ==========================================================================
-import { THREE, rnd, ri, clamp, pick, lerp, mat, box, cyl, sphere, torus, emojiSprite, emojiPlane, textPlane, textTexture, carpetTexture, woodTexture, blobShadow, makeKid, approach, makePlush, PLUSH_KINDS } from "./lib.js";
+import { THREE, rnd, ri, clamp, pick, lerp, mat, box, cyl, sphere, torus, emojiSprite, emojiPlane, textPlane, textTexture, carpetTexture, woodTexture, blobShadow, makeKid, approach, makePlush, PLUSH_KINDS, LOW_TIER, mergeStatic } from "./lib.js";
 
 const ROOM_W = 46, ROOM_D = 36; // x, z extents
 const EYE = 1.55;
 
 export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = {} }) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio || 1));
+  // quality: touch devices (iPad) render at 1x with no MSAA and adapt resolution to hit 60fps
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !LOW_TIER, powerPreference: "high-performance" });
+  const basePR = LOW_TIER ? 1.0 : Math.min(1.75, window.devicePixelRatio || 1); let resScale = 1, emaDt = 1 / 60, adaptT = 0;
+  renderer.setPixelRatio(basePR);
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2a1d14); scene.fog = new THREE.Fog(0x2a1d14, 30, 70);
@@ -30,6 +32,9 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   buildKiosk(scene, obstacles, interactables, animated);
   buildPrizeCounter(scene, obstacles, interactables, animated);
   layoutCabinets(scene, games, obstacles, interactables, animated);
+  // collapse static geometry into a few draw calls (room shell, cabinets, counters)
+  let mergedCount = mergeStatic(scene);
+  const groups = []; scene.traverse((o) => { if (o.isGroup && o !== scene && o.children.length > 3 && !o.userData.noMerge) groups.push(o); }); for (const g of groups) mergedCount += mergeStatic(g);
 
   // ---- player -------------------------------------------------------------
   const kid = makeKid(avatar); scene.add(kid.group);
@@ -153,10 +158,15 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   // ---- loop ---------------------------------------------------------------
   function resize() { const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (override?.camera) { override.camera.aspect = w / h; override.camera.updateProjectionMatrix(); } }
   window.addEventListener("resize", resize); resize();
+  function adaptResolution(dt) { // dynamic resolution: keep frames under ~20ms
+    emaDt = emaDt * 0.9 + dt * 0.1; adaptT += dt; if (adaptT < 1.2) return; adaptT = 0;
+    let next = resScale; if (emaDt > 1 / 40) next = Math.max(0.55, resScale * 0.85); else if (emaDt < 1 / 56) next = Math.min(1, resScale * 1.08);
+    if (Math.abs(next - resScale) > 0.01) { resScale = next; renderer.setPixelRatio(basePR * resScale); resize(); }
+  }
   function frame(now) {
     if (!running) return; requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now; if (paused) return;
-    pollPad();
+    adaptResolution(dt); pollPad();
     if (override) { try { override.update(dt); renderer.render(override.scene, override.camera); } catch (err) { console.error(err); } }
     else { update(dt); renderer.render(scene, camera); }
   }
@@ -186,6 +196,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
     focusPlayer(on) { focus = on; if (on) { player.yaw = camYaw + Math.PI; } },
     playerPos: () => ({ x: player.x, z: player.z }),
     size: () => ({ W: canvas.clientWidth || innerWidth, H: canvas.clientHeight || innerHeight }),
+    stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, merged: mergedCount, resScale, lowTier: LOW_TIER, fps: Math.round(1 / emaDt) }),
   };
 }
 
@@ -223,11 +234,11 @@ function buildRoom(scene, obstacles, animated, interactables) {
   }
   for (let i = -3; i <= 3; i++) { const x = i * (W / 7); const p = box(0.3, 0.3, D, beamDark, x, wallH + Math.abs(x) * 0 + (ridgeH - wallH) * (1 - Math.abs(x) / (W / 2)) - 0.5, 0); scene.add(p); }
   // ridge lights (warm) + hanging pendant lamps
-  scene.add(new THREE.HemisphereLight(0xffe2b8, 0x3a2a4a, 0.95));
-  const sun = new THREE.DirectionalLight(0xffffff, 0.55); sun.position.set(6, 14, -8); scene.add(sun);
-  const bulbMat = mat.neon(0xffd9a0, 2.2);
-  for (let i = -2; i <= 2; i++) { const z = i * 7; const pl = new THREE.PointLight(0xffc98a, 40, 26, 1.6); pl.position.set(0, wallH + 1.6, z); scene.add(pl); scene.add(sphere(0.25, bulbMat, 0, wallH + 1.6, z)); scene.add(cyl(0.01, 0.01, ridgeH - wallH - 2, mat.std(0x333), 6, 0, ridgeH - 1.2, z)); }
-  for (const [x, z] of [[-14, -6], [14, -6], [-14, 8], [14, 8]]) { const pl = new THREE.PointLight(0xffb070, 22, 18, 1.8); pl.position.set(x, wallH - 0.8, z); scene.add(pl); scene.add(cyl(0.5, 0.9, 0.7, mat.std(0x333), 16, x, wallH - 0.6, z)); scene.add(sphere(0.2, bulbMat, x, wallH - 1, z)); }
+  scene.add(new THREE.HemisphereLight(0xffe2b8, 0x3a2a4a, LOW_TIER ? 1.35 : 0.95));
+  const sun = new THREE.DirectionalLight(0xffffff, LOW_TIER ? 0.8 : 0.55); sun.position.set(6, 14, -8); scene.add(sun);
+  const bulbMat = mat.neon(0xffd9a0, 2.2); const lampMat = mat.std(0x333);
+  for (let i = -2; i <= 2; i++) { const z = i * 7; if (!LOW_TIER || i % 2 === 0) { const pl = new THREE.PointLight(0xffc98a, LOW_TIER ? 55 : 40, LOW_TIER ? 34 : 26, 1.6); pl.position.set(0, wallH + 1.6, z); scene.add(pl); } scene.add(sphere(0.25, bulbMat, 0, wallH + 1.6, z)); scene.add(cyl(0.01, 0.01, ridgeH - wallH - 2, lampMat, 6, 0, ridgeH - 1.2, z)); }
+  for (const [x, z] of [[-14, -6], [14, -6], [-14, 8], [14, 8]]) { if (!LOW_TIER) { const pl = new THREE.PointLight(0xffb070, 22, 18, 1.8); pl.position.set(x, wallH - 0.8, z); scene.add(pl); } scene.add(cyl(0.5, 0.9, 0.7, lampMat, 16, x, wallH - 0.6, z)); scene.add(sphere(0.2, bulbMat, x, wallH - 1, z)); }
   // rope lights + neon rail along the trusses (party feel)
   for (const s of [-1, 1]) { const rope = cyl(0.04, 0.04, D - 2, mat.neon(s > 0 ? 0xff3dd6 : 0x00e5ff, 1.2), 6, s * 9, wallH - 0.6, 0); rope.rotation.x = Math.PI / 2; scene.add(rope); }
   // log columns
@@ -235,8 +246,8 @@ function buildRoom(scene, obstacles, animated, interactables) {
   for (const [x, z] of [[-9, -5], [9, -5], [-9, 9], [9, 9]]) { scene.add(cyl(0.55, 0.65, wallH, bark, 14, x, wallH / 2, z)); obstacles.push({ x, z, w: 1.4, d: 1.4 }); scene.add(cyl(0.8, 0.8, 0.3, mat.std(0x3a2414), 14, x, 0.15, z)); }
   // climbing wall (back-left corner)
   const cw = box(6, wallH + 3.5, 1.4, mat.std(0xb9a58a, { roughness: 1 }), -17, (wallH + 3.5) / 2, -D / 2 + 1.4); scene.add(cw); obstacles.push({ x: -17, z: -D / 2 + 1.4, w: 6.4, d: 1.8 });
-  const holdCols = [0xff3dd6, 0x00e5ff, 0xffd54a, 0x00c853, 0xf4433f, 0x7a3cff];
-  for (let i = 0; i < 70; i++) scene.add(sphere(rnd(0.1, 0.18), mat.gloss(pick(holdCols)), -17 + rnd(-2.7, 2.7), rnd(0.5, wallH + 3), -D / 2 + 2.15));
+  const holdCols = [0xff3dd6, 0x00e5ff, 0xffd54a, 0x00c853, 0xf4433f, 0x7a3cff]; const holdMats = holdCols.map((c) => mat.gloss(c));
+  for (let i = 0; i < 70; i++) scene.add(sphere(rnd(0.1, 0.18), pick(holdMats), -17 + rnd(-2.7, 2.7), rnd(0.5, wallH + 3), -D / 2 + 2.15));
   const cwSign = textPlane(["🧗 ROCK WALL — FREE!"], 4, 0.8, { bg: "#00c853", color: "#fff", size: 100 }); cwSign.position.set(-17, wallH + 2.6, -D / 2 + 2.15); scene.add(cwSign);
   scene.add(box(3.5, 0.15, 1.2, mat.std(0x3d8bfd), -17, 0.07, -D / 2 + 3.0)); // crash mat
   cw.userData.wallSpot = { x: -17, z: -D / 2 + 2.3 };
@@ -266,7 +277,7 @@ function buildRoom(scene, obstacles, animated, interactables) {
   // water fountain beside the restrooms
   const fx = rx - 3.2, fz = rz - 3.4;
   scene.add(box(0.7, 0.9, 0.6, mat.metal(0xb0bec5), fx, 0.45, fz)); scene.add(box(0.7, 0.08, 0.6, mat.gloss(0xeceff1), fx, 0.93, fz)); scene.add(cyl(0.03, 0.03, 0.12, mat.metal(), 8, fx, 1.02, fz + 0.15)); obstacles.push({ x: fx, z: fz, w: 0.9, d: 0.8 });
-  const drops = []; for (let i = 0; i < 6; i++) { const dr = sphere(0.02, mat.gloss(0x9fdfff, { transparent: true, opacity: 0.85 }), fx, 1.1, fz + 0.15, 6); scene.add(dr); drops.push({ m: dr, t: i / 6 }); }
+  const dropMat = mat.gloss(0x9fdfff, { transparent: true, opacity: 0.85 }); const drops = []; for (let i = 0; i < 6; i++) { const dr = sphere(0.02, dropMat, fx, 1.1, fz + 0.15, 6); dr.userData.dyn = true; scene.add(dr); drops.push({ m: dr, t: i / 6 }); }
   animated.push((dt) => { for (const d of drops) { d.t = (d.t + dt * 1.2) % 1; d.m.position.set(fx + d.t * 0.12, 1.1 + Math.sin(d.t * Math.PI) * 0.16 - d.t * 0.05, fz + 0.15 + d.t * 0.05); } });
   const fSign = textPlane(["🚰 WATER"], 1.2, 0.3, { bg: "#00e5ff", color: "#1a1040", size: 70 }); fSign.position.set(fx, 1.5, fz); scene.add(fSign);
   const fIt = { id: "fountain", kind: "fountain", label: "🚰 Drink some water", front: new THREE.Vector3(fx, 0, fz + 1.2), eye: new THREE.Vector3(fx, 1.6, fz + 1.3), look: new THREE.Vector3(fx, 1.0, fz), hit: [] };
@@ -283,7 +294,7 @@ function buildRoom(scene, obstacles, animated, interactables) {
   const entrySign = textPlane(["🕹️ EMMY'S ARCADE 🎟️", "welcome!"], 10, 2.2, { bg: null, color: "#ff3dd6", size: 150, glow: "#ff3dd6" }); entrySign.position.set(0, 4.6, D / 2 - 0.1); entrySign.rotation.y = Math.PI; scene.add(entrySign);
   const doorL = box(0.3, 4, 0.3, mat.std(0x3a2414), -2.4, 2, D / 2 - 0.3), doorR = doorL.clone(); doorR.position.x = 2.4; scene.add(doorL, doorR); scene.add(box(5.1, 0.3, 0.3, mat.std(0x3a2414), 0, 4, D / 2 - 0.3));
   // ambient life: a few floating balloons drifting under the roof
-  const balloons = []; for (let i = 0; i < 8; i++) { const b = sphere(0.35, mat.gloss(pick(holdCols)), rnd(-18, 18), rnd(5.5, 6.8), rnd(-12, 12)); b.userData.o = rnd(0, 6); scene.add(b); balloons.push(b); const str = cyl(0.008, 0.008, 1.2, mat.std(0xdddddd), 4, 0, -0.9, 0); b.add(str); }
+  const balloons = []; for (let i = 0; i < 8; i++) { const b = sphere(0.35, mat.gloss(pick(holdCols)), rnd(-18, 18), rnd(5.5, 6.8), rnd(-12, 12)); b.userData.o = rnd(0, 6); b.userData.dyn = true; scene.add(b); balloons.push(b); const str = cyl(0.008, 0.008, 1.2, mat.std(0xdddddd), 4, 0, -0.9, 0); b.add(str); }
   animated.push((dt, t) => { for (const b of balloons) b.position.y += Math.sin(t * 0.7 + b.userData.o) * 0.002; });
 }
 
@@ -347,12 +358,12 @@ function layoutCabinets(scene, games, obstacles, interactables, animated) {
     const it = { id: def.id, kind: "game", def, label: def.cost ? `${def.emoji} Play ${def.name} (🪙 ${def.cost})` : `${def.emoji} Play ${def.name} (FREE!)`, front, eye, look, group, hit: [group] };
     group.userData.interactable = it; interactables.push(it);
     const ph = rnd(0, 6);
-    animated.push((dt, t) => { for (const n of neon) n.material.emissiveIntensity = 1.2 + Math.sin(t * 3 + ph) * 0.5; });
+    const neonMats = [...new Set(neon.map((n) => n.material))]; animated.push((dt, t) => { for (const m of neonMats) m.emissiveIntensity = 1.2 + Math.sin(t * 3 + ph) * 0.5; });
   });
 }
 function buildCabinet(def) {
   const g = new THREE.Group(); const c = new THREE.Color(def.color || 0xff3dd6);
-  const dark = mat.gloss(0x14102a), body = mat.gloss(c.clone().multiplyScalar(0.55)), neonM = () => mat.neon(c.getHex(), 1.4);
+  const dark = mat.gloss(0x14102a), body = mat.gloss(c.clone().multiplyScalar(0.55)); const neonShared = mat.neon(c.getHex(), 1.4); const neonM = () => neonShared; g.userData.noMerge = false;
   const neon = []; let screen = null, w = 1.6, d = 1.2, viewDist = 0.9, lookY = null;
   const attract = (lines, sw, sh) => { const s = textPlane(lines, sw, sh, { bg: "#0b0620", color: "#fff", size: 110, glow: `#${c.getHexString()}` }); s.material.toneMapped = false; return s; };
   const marquee = (y, sw = 1.6) => { const m = textPlane([def.name.toUpperCase()], sw, 0.42, { bg: `#${c.getHexString()}`, color: "#fff", size: 78 }); m.position.set(0, y, d / 2 - 0.02); g.add(m); };

@@ -2,7 +2,33 @@
 //  Emmy's Arcade 3D — shared helpers (Three.js, procedural only, no assets).
 // ==========================================================================
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 export { THREE };
+
+// Performance tier: phones/tablets get a lighter renderer (fewer lights, 1x pixels, no MSAA).
+export const LOW_TIER = (("ontouchstart" in window) || navigator.maxTouchPoints > 0) && !/Windows NT/.test(navigator.userAgent);
+
+// Merge every plain, static Mesh directly under `parent` that shares a material into one
+// mesh per material. Cuts hundreds of draw calls down to a handful. Skips sprites, lights,
+// meshes with children, interactables and anything flagged userData.dyn (animated).
+export function mergeStatic(parent, keep = () => false) {
+  const byMat = new Map(); const remove = [];
+  for (const c of parent.children) {
+    if (!c.isMesh || c.isSprite || c.children.length || c.userData.interactable || c.userData.dyn || keep(c)) continue;
+    const ga = c.geometry.attributes; if (!ga.position || !ga.normal || !ga.uv) continue;
+    c.updateMatrix(); let g = c.geometry.index ? c.geometry.toNonIndexed() : c.geometry.clone(); g.applyMatrix4(c.matrix);
+    for (const k of Object.keys(g.attributes)) if (!["position", "normal", "uv"].includes(k)) g.deleteAttribute(k);
+    if (!byMat.has(c.material)) byMat.set(c.material, []); byMat.get(c.material).push(g); remove.push([c, c.material]);
+  }
+  let merged = 0;
+  for (const [m, geos] of byMat) {
+    if (geos.length < 2) { geos.forEach((g) => g.dispose()); continue; }
+    const mg = mergeGeometries(geos, false); geos.forEach((g) => g.dispose()); if (!mg) continue;
+    const mesh = new THREE.Mesh(mg, m); mesh.userData.merged = true; parent.add(mesh); merged++;
+    for (const [c, cm] of remove) if (cm === m) { parent.remove(c); c.geometry.dispose(); }
+  }
+  return merged;
+}
 
 export const rnd = (a, b) => a + Math.random() * (b - a);
 export const ri = (a, b) => Math.floor(rnd(a, b + 1));
@@ -183,8 +209,9 @@ export function makeKid({ shirt = 0xff3dd6, pants = 0x3d8bfd, skin = 0xffd6b8, h
 // ---- plush / claw prizes: distinct little shapes (not just spheres) --------
 //  kind: bear | panda | frog | dino | octo | whale | star | gift | unicorn | duck
 export const PLUSH_KINDS = ["bear", "panda", "frog", "dino", "octo", "whale", "star", "gift", "unicorn", "duck"];
+const plushMats = new Map(); const plushMat = (c) => { if (!plushMats.has(c)) plushMats.set(c, mat.std(c, { roughness: 1 })); return plushMats.get(c); };
 export function makePlush(kind, s = 1) {
-  const g = new THREE.Group(); const soft = (c) => mat.std(c, { roughness: 1 });
+  const g = new THREE.Group(); const soft = plushMat;
   const eye = (x, y, z, r = 0.035) => { g.add(sphere(r, mat.std(0x111111), x, y, z, 10)); g.add(sphere(r * 0.35, mat.basic(0xffffff), x + r * 0.3, y + r * 0.3, z + r * 0.8, 6)); };
   const smile = (y, z, r = 0.05, c = 0x5a2d2d) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.012, 6, 12, Math.PI), mat.std(c)); m.position.set(0, y, z); m.rotation.z = Math.PI; g.add(m); };
   switch (kind) {
