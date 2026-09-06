@@ -91,9 +91,11 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
     pad.connected = !!gp; if (!gp) { cursor.style.display = "none"; return; }
     pad.lx = dz(gp.axes[0] || 0); pad.ly = dz(gp.axes[1] || 0); pad.rx = dz(gp.axes[2] || 0); pad.ry = dz(gp.axes[3] || 0);
     const pressed = gp.buttons.map((b) => b.pressed); const edges = pressed.map((p, i) => p && !prevBtn[i]); const released = pressed.map((p, i) => !p && prevBtn[i]); prevBtn.length = 0; prevBtn.push(...pressed); pad.buttons = pressed;
+    // any button edge goes to the hub first (start/again buttons, menus); it returns true if it consumed it
+    let consumed = false; edges.forEach((e, i) => { if (e && onPadButton && onPadButton(i)) consumed = true; }); if (consumed) return;
     if (override) { // virtual cursor: right stick (or left) moves it, A taps at it
       const W = canvas.clientWidth || innerWidth, H = canvas.clientHeight || innerHeight; const mx = pad.rx || pad.lx, my = pad.ry || pad.ly;
-      cur.x = clamp(cur.x + mx * 0.9 / 60, 0.02, 0.98); cur.y = clamp(cur.y + my * 0.9 / 60, 0.02, 0.98);
+      cur.x = clamp(cur.x + mx * 1.4 / 60, 0.02, 0.98); cur.y = clamp(cur.y + my * 1.4 / 60, 0.02, 0.98);
       cursor.style.display = "block"; cursor.style.left = `${cur.x * W}px`; cursor.style.top = `${cur.y * H}px`; cursor.classList.toggle("down", !!pressed[0]);
       const fake = { clientX: canvas.getBoundingClientRect().left + cur.x * W, clientY: canvas.getBoundingClientRect().top + cur.y * H, pointerId: 999 };
       if (edges[0]) override.onDown && override.onDown(evt(fake)); else if (pressed[0]) override.onMove && override.onMove(evt(fake)); if (released[0]) override.onUp && override.onUp(evt(fake));
@@ -103,7 +105,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
       if (edges[0] && nearest && !transition) onInteract(nearest); if (edges[1] && onPadBack) onPadBack();
     }
   }
-  let onPadBack = null;
+  let onPadBack = null, onPadButton = null;
   const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), tmpV = new THREE.Vector3();
   function tapToWalk(p) {
     const meshes = interactables.flatMap((i) => i.hit);
@@ -186,7 +188,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
 
   return {
     renderer, scene, camera, keys, interactables, pad,
-    onPadBack(fn) { onPadBack = fn; },
+    onPadBack(fn) { onPadBack = fn; }, onPadButton(fn) { onPadButton = fn; },
     start() { if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } },
     stop() { running = false; },
     pause(v) { paused = v; if (!v) last = performance.now(); },

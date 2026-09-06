@@ -332,6 +332,15 @@ function closeGame() {
 }
 $("gQuit").onclick = closeGame;
 if (world) world.onPadBack(() => { if (modalOpen) closeModal(); else if (active) closeGame(); });
+// A button: start a game from its banner, replay from the result screen, confirm the mode picker
+if (world) world.onPadButton((b) => {
+  if (b !== 0) return false;
+  if ($("bStart")) { $("bStart").click(); return true; }
+  if ($("bAgain")) { $("bAgain").click(); return true; }
+  if ($("modeModal").classList.contains("show")) { $("pickSandbox").click(); return true; }
+  if (modalOpen === "rrModal") return true;
+  return false;
+});
 window.addEventListener("gamepadconnected", () => toast("🎮 Controller connected! Left stick walks, right stick looks, A = play/tap, B = back.", 4000));
 
 // --------------------------------------------------------------------------
