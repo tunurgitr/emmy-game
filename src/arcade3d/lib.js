@@ -90,10 +90,12 @@ export function blobShadow(r = 1, opacity = 0.35) {
 }
 
 // ---- 3D particle bursts ----------------------------------------------------
+let dotTex = null;
+function dotTexture() { if (!dotTex) { const c = document.createElement("canvas"); c.width = c.height = 32; const g = c.getContext("2d"); const gr = g.createRadialGradient(16, 16, 2, 16, 16, 16); gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.6, "rgba(255,255,255,.9)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); dotTex = new THREE.CanvasTexture(c); } return dotTex; }
 export function makeParticles(scene, max = 300) {
   const geo = new THREE.BufferGeometry(); const pos = new Float32Array(max * 3), col = new Float32Array(max * 3);
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3)); geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.12, vertexColors: true, transparent: true, opacity: 0.95, sizeAttenuation: true, depthWrite: false })); pts.frustumCulled = false; scene.add(pts);
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.1, map: dotTexture(), vertexColors: true, transparent: true, opacity: 0.95, sizeAttenuation: true, depthWrite: false, alphaTest: 0.2 })); pts.frustumCulled = false; scene.add(pts);
   const live = []; const tmp = new THREE.Color();
   return {
     burst(p, color, n = 20, speed = 3, life = 0.8, gravity = 6) { tmp.set(color); for (let i = 0; i < n && live.length < max; i++) { live.push({ x: p.x, y: p.y, z: p.z, vx: rnd(-1, 1) * speed, vy: rnd(0.2, 1.4) * speed, vz: rnd(-1, 1) * speed, t: life * rnd(0.5, 1), r: tmp.r, g: tmp.g, b: tmp.b, gr: gravity }); } },
@@ -131,15 +133,107 @@ export function hitPlane(ray, normal = [0, 1, 0], constant = 0) { _plane.set(new
 // simple spring/tween tick
 export function approach(cur, target, rate, dt) { return cur + (target - cur) * Math.min(1, rate * dt); }
 
-// ---- a little kid character (used in the arcade + laser tag friends) -------
-export function makeKid({ shirt = 0xff3dd6, pants = 0x3d8bfd, skin = 0xffd6b8, hair = 0x6b3e1e, face = "😊" } = {}) {
+// ---- a little kid character with a modelled (human) face ------------------
+//  opts: shirt, pants, skin, hair, hairStyle (short|long|ponytail|curly|bun),
+//        eyes (color), mood (happy|neutral|excited), shoes, hat (emoji or null)
+export function makeKid({ shirt = 0xff3dd6, pants = 0x3d8bfd, skin = 0xffd6b8, hair = 0x6b3e1e, hairStyle = "long", eyes = 0x3b6ea5, mood = "happy", shoes = 0xffffff, hat = null } = {}) {
   const g = new THREE.Group();
+  const skinM = mat.std(skin, { roughness: 0.75 }), hairM = mat.std(hair, { roughness: 0.9 });
   const legL = cyl(0.11, 0.1, 0.5, mat.std(pants), 12, -0.14, 0.25, 0), legR = legL.clone(); legR.position.x = 0.14; g.add(legL, legR);
+  for (const x of [-0.14, 0.14]) { const sh = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.14, 4, 10), mat.gloss(shoes)); sh.rotation.x = Math.PI / 2; sh.position.set(x, 0.05, 0.05); g.add(sh); }
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.42, 6, 14), mat.std(shirt)); body.position.y = 0.85; g.add(body);
   const armL = cyl(0.07, 0.06, 0.5, mat.std(shirt), 10, -0.38, 0.85, 0), armR = armL.clone(); armR.position.x = 0.38; g.add(armL, armR);
-  const head = sphere(0.3, mat.std(skin), 0, 1.5, 0); g.add(head);
-  const hairM = sphere(0.31, mat.std(hair), 0, 1.58, -0.04); hairM.scale.set(1, 0.7, 1); g.add(hairM);
-  const faceS = emojiSprite(face, 0.4); faceS.position.set(0, 1.48, 0.3); g.add(faceS);
+  for (const x of [-0.38, 0.38]) g.add(sphere(0.075, skinM, x, 0.58, 0, 12));
+  g.add(cyl(0.08, 0.1, 0.1, skinM, 12, 0, 1.2, 0)); // neck
+  // head — slightly oval, with ears
+  const head = sphere(0.3, skinM, 0, 1.52, 0, 28); head.scale.set(1, 1.08, 0.98); g.add(head);
+  for (const x of [-0.29, 0.29]) { const ear = sphere(0.07, skinM, x, 1.5, 0, 12); ear.scale.set(0.6, 1, 0.8); g.add(ear); }
+  // eyes: white + iris + pupil + highlight, eyebrows
+  const eyeParts = [];
+  for (const x of [-0.11, 0.11]) {
+    const white = sphere(0.062, mat.std(0xffffff, { roughness: 0.3 }), x, 1.56, 0.245, 14); white.scale.set(1, 1.15, 0.6); g.add(white); eyeParts.push(white);
+    const iris = sphere(0.036, mat.std(eyes, { roughness: 0.3 }), x, 1.56, 0.28, 12); g.add(iris);
+    const pupil = sphere(0.018, mat.std(0x111111), x, 1.56, 0.305, 8); g.add(pupil);
+    const hl = sphere(0.008, mat.basic(0xffffff), x + 0.012, 1.575, 0.318, 6); g.add(hl);
+    const brow = box(0.09, 0.016, 0.02, hairM, x, 1.64, 0.26); brow.rotation.z = x < 0 ? -0.12 : 0.12; if (mood === "excited") brow.position.y += 0.015; g.add(brow);
+    const lash = box(0.1, 0.012, 0.02, mat.std(0x222222), x, 1.605, 0.26); g.add(lash);
+  }
+  // nose + mouth + cheeks
+  const nose = sphere(0.028, skinM, 0, 1.49, 0.29, 10); nose.scale.set(1, 0.8, 0.8); g.add(nose);
+  const mouthM = mat.std(0xc94a5a, { roughness: 0.5 });
+  if (mood === "excited") { const m = sphere(0.05, mouthM, 0, 1.415, 0.26, 12); m.scale.set(1.3, 0.9, 0.5); g.add(m); const teeth = box(0.08, 0.02, 0.01, mat.basic(0xffffff), 0, 1.43, 0.285); g.add(teeth); }
+  else if (mood === "neutral") { const m = box(0.09, 0.018, 0.02, mouthM, 0, 1.415, 0.28); g.add(m); }
+  else { const smile = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.013, 8, 16, Math.PI), mouthM); smile.position.set(0, 1.435, 0.275); smile.rotation.z = Math.PI; g.add(smile); }
+  for (const x of [-0.17, 0.17]) { const ch = new THREE.Mesh(new THREE.CircleGeometry(0.035, 12), mat.basic(0xff9aa8, { transparent: true, opacity: 0.55 })); ch.position.set(x, 1.46, 0.262); ch.lookAt(x * 3, 1.46, 1.2); g.add(ch); }
+  // hair
+  const cap = sphere(0.315, hairM, 0, 1.58, -0.03, 24); cap.scale.set(1.02, 0.82, 1.02); g.add(cap);
+  const fringe = box(0.5, 0.1, 0.12, hairM, 0, 1.75, 0.2); fringe.rotation.x = 0.35; g.add(fringe);
+  if (hairStyle === "long") { for (const x of [-0.27, 0.27]) { const side = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.42, 4, 10), hairM); side.position.set(x, 1.32, -0.05); g.add(side); } const back = box(0.5, 0.5, 0.14, hairM, 0, 1.3, -0.24); g.add(back); }
+  if (hairStyle === "ponytail") { const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.4, 4, 10), hairM); tail.position.set(0, 1.35, -0.34); tail.rotation.x = 0.3; g.add(tail); g.add(torus(0.075, 0.02, mat.gloss(0xff3dd6), 0, 1.62, -0.3).rotateX(Math.PI / 2)); }
+  if (hairStyle === "curly") { for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; g.add(sphere(0.1, hairM, Math.cos(a) * 0.26, 1.66 + Math.sin(i) * 0.04, Math.sin(a) * 0.26 - 0.03, 10)); } }
+  if (hairStyle === "bun") { g.add(sphere(0.12, hairM, 0, 1.9, -0.1, 14)); }
+  if (hat) { const h = emojiSprite(hat, 0.6); h.position.set(0, 1.98, 0.05); g.add(h); }
   g.add(blobShadow(0.55, 0.4));
-  return { group: g, parts: { legL, legR, armL, armR, head, body }, walk(t, speed) { const s = Math.sin(t * 10) * Math.min(1, speed) * 0.6; legL.rotation.x = s; legR.rotation.x = -s; armL.rotation.x = -s; armR.rotation.x = s; body.position.y = 0.85 + Math.abs(Math.sin(t * 10)) * 0.04 * Math.min(1, speed); } };
+  let blinkT = rnd(1, 4);
+  return { group: g, parts: { legL, legR, armL, armR, head, body }, walk(t, speed, dt = 0.016) {
+    const s = Math.sin(t * 10) * Math.min(1, speed) * 0.6; legL.rotation.x = s; legR.rotation.x = -s; armL.rotation.x = -s; armR.rotation.x = s; body.position.y = 0.85 + Math.abs(Math.sin(t * 10)) * 0.04 * Math.min(1, speed);
+    blinkT -= dt; const bl = blinkT < 0 ? Math.max(0.15, 1 - Math.sin(Math.min(1, -blinkT / 0.15) * Math.PI)) : 1; for (const e of eyeParts) e.scale.y = 1.15 * bl; if (blinkT < -0.15) blinkT = rnd(2, 5);
+  } };
 }
+
+// ---- plush / claw prizes: distinct little shapes (not just spheres) --------
+//  kind: bear | panda | frog | dino | octo | whale | star | gift | unicorn | duck
+export const PLUSH_KINDS = ["bear", "panda", "frog", "dino", "octo", "whale", "star", "gift", "unicorn", "duck"];
+export function makePlush(kind, s = 1) {
+  const g = new THREE.Group(); const soft = (c) => mat.std(c, { roughness: 1 });
+  const eye = (x, y, z, r = 0.035) => { g.add(sphere(r, mat.std(0x111111), x, y, z, 10)); g.add(sphere(r * 0.35, mat.basic(0xffffff), x + r * 0.3, y + r * 0.3, z + r * 0.8, 6)); };
+  const smile = (y, z, r = 0.05, c = 0x5a2d2d) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.012, 6, 12, Math.PI), mat.std(c)); m.position.set(0, y, z); m.rotation.z = Math.PI; g.add(m); };
+  switch (kind) {
+    case "bear": case "panda": {
+      const body = kind === "panda" ? soft(0xffffff) : soft(0xc68642), dark = kind === "panda" ? soft(0x222222) : soft(0x8d5a2b);
+      const b = sphere(0.2, body, 0, 0.2, 0); b.scale.set(1, 0.9, 0.85); g.add(b); g.add(sphere(0.17, body, 0, 0.47, 0.02));
+      for (const x of [-0.12, 0.12]) { g.add(sphere(0.06, dark, x, 0.6, 0)); g.add(sphere(0.07, dark, x * 1.9, 0.14, 0.02)); g.add(sphere(0.06, dark, x * 0.9, 0.02, 0.09)); }
+      if (kind === "panda") for (const x of [-0.06, 0.06]) { const p = sphere(0.04, dark, x, 0.49, 0.15); p.scale.set(1, 1.3, 0.6); g.add(p); }
+      g.add(sphere(0.07, kind === "panda" ? soft(0xffffff) : soft(0xe6b980), 0, 0.42, 0.14)); g.add(sphere(0.025, mat.std(0x111), 0, 0.44, 0.2, 8));
+      eye(-0.06, 0.5, 0.16, 0.022); eye(0.06, 0.5, 0.16, 0.022); break; }
+    case "frog": {
+      const b = sphere(0.22, soft(0x66bb6a), 0, 0.2, 0); b.scale.set(1.1, 0.8, 1); g.add(b);
+      for (const x of [-0.12, 0.12]) { g.add(sphere(0.07, soft(0x66bb6a), x, 0.38, 0.06)); eye(x, 0.4, 0.11, 0.035); g.add(sphere(0.06, soft(0x4caf50), x * 1.9, 0.06, 0.1)); }
+      smile(0.22, 0.2, 0.08); g.add(sphere(0.12, soft(0xc5e1a5), 0, 0.14, 0.14)); break; }
+    case "dino": {
+      const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.22, 6, 12), soft(0x7cb342)); b.position.set(0, 0.28, 0); b.rotation.x = 0.3; g.add(b);
+      g.add(sphere(0.13, soft(0x7cb342), 0, 0.5, 0.1)); const tail = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.35, 8), soft(0x7cb342)); tail.position.set(0, 0.12, -0.25); tail.rotation.x = -1.9; g.add(tail);
+      for (let i = 0; i < 4; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 6), soft(0xffd54a)); sp.position.set(0, 0.6 - i * 0.12, -0.02 - i * 0.07); sp.rotation.x = -0.4; g.add(sp); }
+      eye(-0.06, 0.53, 0.2, 0.03); eye(0.06, 0.53, 0.2, 0.03); g.add(sphere(0.1, soft(0xc5e1a5), 0, 0.26, 0.13)); for (const x of [-0.09, 0.09]) g.add(cyl(0.04, 0.05, 0.1, soft(0x7cb342), 8, x, 0.05, 0.02)); break; }
+    case "octo": {
+      g.add(sphere(0.2, soft(0xab47bc), 0, 0.3, 0)); for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const t = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.18, 4, 8), soft(0xab47bc)); t.position.set(Math.cos(a) * 0.14, 0.08, Math.sin(a) * 0.14); t.rotation.z = Math.cos(a) * 0.5; t.rotation.x = -Math.sin(a) * 0.5; g.add(t); }
+      eye(-0.07, 0.32, 0.17, 0.03); eye(0.07, 0.32, 0.17, 0.03); smile(0.24, 0.19, 0.04); for (const x of [-0.14, 0.14]) g.add(sphere(0.03, mat.basic(0xf48fb1, { transparent: true, opacity: 0.8 }), x, 0.27, 0.14, 6)); break; }
+    case "whale": {
+      const b = sphere(0.22, soft(0x42a5f5), 0, 0.2, 0); b.scale.set(1, 0.75, 1.3); g.add(b); const belly = sphere(0.18, soft(0xe3f2fd), 0, 0.1, 0.06); belly.scale.set(1, 0.5, 1.2); g.add(belly);
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 8), soft(0x42a5f5)); tail.position.set(0, 0.2, -0.32); tail.rotation.x = -Math.PI / 2; g.add(tail); for (const x of [-0.07, 0.07]) { const fl = sphere(0.06, soft(0x42a5f5), x, 0.26, -0.42); fl.scale.set(1.2, 0.4, 1); g.add(fl); }
+      eye(-0.12, 0.26, 0.2, 0.028); eye(0.12, 0.26, 0.2, 0.028); const spout = emojiSprite("💦", 0.18); spout.position.set(0, 0.45, 0.05); g.add(spout); break; }
+    case "star": {
+      const sh = new THREE.Shape(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.11 : 0.24, a = (i / 10) * Math.PI * 2 - Math.PI / 2; i ? sh.lineTo(Math.cos(a) * r, Math.sin(a) * r) : sh.moveTo(Math.cos(a) * r, Math.sin(a) * r); } sh.closePath();
+      const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.1, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 2 }); geo.center(); const st = new THREE.Mesh(geo, mat.gloss(0xffd54a, { emissive: 0xffb300, emissiveIntensity: 0.25 })); st.position.y = 0.26; g.add(st);
+      eye(-0.06, 0.28, 0.1, 0.025); eye(0.06, 0.28, 0.1, 0.025); smile(0.2, 0.1, 0.035, 0xa65e00); break; }
+    case "gift": {
+      g.add(box(0.34, 0.3, 0.34, mat.gloss(0xef5350), 0, 0.15, 0)); g.add(box(0.36, 0.08, 0.36, mat.gloss(0xc62828), 0, 0.3, 0)); g.add(box(0.37, 0.4, 0.08, mat.gloss(0xffd54a), 0, 0.17, 0)); g.add(box(0.08, 0.4, 0.37, mat.gloss(0xffd54a), 0, 0.17, 0));
+      for (const x of [-0.07, 0.07]) { const loop = torus(0.06, 0.02, mat.gloss(0xffd54a), x, 0.4, 0); loop.rotation.y = x < 0 ? 0.6 : -0.6; g.add(loop); } break; }
+    case "unicorn": {
+      g.add(sphere(0.2, soft(0xfce4ec), 0, 0.2, 0)); g.add(sphere(0.16, soft(0xfce4ec), 0, 0.45, 0.03));
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.2, 8), mat.metal(0xffd76a)); horn.position.set(0, 0.68, 0.05); g.add(horn);
+      for (const x of [-0.09, 0.09]) { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.1, 8), soft(0xfce4ec)); ear.position.set(x, 0.6, 0); g.add(ear); }
+      [0xff8ac8, 0xbfeaff, 0xe6ccff, 0xfff8dc].forEach((c, i) => g.add(sphere(0.05, soft(c), -0.02 + i * 0.015, 0.6 - i * 0.06, -0.14, 8)));
+      eye(-0.06, 0.47, 0.14, 0.024); eye(0.06, 0.47, 0.14, 0.024); smile(0.4, 0.15, 0.03); for (const x of [-0.1, 0.1]) g.add(cyl(0.04, 0.045, 0.1, soft(0xfce4ec), 8, x, 0.05, 0.02)); break; }
+    case "duck": default: {
+      const b = sphere(0.2, soft(0xffeb3b), 0, 0.18, 0); b.scale.set(1, 0.85, 1.15); g.add(b); g.add(sphere(0.14, soft(0xffeb3b), 0, 0.42, 0.1));
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.1, 8), mat.gloss(0xff9800)); beak.position.set(0, 0.4, 0.24); beak.rotation.x = Math.PI / 2; g.add(beak);
+      eye(-0.06, 0.46, 0.2, 0.022); eye(0.06, 0.46, 0.2, 0.022); const w = sphere(0.08, soft(0xffe082), 0, 0.2, -0.16); w.scale.set(1.2, 0.6, 1); g.add(w); break; }
+  }
+  g.scale.setScalar(s); g.userData.plush = kind; return g;
+}
+export const PLUSH_INFO = {
+  bear: { name: "Teddy Bear", emoji: "🧸", v: 20, grip: 0.8 }, panda: { name: "Panda Plush", emoji: "🐼", v: 25, grip: 0.75 }, frog: { name: "Froggy", emoji: "🐸", v: 15, grip: 0.9 },
+  dino: { name: "Dino Plush", emoji: "🦖", v: 30, grip: 0.7 }, octo: { name: "Octo Plush", emoji: "🐙", v: 20, grip: 0.85 }, whale: { name: "Whale Plush", emoji: "🐳", v: 22, grip: 0.8 },
+  star: { name: "Star Squishy", emoji: "⭐", v: 45, grip: 0.55 }, gift: { name: "Mystery Gift", emoji: "🎁", v: 60, grip: 0.5 }, unicorn: { name: "Mini Unicorn", emoji: "🦄", v: 40, grip: 0.6 }, duck: { name: "Rubber Ducky", emoji: "🐤", v: 12, grip: 0.9 },
+};

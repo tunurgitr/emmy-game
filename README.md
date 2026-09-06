@@ -61,35 +61,41 @@ Tuned for iPad/touchscreens — big tap targets, no double-tap zoom lag, pointer
 
 ## 🕹️ Emmy's Arcade
 
-A **walkable 3D arcade** (Three.js, all procedural geometry) modelled on a big timber-truss family arcade hall: wood plank walls, a pitched wooden ceiling with king-post trusses and warm pendant lights, patterned carpet, log columns, daylight windows, a climbing wall, a Snack Shack cabin, balloons under the roof, and glowing arcade cabinets everywhere.
+A **walkable 3D arcade** (Three.js, all procedural geometry) modelled on a big timber-truss family arcade hall: wood plank walls, a pitched wooden ceiling with king-post trusses and warm pendant lights, patterned carpet, log columns, daylight windows, a **climbable rock wall**, an **open Snack Shack** with a chef, balloons under the roof, and glowing arcade cabinets everywhere. Everyone in the arcade has a modelled human face (eyes that blink, brows, nose, smile, hair styles) — no emoji faces.
 
-- **Walk around in third-person.** On iPad: left thumb = virtual joystick, right thumb = drag to look, or just **tap the floor / tap a machine** and Emmy walks there. On desktop: WASD/arrows + mouse drag, `E`/Enter to interact.
-- **Walk up to a machine** and a "▶ Play" prompt appears; the camera **flies into the cabinet** and the game plays in **first-person**.
-- Your wallet has **unlimited money** — walk to the glowing **💳 card kiosk** by the entrance to load credits onto your arcade card. Games cost 2–4 credits and pay out 🎟️ tickets that fly onto your card.
-- The **🏪 Prize Counter** at the back wall (with a clerk and shelves of prizes) is where tickets become prizes.
+### Two ways to play
+- **🏖️ Sandbox mode** — unlimited money. Load your card as much as you like.
+- **💼 Regular mode** — start with $5 and **earn money by working**: a 60-second **Snack Shack shift** (take orders, tap the right snacks in order, ring the bell — speed earns tips) or a **Prize Booth shift** (hand kids the plushie on their ticket receipt). Do a good job and you get paid; wrong orders earn nothing. Money buys card credits and snacks.
+- Progress saves separately per mode; switch anytime from the top bar.
 
-### Games — 10 machines, each a real 3D scene
+### Walking around
+- Third-person camera. On iPad: an always-visible **virtual joystick** (bottom-left) plus drag-to-look on the right, or just **tap the floor / a machine** and Emmy walks there. Desktop: WASD/arrows + mouse drag, `E`/Enter to interact.
+- Walk up to anything glowing and a "▶ Play" prompt appears; the camera **flies in** and the game plays in **first-person**.
+- **💳 Card kiosk** (entrance) turns money into credits. **🍕 Snack Shack** sells snacks for money — every snack gives a boost (double tickets, a free game, +50% tickets, or instant tickets). **🏪 Prize Counter** trades tickets for prizes and is where you sign up for a Prize Booth shift.
+
+### Games — 15 machines, each a real 3D scene (payouts are generous: every win ×1.5)
 | | |
 |---|---|
-| **🏎️ Turbo Racer** — sit-down motorbike cabinet; first-person highway with traffic, coins, trees | **🦾 Claw Machine** — look into the glass box; drag the claw over plush prizes, release to drop |
-| **🥽 VR Blaster** — a VR pod; drag to look around space, tap to blast UFOs and asteroids | **🎡 Ticket Wheel** — a real spinning prize wheel; swipe to spin, 2–200 tickets (★ jackpot) |
-| **🔫 Laser Tag** — neon arena behind a curtain; robots pop up behind barriers, don't zap the kids | **🏒 Air Hockey** — real table, drag your paddle on the surface, first to 5 vs the robot |
-| **🎣 Gone Fishin'** — on a dock over animated water; cast, tap the ❗ bite, hold to keep the fish in the green zone | **🎳 Skee-Ball** — swipe to roll up the lane and ramp into tilted rings |
-| **🐹 Whack-a-Mole** — moles pop out of a 3D table, tap to bonk with the hammer | **🏀 Hoop Shot** — swipe to shoot at a moving hoop with rim & backboard physics |
+| **🏎️ Turbo Racer** — sit-down bike, first-person highway | **🦾 Claw Machine** — a real claw crane full of *shaped* plushies (bear, panda, frog, dino, octopus, whale, star, gift, unicorn, duck); what you grab goes on your shelf |
+| **🥽 VR Blaster** — drag to look, blast UFOs and asteroids | **🎡 Ticket Wheel** — a real spinning prize wheel, 2–200 tickets |
+| **🔫 Laser Tag** — neon arena, robots behind barriers | **🏒 Air Hockey** — drag your paddle, first to 5 |
+| **🎣 Gone Fishin'** — dock, animated water, 3D reel gauge | **🎳 Skee-Ball** — roll up the lane into tilted rings |
+| **🐹 Whack-a-Mole** · **🏀 Hoop Shot** | **🪙 Coin Pusher** — drop coins, the bar shoves the pile off the edge |
+| **🎈 Balloon Darts** — swipe to throw darts at drifting balloons | **🎳 Bowling** — swipe to roll, curve with a sideways swipe, strikes pay big |
+| **🕺 Dance Floor** — rhythm game on a lit dance floor (tap pads or arrow keys) | **🧗 Rock Wall** — FREE: tap the glowing holds to climb to the bell |
 
-Every cabinet remembers your **best ticket haul**.
-
-### Prize Counter — every prize is interactive
+### Prize Counter — every prize is interactive (and affordable)
 | Prize | What you can do with it |
 |---|---|
-| 🍬 Candy Bag | Unwrap and munch 10 candies |
-| 🏐 Bouncy Ball | Flick it around a box with real bouncing physics |
-| 🪀 Glow Yo-Yo · 🫧 Galaxy Slime · 🧸 Teddy · 🦄 Unicorn · 🦎 GIANT Axolotl · 🏆 Trophy | **Real 3D toys** rendered with the Fidget Zone engine — hold to **squish** the stuffies, flick the yo-yo, polish the trophy |
-| 🪄 Glow Wand | Draw glowing rainbow light trails |
-| 🃏 Pokémon Pack · ✨ Lorcana Pack | Rip open a 5-card booster, flip each card (holo & secret rares!), and keep a **binder** collection |
-| 📱 iPad | A tablet with exactly **one** app installed: Emmy's Fidget Trading, playable right inside it |
+| 🍬 Candy Bag (15🎟️) | Unwrap and munch 10 candies |
+| 🏐 Bouncy Ball (30) · 🪄 Glow Wand (60) | Bounce physics · draw glowing rainbow light trails |
+| 🪀 Yo-Yo · 🫧 Slime · 🧸 Teddy · 🦄 Unicorn · 🦎 GIANT Axolotl · 🏆 Trophy (40–1200) | **Real 3D toys** — hold to squish, flick to spin, polish |
+| 🦾 Claw plushies | The actual shaped plush you grabbed — hold to squish, drag to spin |
+| 🃏 **Critter Clash Pack** (80) | 10 original monster battle cards with procedural illustrated art, HP, attacks, weakness, rarity marks and a reverse-holo |
+| ✨ **Inkbound Pack** (100) | 12 original character cards in six inks (Amber, Amethyst, Emerald, Ruby, Sapphire, Steel): hex ink cost, inkable ring, strength/willpower shields, lore diamonds, six rarity gems (circle → hexagon), one guaranteed foil; collect them in a binder |
+| 📱 iPad (600) | A tablet with exactly **one** app installed: Emmy's Fidget Trading, playable inside it |
 
-Progress (card balance, tickets, prizes, card binders) saves locally, separately from the trading game.
+All characters, creatures and card sets are original — nothing licensed.
 
 ---
 
@@ -122,9 +128,9 @@ npm run preview  # preview the production build
 | `game.html` + `src/game.js` | Fidget Trading (UI, state, turns, boxes, fidget zone, chat) |
 | `arcade.html` + `src/arcade.js` | Emmy's Arcade hub — HUD, arcade card, prize counter, first-person game harness |
 | `src/arcade3d/world.js` | The walkable 3D hall: room, trusses, lights, cabinets, kiosk, prize counter, character, controls, camera fly-in |
-| `src/arcade3d/games1.js`, `src/arcade3d/games2.js` | The 10 first-person 3D games (each is a `{create(api) → {scene, camera, update…}}` controller) |
-| `src/arcade3d/lib.js` | Shared Three.js helpers — emoji sprites, text/wood/carpet textures, materials, particles, kid character |
-| `src/arcade-prizes.js` + `src/canvas2d.js` | Prize catalog, card sets, and the interactive prize views (3D toys via `fidget3d.js`, iPad, packs…) |
+| `src/arcade3d/games1.js`, `games2.js`, `games3.js` | The 15 first-person 3D games + the 2 jobs (each is a `{create(api) → {scene, camera, update…}}` controller) |
+| `src/arcade3d/lib.js` | Shared Three.js helpers — textures, materials, particles, the human-faced kid character, shaped plushies |
+| `src/arcade-prizes.js` + `src/canvas2d.js` | Prize catalog, snack menu, the two card sets with SVG art generator, and the interactive prize views |
 | `src/toys.js` | Toy catalog, rarity tiers, and trade/offer/box logic |
 | `src/fidget3d.js` | Lazy-loaded Three.js scene — procedural 3D toy archetypes |
 | `mockups.html`, `mockup-a.html`, `mockup-b.html` | Early design mockups (kept for reference) |

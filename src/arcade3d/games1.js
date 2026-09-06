@@ -6,7 +6,7 @@
 //  onUp(p), onKey(k), dispose() }.  p = { x, y (NDC), sx, sy (px), ray, W, H }
 //  api = { W, H, sfx, tone, keys, setScore, setTip, finish(tickets,title,detail), hud }
 // ==========================================================================
-import { THREE, rnd, ri, clamp, pick, lerp, fmtT, mat, box, cyl, sphere, torus, emojiSprite, emojiPlane, textPlane, textTexture, blobShadow, makeParticles, disposeScene, lightScene, fpCamera, hitTest, hitPlane, approach, makeKid } from "./lib.js";
+import { THREE, rnd, ri, clamp, pick, lerp, fmtT, mat, box, cyl, sphere, torus, emojiSprite, emojiPlane, textPlane, textTexture, blobShadow, makeParticles, disposeScene, lightScene, fpCamera, hitTest, hitPlane, approach, makeKid, makePlush, PLUSH_KINDS, PLUSH_INFO } from "./lib.js";
 
 const baseScene = (bg = 0x0b0620) => { const s = new THREE.Scene(); s.background = new THREE.Color(bg); return s; };
 const std = (ctrl, scene) => ({ ...ctrl, dispose() { ctrl.dispose && ctrl.dispose(); disposeScene(scene); } });
@@ -75,66 +75,77 @@ export const wheel = {
 };
 
 // ==========================================================================
-//  🦾 CLAW MACHINE — look into the glass box; drag the claw, release to drop.
+//  🦾 CLAW MACHINE — a real claw crane: glass cabinet, joystick, rails, and a
+//  pile of plush prizes with different shapes. What you grab goes on your shelf!
 // ==========================================================================
-const CLAW_PRIZES = [{ e: "🧸", v: 15, grip: 0.8 }, { e: "🐙", v: 12, grip: 0.85 }, { e: "🦄", v: 25, grip: 0.7 }, { e: "🐸", v: 10, grip: 0.9 }, { e: "🐼", v: 18, grip: 0.75 }, { e: "🦖", v: 20, grip: 0.7 }, { e: "⭐", v: 40, grip: 0.55 }, { e: "🎁", v: 60, grip: 0.45 }, { e: "🐳", v: 14, grip: 0.8 }];
 export const claw = {
-  id: "claw", name: "Claw Machine", emoji: "🦾", cost: 3, color: 0x00e5ff, cabinet: "claw", payout: "up to 100 🎟️",
-  tip: "👆 Drag anywhere to steer the claw over a prize, let go to drop it! 3 tries.",
+  id: "claw", name: "Claw Machine", emoji: "🦾", cost: 3, color: 0x00e5ff, cabinet: "claw", payout: "plushies + up to 120 🎟️",
+  tip: "👆 Drag anywhere to steer the claw over a prize, let go to drop it! 3 tries. Grabbed prizes go on your shelf!",
   create(api) {
-    const scene = baseScene(0x0b1a2a); lightScene(scene, { ambient: 0.7, pos: [1, 5, 3] });
-    const camera = fpCamera(api.W, api.H, [0, 2.6, 3.6], [0, 1.2, 0], 52);
+    const scene = baseScene(0x0b1a2a); lightScene(scene, { ambient: 0.75, pos: [1, 5, 3] });
+    const camera = fpCamera(api.W, api.H, [0, 2.3, 3.4], [0, 1.15, 0], 52);
     const parts = makeParticles(scene);
-    const BW = 2.4, BD = 2.0, floorY = 0.4; // box interior
-    scene.add(box(BW + 0.3, floorY, BD + 0.3, mat.gloss(0x14102a), 0, floorY / 2, 0));
-    const pinkFloor = box(BW, 0.04, BD, mat.std(0xe91e63), 0, floorY, 0); scene.add(pinkFloor);
-    for (let i = 0; i < 30; i++) scene.add(sphere(0.05, mat.gloss(pick([0xff9ec7, 0xffd54a, 0x00e5ff])), rnd(-BW / 2, BW / 2), floorY + 0.03, rnd(-BD / 2, BD / 2)));
-    // glass walls + neon posts
-    for (const [x, z, w, d] of [[0, -BD / 2, BW, 0.02], [-BW / 2, 0, 0.02, BD], [BW / 2, 0, 0.02, BD]]) scene.add(box(w, 2.2, d, mat.glass(0xaee8ff, 0.15), x, floorY + 1.1, z));
-    for (const [x, z] of [[-BW / 2, -BD / 2], [BW / 2, -BD / 2], [-BW / 2, BD / 2], [BW / 2, BD / 2]]) scene.add(box(0.08, 2.2, 0.08, mat.neon(0x00e5ff, 1.2), x, floorY + 1.1, z));
-    scene.add(box(BW + 0.3, 0.25, BD + 0.3, mat.gloss(0x14102a), 0, floorY + 2.3, 0));
-    // chute (front-left)
-    const chute = { x: -BW / 2 + 0.35, z: BD / 2 - 0.3 }; scene.add(box(0.6, 0.06, 0.5, mat.std(0x111), chute.x, floorY + 0.03, chute.z)); const chuteLbl = textPlane(["PRIZE ↓"], 0.6, 0.2, { bg: "#ffd54a", color: "#4a2b00", size: 70 }); chuteLbl.position.set(chute.x, floorY + 0.35, chute.z + 0.26); scene.add(chuteLbl);
-    // prizes: plush spheres with emoji faces
-    const prizes = [];
-    for (let i = 0; i < 10; i++) { const p = pick(CLAW_PRIZES); const g = new THREE.Group(); const body = sphere(0.19, mat.std(pick([0xffb6c1, 0xbfeaff, 0xfff8dc, 0xd7f542, 0xe6ccff]), { roughness: 1 })); g.add(body); const face = emojiSprite(p.e, 0.34); face.position.set(0, 0.02, 0.12); g.add(face);
-      let x, z, tries = 0; do { x = rnd(-BW / 2 + 0.3, BW / 2 - 0.3); z = rnd(-BD / 2 + 0.3, BD / 2 - 0.3); tries++; } while ((Math.hypot(x - chute.x, z - chute.z) < 0.6 || prizes.some((q) => Math.hypot(q.g.position.x - x, q.g.position.z - z) < 0.36)) && tries < 40);
-      g.position.set(x, floorY + 0.2, z); scene.add(g); prizes.push({ ...p, g }); }
-    // claw rig
-    const rail = box(BW, 0.06, 0.06, mat.metal(), 0, floorY + 2.15, 0); scene.add(rail);
-    const carriage = box(0.2, 0.1, 0.2, mat.metal(0x8899aa), 0, floorY + 2.1, 0); scene.add(carriage);
+    const BW = 2.4, BD = 2.0, floorY = 0.9; // glass box interior
+    // cabinet body: dark base with lit panel, coin slot, joystick & button
+    scene.add(box(BW + 0.4, floorY, BD + 0.4, mat.gloss(0x1b1340), 0, floorY / 2, 0));
+    const panel = textPlane(["🦾 CLAW MACHINE"], BW, 0.36, { bg: "#00e5ff", color: "#1a1040", size: 80 }); panel.position.set(0, floorY - 0.35, BD / 2 + 0.21); scene.add(panel);
+    scene.add(box(BW + 0.4, 0.08, 0.5, mat.gloss(0x2a1a5e), 0, floorY + 0.02, BD / 2 + 0.35)); // control ledge
+    const stick = cyl(0.03, 0.03, 0.28, mat.metal(), 10, -0.5, floorY + 0.16, BD / 2 + 0.38); scene.add(stick); const knob = sphere(0.07, mat.gloss(0xf4433f), -0.5, floorY + 0.32, BD / 2 + 0.38); scene.add(knob);
+    const btn = cyl(0.09, 0.09, 0.05, mat.neon(0x00c853, 0.8), 20, 0.4, floorY + 0.08, BD / 2 + 0.38); scene.add(btn);
+    scene.add(box(0.05, 0.14, 0.02, mat.std(0x111), 0.9, floorY - 0.2, BD / 2 + 0.22)); // coin slot
+    // prize floor (pink with confetti)
+    scene.add(box(BW, 0.04, BD, mat.std(0xe91e63), 0, floorY, 0));
+    for (let i = 0; i < 40; i++) scene.add(sphere(0.04, mat.gloss(pick([0xff9ec7, 0xffd54a, 0x00e5ff, 0xffffff])), rnd(-BW / 2, BW / 2), floorY + 0.03, rnd(-BD / 2, BD / 2), 6));
+    // glass walls + chrome posts + lit top
+    for (const [x, z, w, d] of [[0, -BD / 2, BW, 0.02], [-BW / 2, 0, 0.02, BD], [BW / 2, 0, 0.02, BD], [0, BD / 2, BW, 0.02]]) scene.add(box(w, 2.0, d, mat.glass(0xaee8ff, 0.12), x, floorY + 1.0, z));
+    for (const [x, z] of [[-BW / 2, -BD / 2], [BW / 2, -BD / 2], [-BW / 2, BD / 2], [BW / 2, BD / 2]]) { scene.add(box(0.1, 2.0, 0.1, mat.metal(0xdfe6ee), x, floorY + 1.0, z)); scene.add(box(0.04, 2.0, 0.04, mat.neon(0x00e5ff, 1.2), x, floorY + 1.0, z)); }
+    scene.add(box(BW + 0.4, 0.3, BD + 0.4, mat.gloss(0x1b1340), 0, floorY + 2.15, 0)); const marquee = textPlane(["WIN A PLUSHIE!"], BW, 0.3, { bg: "#ff3dd6", color: "#fff", size: 80 }); marquee.position.set(0, floorY + 2.15, BD / 2 + 0.21); scene.add(marquee);
+    for (let i = 0; i < 8; i++) scene.add(sphere(0.04, mat.neon(i % 2 ? 0xffd54a : 0xffffff, 1.5), -BW / 2 + 0.2 + i * (BW - 0.4) / 7, floorY + 1.98, BD / 2 - 0.02, 6));
+    const lamp = new THREE.PointLight(0xffffff, 6, 6); lamp.position.set(0, floorY + 1.9, 0); scene.add(lamp);
+    // chute (front-left corner) with a flap
+    const chute = { x: -BW / 2 + 0.38, z: BD / 2 - 0.32 }; scene.add(box(0.62, 0.05, 0.55, mat.std(0x111), chute.x, floorY + 0.03, chute.z)); scene.add(box(0.62, 0.3, 0.02, mat.gloss(0x2a1a5e), chute.x, floorY + 0.15, chute.z - 0.28)); scene.add(box(0.02, 0.3, 0.55, mat.gloss(0x2a1a5e), chute.x + 0.31, floorY + 0.15, chute.z));
+    const chuteLbl = textPlane(["PRIZE ↓"], 0.6, 0.18, { bg: "#ffd54a", color: "#4a2b00", size: 70 }); chuteLbl.position.set(chute.x, floorY + 0.32, chute.z - 0.27); scene.add(chuteLbl);
+    // prizes: plush shapes, piled up
+    const prizes = []; const kinds = [...PLUSH_KINDS].sort(() => Math.random() - 0.5).slice(0, 8).concat(pick(PLUSH_KINDS), pick(PLUSH_KINDS));
+    for (const kind of kinds) { const g = makePlush(kind, 0.9); let x, z, tries = 0;
+      do { x = rnd(-BW / 2 + 0.3, BW / 2 - 0.3); z = rnd(-BD / 2 + 0.3, BD / 2 - 0.3); tries++; } while ((Math.hypot(x - chute.x, z - chute.z) < 0.65 || prizes.some((q) => Math.hypot(q.g.position.x - x, q.g.position.z - z) < 0.42)) && tries < 60);
+      g.position.set(x, floorY + 0.02, z); g.rotation.y = rnd(0, Math.PI * 2); scene.add(g); prizes.push({ kind, ...PLUSH_INFO[kind], g }); }
+    // claw rig: gantry rail + carriage + cable + 3-finger claw
+    const rail = box(BW, 0.06, 0.06, mat.metal(), 0, floorY + 1.9, 0); scene.add(rail);
+    for (const x of [-BW / 2 + 0.05, BW / 2 - 0.05]) scene.add(box(0.06, 0.06, BD, mat.metal(0x8899aa), x, floorY + 1.93, 0));
+    const carriage = box(0.22, 0.12, 0.22, mat.metal(0x8899aa), 0, floorY + 1.85, 0); scene.add(carriage);
     const cable = cyl(0.012, 0.012, 1, mat.std(0xdddddd), 6); scene.add(cable);
     const clawG = new THREE.Group(); scene.add(clawG); clawG.add(sphere(0.09, mat.metal(0xdfe6ee)));
-    const fingers = [0, 2.1, 4.2].map((a) => { const f = new THREE.Group(); f.rotation.y = a; const seg = box(0.035, 0.32, 0.035, mat.metal(0xc0c8d0), 0.1, -0.16, 0); seg.rotation.z = -0.35; f.add(seg); const tip = box(0.035, 0.16, 0.035, mat.metal(0xc0c8d0), 0.18, -0.36, 0); tip.rotation.z = 0.5; f.add(tip); clawG.add(f); return f; });
-    const cl = { x: 0, z: 0, y: floorY + 2.0, tx: 0, tz: 0, open: 1 };
-    let phase = "aim", tries = 3, won = 0, grabbed = null, t = 0, drag = null;
-    const score = () => api.setScore(`🎟️ ${won}   •   ${"🕹️".repeat(tries)}`); score();
+    const fingers = [0, 2.1, 4.2].map((a) => { const f = new THREE.Group(); f.rotation.y = a; const seg = box(0.035, 0.34, 0.035, mat.metal(0xc0c8d0), 0.1, -0.17, 0); seg.rotation.z = -0.35; f.add(seg); const tip = box(0.035, 0.18, 0.035, mat.metal(0xc0c8d0), 0.19, -0.4, 0); tip.rotation.z = 0.55; f.add(tip); clawG.add(f); return f; });
+    const cl = { x: 0, z: 0, y: floorY + 1.75, tx: 0, tz: 0, open: 1 };
+    let phase = "aim", tries = 3, won = 0, grabbed = null, t = 0, drag = null; const gotPrizes = [];
+    const score = () => api.setScore(`🎟️ ${won}   •   ${"🕹️".repeat(tries)}   ${gotPrizes.map((k) => PLUSH_INFO[k].emoji).join("")}`); score();
+    const finish = () => api.finish(won, gotPrizes.length ? "Nice grabbing!" : "The claw was slippery…", gotPrizes.length ? `You won: ${gotPrizes.map((k) => PLUSH_INFO[k].emoji + " " + PLUSH_INFO[k].name).join(", ")} — they're on your prize shelf! (+${won} tickets)` : `${won} tickets`);
     return std({
       scene, camera,
       onDown(p) { if (phase !== "aim") return; drag = { x: p.sx, y: p.sy }; api.sfx.motor(); },
       onMove(p) { if (!drag || phase !== "aim") return; cl.tx = clamp(cl.tx + (p.sx - drag.x) * 0.006, -BW / 2 + 0.25, BW / 2 - 0.25); cl.tz = clamp(cl.tz + (p.sy - drag.y) * 0.006, -BD / 2 + 0.25, BD / 2 - 0.25); drag = { x: p.sx, y: p.sy }; },
-      onUp() { if (drag && phase === "aim") { drag = null; phase = "drop"; api.sfx.tap(); } },
+      onUp() { if (drag && phase === "aim") { drag = null; phase = "drop"; api.sfx.tap(); btn.material.emissiveIntensity = 2; } },
       onKey(k) { if (k === "ArrowLeft") cl.tx -= 0.15; if (k === "ArrowRight") cl.tx += 0.15; if (k === "ArrowUp") cl.tz -= 0.15; if (k === "ArrowDown") cl.tz += 0.15; cl.tx = clamp(cl.tx, -BW / 2 + 0.25, BW / 2 - 0.25); cl.tz = clamp(cl.tz, -BD / 2 + 0.25, BD / 2 - 0.25); if ((k === " " || k === "Enter") && phase === "aim") phase = "drop"; },
       update(dt) {
-        t += dt; parts.update(dt);
+        t += dt; parts.update(dt); btn.material.emissiveIntensity = approach(btn.material.emissiveIntensity, 0.8, 4, dt);
         if (phase === "aim" || phase === "carry" || phase === "return") { cl.x = approach(cl.x, cl.tx, 6, dt); cl.z = approach(cl.z, cl.tz, 6, dt); }
-        if (phase === "drop") { cl.y -= 1.4 * dt; cl.open = 1; if (cl.y <= floorY + 0.42) { phase = "grab"; t = 0; } }
+        if (phase === "drop") { cl.y -= 1.4 * dt; cl.open = 1; if (cl.y <= floorY + 0.5) { phase = "grab"; t = 0; } }
         else if (phase === "grab") { cl.open = Math.max(0, cl.open - dt * 3); if (cl.open === 0 && t > 0.5) {
-          let best = null, bd = 0.3; for (const p of prizes) { const d = Math.hypot(p.g.position.x - cl.x, p.g.position.z - cl.z); if (d < bd) { bd = d; best = p; } }
-          if (best && Math.random() < best.grip * (1 - bd / 0.45)) { grabbed = best; api.sfx.ding(); api.setTip("Got one! Hold on tight…"); } else { api.setTip("Missed! Try again…"); api.sfx.miss(); }
+          let best = null, bd = 0.32; for (const p of prizes) { const d = Math.hypot(p.g.position.x - cl.x, p.g.position.z - cl.z); if (d < bd) { bd = d; best = p; } }
+          if (best && Math.random() < best.grip * (1 - bd / 0.5) + 0.15) { grabbed = best; api.sfx.ding(); api.setTip(`Got the ${best.name}! Hold on tight…`); } else { api.setTip("Missed! Try again…"); api.sfx.miss(); }
           phase = "lift"; t = 0; } }
-        else if (phase === "lift") { cl.y += 1.2 * dt; if (grabbed && Math.random() < 0.0015) { grabbed = null; api.setTip("Oh no, it slipped! 😱"); api.sfx.miss(); } if (cl.y >= floorY + 2.0) { cl.y = floorY + 2.0; phase = "carry"; cl.tx = chute.x; cl.tz = chute.z; } }
+        else if (phase === "lift") { cl.y += 1.2 * dt; if (grabbed && Math.random() < 0.001) { grabbed = null; api.setTip("Oh no, it slipped! 😱"); api.sfx.miss(); } if (cl.y >= floorY + 1.75) { cl.y = floorY + 1.75; phase = "carry"; cl.tx = chute.x; cl.tz = chute.z; } }
         else if (phase === "carry") { if (Math.hypot(cl.x - cl.tx, cl.z - cl.tz) < 0.03) { phase = "release"; t = 0; } }
         else if (phase === "release") { cl.open = Math.min(1, cl.open + dt * 3);
-          if (grabbed) { grabbed.g.position.y -= 2.5 * dt; if (grabbed.g.position.y < -0.5) { won += grabbed.v; api.sfx.win(); parts.burst(new THREE.Vector3(chute.x, floorY + 0.3, chute.z), 0xffd54a, 40, 2.5); api.setTip(`+${grabbed.v} tickets! 🎟️`); scene.remove(grabbed.g); prizes.splice(prizes.indexOf(grabbed), 1); grabbed = null; score(); } }
-          else if (cl.open >= 1) { tries--; score(); if (tries <= 0 || prizes.length === 0) api.finish(won, won ? "Nice grabbing!" : "The claw was slippery…", `${won} tickets`); else { phase = "return"; cl.tx = 0; cl.tz = 0; } } }
+          if (grabbed) { grabbed.g.position.y -= 2.5 * dt; if (grabbed.g.position.y < floorY - 0.6) { won += grabbed.v; gotPrizes.push(grabbed.kind); api.awardPrize && api.awardPrize("plush_" + grabbed.kind); api.sfx.win(); parts.burst(new THREE.Vector3(chute.x, floorY + 0.3, chute.z), 0xffd54a, 40, 2.5); api.setTip(`${grabbed.emoji} ${grabbed.name} is yours! +${grabbed.v} tickets 🎟️`); scene.remove(grabbed.g); prizes.splice(prizes.indexOf(grabbed), 1); grabbed = null; score(); } }
+          else if (cl.open >= 1) { tries--; score(); if (tries <= 0 || prizes.length === 0) finish(); else { phase = "return"; cl.tx = 0; cl.tz = 0; } } }
         else if (phase === "return") { if (Math.hypot(cl.x - cl.tx, cl.z - cl.tz) < 0.05) { phase = "aim"; api.setTip("👆 Drag to steer the claw, let go to drop it!"); } }
-        if (grabbed && phase !== "release") { grabbed.g.position.set(cl.x, cl.y - 0.42, cl.z); }
-        // rig visuals
-        carriage.position.set(cl.x, floorY + 2.1, cl.z); rail.position.z = cl.z; clawG.position.set(cl.x, cl.y, cl.z);
-        const len = floorY + 2.1 - cl.y; cable.scale.y = Math.max(0.01, len); cable.position.set(cl.x, cl.y + len / 2, cl.z);
+        if (grabbed && phase !== "release") { grabbed.g.position.set(cl.x, cl.y - 0.55, cl.z); grabbed.g.rotation.z = Math.sin(t * 6) * 0.15; }
+        carriage.position.set(cl.x, floorY + 1.85, cl.z); rail.position.z = cl.z; clawG.position.set(cl.x, cl.y, cl.z);
+        const len = floorY + 1.85 - cl.y; cable.scale.y = Math.max(0.01, len); cable.position.set(cl.x, cl.y + len / 2, cl.z);
         fingers.forEach((f) => (f.rotation.z = -0.15 - cl.open * 0.55));
-        for (const p of prizes) if (p !== grabbed) p.g.position.y = floorY + 0.2 + Math.sin(t * 2 + p.g.position.x * 3) * 0.005;
+        stick.rotation.z = (cl.tx / BW) * 0.6; stick.rotation.x = -(cl.tz / BD) * 0.6; knob.position.set(-0.5 + (cl.tx / BW) * 0.16, floorY + 0.32, BD / 2 + 0.38 + (cl.tz / BD) * 0.16);
       },
     }, scene);
   },
@@ -260,7 +271,7 @@ export const laser = {
     const bots = []; const hitObjs = [];
     for (const [x, z] of spots) { const b = box(2.2, 1.1, 0.5, mat.gloss(0x2a1a6e), x, 0.55, z); scene.add(b); scene.add(box(2.3, 0.06, 0.55, mat.neon(0xff3dd6, 1.5), x, 1.12, z)); }
     const mkBot = () => { const g = new THREE.Group(); g.add(box(0.7, 0.7, 0.5, mat.metal(0xb0bec5), 0, 0.35, 0)); g.add(box(0.5, 0.45, 0.45, mat.metal(0xeceff1), 0, 0.95, 0)); g.add(box(0.36, 0.14, 0.05, mat.neon(0xff2222, 2), 0, 0.98, 0.24)); g.add(cyl(0.02, 0.02, 0.3, mat.metal(), 6, 0, 1.3, 0)); g.add(sphere(0.06, mat.neon(0xff2222, 2), 0, 1.47, 0)); return g; };
-    const mkFriend = () => { const k = makeKid({ shirt: pick([0x00c853, 0xffd54a, 0x3d8bfd]), face: pick(["😀", "😊", "🤗"]) }); k.group.scale.setScalar(0.85); return k.group; };
+    const mkFriend = () => { const k = makeKid({ shirt: pick([0x00c853, 0xffd54a, 0x3d8bfd]), skin: pick([0xffd6b8, 0xe0ac8a, 0x8d5a3c, 0xf1c9a5]), hair: pick([0x6b3e1e, 0x222222, 0xe8c36a, 0xa33a1e]), hairStyle: pick(["short", "long", "ponytail", "curly"]), mood: pick(["happy", "excited"]) }); k.group.scale.setScalar(0.85); return k.group; };
     let time = 30, hits = 0, oops = 0, spawnT = 0, over = false, combo = 0; const beams = [];
     const gun = new THREE.Group(); gun.position.set(0.38, -0.36, -1); gun.scale.setScalar(0.32); camera.add(gun); scene.add(camera); gun.add(box(0.14, 0.2, 0.7, mat.gloss(0x7a3cff))); gun.add(cyl(0.04, 0.04, 0.3, mat.neon(0x00e5ff, 1.5), 8, 0, 0.05, -0.5).rotateX(Math.PI / 2)); gun.add(box(0.1, 0.25, 0.12, mat.gloss(0x222), 0, -0.2, 0.2));
     return std({

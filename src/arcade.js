@@ -1,15 +1,17 @@
 // ==========================================================================
 //  Emmy's Arcade — hub. Walk around the 3D arcade (third-person), step up to
-//  a machine to play it in first-person, load your card at the kiosk and trade
-//  tickets for interactive prizes at the counter.
+//  a machine to play it in first-person, load your card at the kiosk, buy
+//  snacks, work shifts for money (Regular mode) and trade tickets for prizes.
 // ==========================================================================
 import { createWorld } from "./arcade3d/world.js";
 import { wheel, claw, vr, race, laser } from "./arcade3d/games1.js";
 import { hockey, fish, skee, mole, hoops } from "./arcade3d/games2.js";
-import { PRIZES, prizeById, playPrize } from "./arcade-prizes.js";
+import { pusher, darts, bowling, dance, climb, snackjob, prizejob } from "./arcade3d/games3.js";
+import { PRIZES, prizeById, playPrize, SNACKS } from "./arcade-prizes.js";
 
-const GAMES = [race, claw, vr, wheel, laser, hockey, fish, skee, mole, hoops];
+const GAMES = [race, claw, vr, wheel, laser, hockey, fish, skee, mole, hoops, pusher, darts, bowling, dance, climb, snackjob, prizejob];
 const $ = (id) => document.getElementById(id);
+const TICKET_BONUS = 1.5; // generous arcade: every payout ×1.5
 
 // --------------------------------------------------------------------------
 //  Sound (Web Audio, generated — shares the mute flag with the trading game)
@@ -42,6 +44,7 @@ const SFX = {
   win:    () => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.2, { type: "triangle", vol: 0.2, when: i * 0.08 })); },
   miss:   () => tone(280, 0.18, { type: "sine", vol: 0.16, slideTo: 160 }),
   coin:   () => { tone(988, 0.06, { type: "square", vol: 0.1 }); tone(1319, 0.12, { type: "square", vol: 0.1, when: 0.06 }); },
+  cash:   () => { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.1, { type: "square", vol: 0.1, when: i * 0.06 })); },
   crash:  () => { tone(120, 0.3, { type: "sawtooth", vol: 0.18, slideTo: 40 }); tone(90, 0.3, { type: "square", vol: 0.1, slideTo: 30 }); },
   laser:  () => tone(1400, 0.14, { type: "sawtooth", vol: 0.12, slideTo: 200 }),
   spin:   () => tone(300, 0.5, { type: "sawtooth", vol: 0.08, slideTo: 900 }),
@@ -56,24 +59,39 @@ const SFX = {
   error:  () => tone(160, 0.15, { type: "square", vol: 0.12 }),
   whoosh: () => tone(200, 0.5, { type: "sine", vol: 0.1, slideTo: 900 }),
 };
-function setMuteLabel() { $("mute").textContent = muted ? "🔇 Muted" : "🔊 Sound"; }
+function setMuteLabel() { $("mute").textContent = muted ? "🔇" : "🔊"; }
 $("mute").onclick = () => { muted = !muted; localStorage.setItem("emmy.muted", muted ? "1" : "0"); setMuteLabel(); if (!muted) SFX.tap(); };
 setMuteLabel();
 
 // --------------------------------------------------------------------------
-//  State
+//  Modes & state — Sandbox (unlimited money) / Regular (earn money at jobs)
 // --------------------------------------------------------------------------
-const SAVE_KEY = "emmy.arcade.save.v1";
-let state = load();
-function fresh() { return { credits: 0, tickets: 0, prizes: {}, best: {}, plays: 0, cards: {}, candy: 0, totalTickets: 0 }; }
-function load() { try { const raw = localStorage.getItem(SAVE_KEY); if (raw) return { ...fresh(), ...JSON.parse(raw) }; } catch {} return fresh(); }
-function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+const MODE_KEY = "emmy.arcade.mode";
+let mode = localStorage.getItem(MODE_KEY); // "sandbox" | "regular" | null (not chosen yet)
+const saveKey = () => `emmy.arcade.save.v2.${mode}`;
+let state = null;
+function fresh() { return { credits: 0, tickets: 0, money: mode === "regular" ? 5 : 0, prizes: {}, best: {}, plays: 0, cards: {}, foils: {}, candy: 0, totalTickets: 0, earned: 0, boost: null, shifts: 0 }; }
+function load() { try { const raw = localStorage.getItem(saveKey()); if (raw) return { ...fresh(), ...JSON.parse(raw) }; } catch {} return fresh(); }
+function save() { if (state) localStorage.setItem(saveKey(), JSON.stringify(state)); }
+const unlimited = () => mode === "sandbox";
+const money = () => (unlimited() ? Infinity : state.money);
+const fmt$ = (v) => (v === Infinity ? "$∞" : `$${v.toFixed(2)}`);
+
+function setMode(m) {
+  mode = m; localStorage.setItem(MODE_KEY, m); state = load(); save(); renderPills(); renderPrizes();
+  $("modeBtn").textContent = m === "sandbox" ? "🏖️ Sandbox" : "💼 Regular";
+  document.body.classList.toggle("regular", m === "regular");
+}
+function chooseMode() { $("modeModal").classList.add("show"); }
+$("pickSandbox").onclick = () => { SFX.tap(); setMode("sandbox"); $("modeModal").classList.remove("show"); toast("🏖️ Sandbox mode — unlimited money! Load your card at the 💳 kiosk."); };
+$("pickRegular").onclick = () => { SFX.tap(); setMode("regular"); $("modeModal").classList.remove("show"); toast(`💼 Regular mode — you have ${fmt$(state.money)}. Work a shift at the Snack Shack or Prize Booth to earn more!`, 4000); };
+$("modeBtn").onclick = () => { if (active) return; SFX.tap(); chooseMode(); };
 
 // --------------------------------------------------------------------------
 //  UI helpers
 // --------------------------------------------------------------------------
 let toastT = 0;
-function toast(msg, ms = 2400) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), ms); }
+function toast(msg, ms = 2600) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), ms); }
 function bump(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
 function spark(stage, nx, ny, marks, n = 6) {
   const r = stage.getBoundingClientRect();
@@ -89,17 +107,22 @@ function confetti(n = 120) {
     confs = confs.filter((p) => p.y < cf.height + 30); for (const p of confs) { p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.s * dt; cg.save(); cg.translate(p.x, p.y); cg.rotate(p.a); cg.fillStyle = p.c; cg.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); cg.restore(); }
     if (confs.length) cfRaf = requestAnimationFrame(f); else { cfRaf = 0; cg.clearRect(0, 0, cf.width, cf.height); } }; cfRaf = requestAnimationFrame(f); }
 }
-function flyTickets(n) {
-  const b = $("ticketsPill").getBoundingClientRect(); const count = Math.min(14, Math.max(3, Math.round(n / 4)));
-  for (let i = 0; i < count; i++) { const s = document.createElement("span"); s.className = "ticketfly"; s.textContent = "🎟️";
+function flyTo(targetEl, glyph, n) {
+  const b = targetEl.getBoundingClientRect(); const count = Math.min(14, Math.max(3, Math.round(n / 4)));
+  for (let i = 0; i < count; i++) { const s = document.createElement("span"); s.className = "ticketfly"; s.textContent = glyph;
     const sx = innerWidth * (0.3 + Math.random() * 0.4), sy = innerHeight * (0.35 + Math.random() * 0.3);
     s.style.left = `${sx}px`; s.style.top = `${sy}px`; s.style.setProperty("--dx", `${b.left + b.width / 2 - sx}px`); s.style.setProperty("--dy", `${b.top + b.height / 2 - sy}px`); s.style.animationDelay = `${i * 0.05}s`;
     document.body.appendChild(s); setTimeout(() => s.remove(), 1200 + i * 50); }
 }
+const BOOST_LABEL = { double: "🍕 DOUBLE tickets next game", free: "🥤 next game FREE", lucky: "🍭 +50% tickets next game" };
 function renderPills() {
-  $("creditsPill").textContent = `🪙 ${state.credits} credit${state.credits === 1 ? "" : "s"}`; $("ticketsPill").textContent = `🎟️ ${state.tickets}`;
+  if (!state) return;
+  $("creditsPill").textContent = `🪙 ${state.credits}`; $("ticketsPill").textContent = `🎟️ ${state.tickets}`; $("moneyPill").textContent = `💵 ${fmt$(money())}`;
+  $("boostPill").style.display = state.boost ? "" : "none"; $("boostPill").textContent = BOOST_LABEL[state.boost] || "";
   $("cardCredits").textContent = `🪙 ${state.credits}`; $("cardTickets").textContent = `🎟️ ${state.tickets}`;
+  $("wallet").innerHTML = unlimited() ? `💵 Your wallet: <b>$∞</b> (Sandbox mode — unlimited money!)` : `💵 Your wallet: <b>${fmt$(state.money)}</b> — earn more by working a shift at the 🍕 Snack Shack or 🎁 Prize Booth`;
   $("cardHint").textContent = state.credits === 0 ? "Your card is empty! Load some credits to start playing. (Games cost 2–4 credits.)" : `You have ${state.credits} credits — enough for about ${Math.floor(state.credits / 3)} games. Have fun!`;
+  for (const [id, cost] of [["load5", 5], ["load10", 10], ["load50", 50], ["load100", 100]]) $(id).disabled = !unlimited() && state.money < cost;
 }
 
 // --------------------------------------------------------------------------
@@ -109,28 +132,52 @@ let modalOpen = null;
 function openModal(id) { closeModal(); modalOpen = id; $(id).classList.add("show"); world && world.pause(true); }
 function closeModal() { if (!modalOpen) return; if (modalOpen === "playModal") closePrizePlay(); $(modalOpen).classList.remove("show"); modalOpen = null; world && world.pause(false); }
 document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => { closeModal(); SFX.tap(); }));
-document.querySelectorAll(".modal").forEach((m) => m.addEventListener("pointerdown", (e) => { if (e.target === m) closeModal(); }));
+document.querySelectorAll(".modal:not(#modeModal)").forEach((m) => m.addEventListener("pointerdown", (e) => { if (e.target === m) closeModal(); }));
 window.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (modalOpen) closeModal(); else if (active) closeGame(); } });
 
-// card kiosk
-function loadCard(n, dollars) { state.credits += n; save(); renderPills(); SFX.buy(); bump($("creditsPill")); toast(`💳 Swiped $${dollars} — +${n} credits loaded!`); }
-$("load10").onclick = () => loadCard(10, 10); $("load50").onclick = () => loadCard(55, 50); $("load100").onclick = () => loadCard(120, 100);
+// card kiosk — money → credits
+function loadCard(credits, dollars) {
+  if (!unlimited()) { if (state.money < dollars) { SFX.error(); toast(`You need $${dollars} — you have ${fmt$(state.money)}. Work a shift to earn more! 💼`); return; } state.money -= dollars; }
+  state.credits += credits; save(); renderPills(); SFX.buy(); bump($("creditsPill")); toast(`💳 Swiped $${dollars} — +${credits} credits loaded!`);
+}
+$("load5").onclick = () => loadCard(6, 5); $("load10").onclick = () => loadCard(13, 10); $("load50").onclick = () => loadCard(70, 50); $("load100").onclick = () => loadCard(150, 100);
+
+// snack shack — money → snacks (boosts) / work a shift
+function renderSnacks() {
+  $("snackMenu").innerHTML = SNACKS.map((s) => `<div class="prize"><div class="face">${s.emoji}</div><div class="name">${s.name}</div><div class="desc">${s.desc}</div><div class="cost money">$${s.price.toFixed(2)}</div><button class="redeem" data-snack="${s.id}" ${money() >= s.price ? "" : "disabled"}>${money() >= s.price ? "Buy!" : "Need $" + (s.price - state.money).toFixed(2)}</button></div>`).join("");
+  $("snackMenu").querySelectorAll("[data-snack]").forEach((b) => (b.onclick = () => buySnack(b.dataset.snack)));
+  $("snackWallet").textContent = `💵 Wallet: ${fmt$(money())}`;
+}
+function buySnack(id) {
+  const s = SNACKS.find((q) => q.id === id); if (!s) return;
+  if (!unlimited()) { if (state.money < s.price) { SFX.error(); toast("Not enough money! Work a shift to earn some. 💼"); return; } state.money -= s.price; }
+  save(); renderPills(); SFX.buy(); toast(`${s.emoji} One ${s.name}, coming right up!`);
+  openPlayView({ kind: "snack", ...s }, () => { $("snackModal").classList.add("show"); modalOpen = "snackModal"; renderSnacks(); }, (snack) => {
+    if (snack.boost === "tickets") { state.tickets += snack.tickets; bump($("ticketsPill")); flyTo($("ticketsPill"), "🎟️", snack.tickets); toast(`+${snack.tickets} tickets! 🎟️`); }
+    else { state.boost = snack.boost; toast(`Boost active: ${BOOST_LABEL[snack.boost]}!`); }
+    save(); renderPills();
+  });
+}
+$("snackJob").onclick = () => { closeModal(); startGame(snackjob); };
+$("prizeJob").onclick = () => { closeModal(); startGame(prizejob); };
 
 // prize counter
 const PLAY_VERB = { toy3d: "Play", bouncy: "Bounce", wand: "Draw", candy: "Eat", pack: "Open", ipad: "Turn on" };
 let tab = "counter";
 document.querySelectorAll(".tab").forEach((b) => (b.onclick = () => { tab = b.dataset.tab; SFX.tap(); renderPrizes(); }));
 function renderPrizes() {
+  if (!state) return;
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   $("prizes").style.display = tab === "counter" ? "" : "none"; $("shelf").style.display = tab === "shelf" ? "" : "none";
-  $("prizes").innerHTML = PRIZES.map((p) => { const have = state.prizes[p.id] > 0; const can = state.tickets >= p.cost && (p.stack || !have);
+  $("prizes").innerHTML = PRIZES.filter((p) => !p.claw).map((p) => { const have = state.prizes[p.id] > 0; const can = state.tickets >= p.cost && (p.stack || !have);
     return `<div class="prize ${p.big ? "big" : ""}">${have && !p.stack ? `<div class="owned">✓ Owned</div>` : ""}<div class="face">${p.emoji}</div><div class="name">${p.name}</div><div class="desc">${p.desc}</div>
       <div class="cost">🎟️ ${p.cost}</div><button class="redeem" data-redeem="${p.id}" ${can ? "" : "disabled"}>${have && !p.stack ? "Owned!" : state.tickets >= p.cost ? "Redeem!" : `Need ${p.cost - state.tickets} more`}</button></div>`; }).join("");
   $("prizes").querySelectorAll("[data-redeem]").forEach((b) => (b.onclick = () => redeem(b.dataset.redeem)));
   const owned = PRIZES.filter((p) => state.prizes[p.id] > 0 || (p.kind === "pack" && state.cards?.[p.set]?.length));
+  $("shelfCount").textContent = owned.length ? `(${owned.length})` : "";
   $("shelf").innerHTML = owned.length ? owned.map((p) => `<div class="prize shelf ${p.big ? "big" : ""}" data-prize="${p.id}">
-      ${p.stack && state.prizes[p.id] > 1 ? `<div class="owned">×${state.prizes[p.id]}</div>` : ""}<div class="face">${p.emoji}</div><div class="name">${p.name}</div><div class="play">▶ ${p.kind === "pack" && !(state.prizes[p.id] > 0) ? "Binder" : PLAY_VERB[p.kind] || "Play"}</div></div>`).join("")
-    : `<div class="empty">No prizes yet — win tickets and redeem them here! 🎟️</div>`;
+      ${p.stack && state.prizes[p.id] > 1 ? `<div class="owned">×${state.prizes[p.id]}</div>` : ""}${p.claw ? `<div class="owned claw">🦾 won</div>` : ""}<div class="face">${p.emoji}</div><div class="name">${p.name}</div><div class="play">▶ ${p.kind === "pack" && !(state.prizes[p.id] > 0) ? "Binder" : PLAY_VERB[p.kind] || "Play"}</div></div>`).join("")
+    : `<div class="empty">No prizes yet — win tickets at the games, or grab a plushie from the 🦾 claw machine!</div>`;
   $("shelf").querySelectorAll(".prize").forEach((el) => (el.onclick = () => openPrizePlay(el.dataset.prize)));
 }
 function redeem(id) {
@@ -141,15 +188,17 @@ function redeem(id) {
   save(); renderPills(); renderPrizes(); SFX.win(); bump($("ticketsPill")); confetti(p.big ? 260 : 90);
   toast(`🎉 You got the ${p.name}!`); setTimeout(() => openPrizePlay(id), 600);
 }
+function awardPrize(id) { const p = prizeById(id); if (!p) return; state.prizes[id] = (state.prizes[id] || 0) + 1; save(); renderPrizes(); }
+
 let prizeCleanup = null;
-function openPrizePlay(id) {
-  const p = prizeById(id); if (!p) return;
-  closePrizePlay(); modalOpen && $(modalOpen).classList.remove("show"); modalOpen = "playModal"; $("playModal").classList.add("show"); world && world.pause(true);
-  $("pName").textContent = `${p.emoji} ${p.name}`; const stage = $("pStage"); stage.innerHTML = ""; $("pTip").textContent = ""; SFX.tap();
-  prizeCleanup = playPrize(p, stage, { sfx: SFX, tone, makeSustain, toast, state, save, spark, setTip: (t) => ($("pTip").textContent = t), box: $("prizeBox"), rerender: renderPrizes });
+function openPlayView(prize, onBack, onEaten) {
+  closePrizePlay(); if (modalOpen) $(modalOpen).classList.remove("show"); modalOpen = "playModal"; $("playModal").classList.add("show"); world && world.pause(true);
+  $("pName").textContent = `${prize.emoji} ${prize.name}`; const stage = $("pStage"); stage.innerHTML = ""; $("pTip").textContent = ""; SFX.tap();
+  $("pClose").onclick = () => { closePrizePlay(); $("playModal").classList.remove("show"); modalOpen = null; if (onBack) onBack(); else world.pause(false); };
+  prizeCleanup = playPrize(prize, stage, { sfx: SFX, tone, makeSustain, toast, state, save, spark, setTip: (t) => ($("pTip").textContent = t), box: $("prizeBox"), rerender: renderPrizes, onEaten });
 }
+function openPrizePlay(id) { const p = prizeById(id); if (p) openPlayView(p, () => { modalOpen = "prizeModal"; $("prizeModal").classList.add("show"); tab = "shelf"; renderPrizes(); }); }
 function closePrizePlay() { if (prizeCleanup) { try { prizeCleanup(); } catch {} prizeCleanup = null; } $("pStage").innerHTML = ""; $("prizeBox").classList.remove("wide"); }
-$("pClose").onclick = () => { closePrizePlay(); $("playModal").classList.remove("show"); modalOpen = "prizeModal"; $("prizeModal").classList.add("show"); renderPrizes(); };
 
 // --------------------------------------------------------------------------
 //  The 3D world
@@ -158,8 +207,8 @@ let world = null, nearest = null;
 try {
   world = createWorld($("view"), {
     games: GAMES, ui: $("hud"),
-    avatar: { shirt: 0xff3dd6, pants: 0x3d8bfd, face: "😊" },
-    onPrompt(it) { nearest = it; const p = $("prompt"); if (it && !active) { p.classList.add("show"); $("interact").textContent = it.label; $("interact").className = `act ${it.kind === "game" ? "btn-green" : it.kind === "kiosk" ? "btn-blue" : "btn-pink"}`; } else p.classList.remove("show"); },
+    avatar: { shirt: 0xff3dd6, pants: 0x3d8bfd, hairStyle: "ponytail", hair: 0x8a5a2b, eyes: 0x4a8f3f, mood: "happy" },
+    onPrompt(it) { nearest = it; const p = $("prompt"); if (it && !active) { p.classList.add("show"); $("interact").textContent = it.label; $("interact").className = `act ${it.kind === "game" ? "btn-green" : it.kind === "kiosk" ? "btn-blue" : it.kind === "snack" ? "btn-gold" : "btn-pink"}`; } else p.classList.remove("show"); },
     onInteract(it) { interact(it); },
   });
   world.start();
@@ -172,60 +221,74 @@ function interact(it) {
   if (active || modalOpen) return; SFX.tap();
   if (it.kind === "kiosk") { renderPills(); openModal("kioskModal"); }
   else if (it.kind === "prizes") { tab = "counter"; renderPrizes(); openModal("prizeModal"); }
+  else if (it.kind === "snack") { renderSnacks(); openModal("snackModal"); }
   else if (it.kind === "game") startGame(it.def);
 }
 
 // --------------------------------------------------------------------------
 //  Game harness — first-person 3D games rendered by the world's renderer
 // --------------------------------------------------------------------------
-let active = null; // { def, ctrl, finished }
+let active = null; // { def, ctrl, finished, boost, cost }
 function startGame(def) {
-  if (state.credits < def.cost) { SFX.error(); toast(`Not enough credits! ${def.name} costs ${def.cost}. Visit the 💳 card kiosk near the entrance.`); return; }
-  state.credits -= def.cost; state.plays++; save(); renderPills(); SFX.coin(); bump($("creditsPill"));
+  let cost = def.cost, usedFree = false;
+  if (cost > 0 && state.boost === "free") { cost = 0; usedFree = true; }
+  if (state.credits < cost) { SFX.error(); toast(`Not enough credits! ${def.name} costs ${def.cost}. Visit the 💳 card kiosk near the entrance.`); return; }
+  const boost = usedFree ? null : (def.job || def.cost === 0 ? null : state.boost);
+  state.credits -= cost; state.plays++; if (usedFree || boost) state.boost = null; save(); renderPills(); if (cost) { SFX.coin(); bump($("creditsPill")); }
+  if (usedFree) toast("🥤 This game is on the house — boost used!");
   $("prompt").classList.remove("show"); $("hint").style.display = "none";
-  active = { def, ctrl: null, finished: false };
+  active = { def, ctrl: null, finished: false, boost, cost };
   $("gameHud").classList.add("show"); $("hud").classList.add("ingame"); $("gTitle").textContent = `${def.emoji} ${def.name}`; $("gScore").textContent = ""; $("gTip").textContent = "";
   SFX.whoosh();
-  world.enterGame(def.id).then(() => {
-    if (!active || active.def !== def) return;
-    showBanner(`<div class="big">${def.emoji}</div><h2>${def.name}</h2><p>${def.tip}</p><div class="row"><button class="act btn-green" id="bStart">▶ Start!</button></div>`);
-    $("bStart").onclick = () => runGame(def);
-  });
+  const go = () => { if (!active || active.def !== def) return; showBanner(`<div class="big">${def.emoji}</div><h2>${def.name}</h2><p>${def.tip}</p>${boost ? `<p class="boostnote">Boost active: ${BOOST_LABEL[boost]}!</p>` : ""}<div class="row"><button class="act btn-green" id="bStart">▶ ${def.job ? "Start my shift!" : "Start!"}</button></div>`); $("bStart").onclick = () => runGame(def); };
+  world.enterGame(def.cabinet === "none" ? (def.id === "snackjob" ? "snack" : "prizes") : def.id).then(go);
 }
 function showBanner(html) { const b = document.createElement("div"); b.className = "banner"; b.innerHTML = html; $("gBanner").innerHTML = ""; $("gBanner").appendChild(b); return b; }
 function runGame(def) {
   $("gBanner").innerHTML = ""; $("gTip").textContent = def.tip;
   const { W, H } = world.size();
   const api = {
-    W, H, sfx: SFX, tone, keys: world.keys, hud: $("gameHud"),
+    W, H, sfx: SFX, tone, keys: world.keys, hud: $("gameHud"), awardPrize: (id) => { awardPrize(id); const p = prizeById(id); if (p) toast(`${p.emoji} ${p.name} added to your prize shelf!`); },
     setScore: (t) => ($("gScore").textContent = t), setTip: (t) => ($("gTip").textContent = t),
-    finish(tickets, title, detail) { if (!active || active.finished) return; active.finished = true; setTimeout(() => endGame(def, tickets, title, detail), 300); },
+    finish(amount, title, detail) { if (!active || active.finished) return; active.finished = true; setTimeout(() => endGame(def, amount, title, detail), 300); },
   };
   try {
     const ctrl = def.create(api); active.ctrl = ctrl;
     $("vignette").classList.toggle("show", def.id === "vr");
     world.setOverride({ scene: ctrl.scene, camera: ctrl.camera, update: (dt) => { if (!active.finished) ctrl.update(dt); }, onDown: (p) => !active.finished && ctrl.onDown && ctrl.onDown(p), onMove: (p) => !active.finished && ctrl.onMove && ctrl.onMove(p), onUp: (p) => !active.finished && ctrl.onUp && ctrl.onUp(p), onKey: (k) => !active.finished && ctrl.onKey && ctrl.onKey(k) });
-  } catch (err) { console.error(err); toast("That machine is out of order 😅 (credits refunded)"); state.credits += def.cost; save(); renderPills(); closeGame(); }
+  } catch (err) { console.error(err); toast("That machine is out of order 😅 (credits refunded)"); state.credits += active.cost; save(); renderPills(); closeGame(); }
 }
-function endGame(def, tickets, title, detail) {
-  tickets = Math.max(0, Math.round(tickets));
-  state.tickets += tickets; state.totalTickets += tickets; if (tickets > (state.best[def.id] || 0)) state.best[def.id] = tickets; save(); renderPills();
-  if (tickets > 0) { flyTickets(tickets); setTimeout(() => bump($("ticketsPill")), 900); if (tickets >= 40) { confetti(160); SFX.win(); } else SFX.ding(); } else SFX.miss();
+function endGame(def, amount, title, detail) {
   $("gTip").textContent = "";
-  showBanner(`<h2>${title}</h2><div class="won">🎟️ +${tickets} ticket${tickets === 1 ? "" : "s"}</div><p>${detail || ""}${state.best[def.id] === tickets && tickets > 0 ? " — 🏅 new best!" : ""}</p>
-    <div class="row"><button class="act btn-green" id="bAgain">🔁 Play again (🪙 ${def.cost})</button><button class="act btn-blue" id="bBack">🚶 Back to the arcade</button></div>`);
-  $("bAgain").onclick = () => { if (state.credits < def.cost) { SFX.error(); toast(`Not enough credits! Visit the 💳 kiosk.`); return; } disposeActive(); state.credits -= def.cost; state.plays++; save(); renderPills(); SFX.coin(); active = { def, ctrl: null, finished: false }; runGame(def); };
+  if (def.job) { // paid in money
+    const pay = Math.round(amount * 100) / 100; state.money += pay; state.earned += pay; state.shifts++; save(); renderPills();
+    if (pay > 0) { flyTo($("moneyPill"), "💵", pay * 4); setTimeout(() => bump($("moneyPill")), 900); SFX.cash(); if (pay >= 12) confetti(160); } else SFX.miss();
+    showBanner(`<h2>${title}</h2><div class="won money">💵 +${fmt$(pay)}</div><p>${detail || ""}</p><p class="boostnote">Wallet: ${fmt$(money())}</p>
+      <div class="row"><button class="act btn-green" id="bAgain">🔁 Another shift</button><button class="act btn-blue" id="bBack">🚶 Back to the arcade</button></div>`);
+    $("bAgain").onclick = () => { disposeActive(); active = { def, ctrl: null, finished: false, boost: null, cost: 0 }; runGame(def); }; $("bBack").onclick = closeGame; return;
+  }
+  let tickets = Math.max(0, Math.round(amount * TICKET_BONUS)); const base = tickets; let boostNote = "";
+  if (active.boost === "double") { tickets *= 2; boostNote = ` 🍕 DOUBLED by your snack (${base} → ${tickets})!`; } else if (active.boost === "lucky") { tickets = Math.round(tickets * 1.5); boostNote = ` 🍭 +50% from your snack (${base} → ${tickets})!`; }
+  state.tickets += tickets; state.totalTickets += tickets; const best = tickets > (state.best[def.id] || 0); if (best) state.best[def.id] = tickets; save(); renderPills();
+  if (tickets > 0) { flyTo($("ticketsPill"), "🎟️", tickets); setTimeout(() => bump($("ticketsPill")), 900); if (tickets >= 50) { confetti(180); SFX.win(); } else SFX.ding(); } else SFX.miss();
+  showBanner(`<h2>${title}</h2><div class="won">🎟️ +${tickets} ticket${tickets === 1 ? "" : "s"}</div><p>${detail || ""}${boostNote}${best && tickets > 0 ? " — 🏅 new best!" : ""}</p>
+    <div class="row"><button class="act btn-green" id="bAgain">🔁 Play again${def.cost ? ` (🪙 ${def.cost})` : ""}</button><button class="act btn-blue" id="bBack">🚶 Back to the arcade</button></div>`);
+  $("bAgain").onclick = () => { if (state.credits < def.cost) { SFX.error(); toast(`Not enough credits! Visit the 💳 kiosk.`); return; } disposeActive(); state.credits -= def.cost; state.plays++; save(); renderPills(); if (def.cost) SFX.coin(); active = { def, ctrl: null, finished: false, boost: null, cost: def.cost }; runGame(def); };
   $("bBack").onclick = closeGame;
 }
 function disposeActive() { if (active?.ctrl) { try { active.ctrl.dispose && active.ctrl.dispose(); } catch {} } world.setOverride(null); $("vignette").classList.remove("show"); $("gBanner").innerHTML = ""; }
 function closeGame() {
   if (!active) return; const wasPlaying = active.ctrl && !active.finished;
   disposeActive(); active = null; $("gameHud").classList.remove("show"); $("hud").classList.remove("ingame"); $("hint").style.display = ""; world.exitGame();
-  if (wasPlaying) toast("Left the game — no refunds at the arcade! 😄");
+  if (wasPlaying) toast("Left early — no refunds at the arcade! 😄");
 }
 $("gQuit").onclick = closeGame;
 
-renderPills(); renderPrizes();
-if (state.plays === 0 && state.credits === 0) setTimeout(() => toast("👋 Welcome to Emmy's Arcade! Walk to the 💳 kiosk to load your card."), 1200);
+// --------------------------------------------------------------------------
+//  Boot
+// --------------------------------------------------------------------------
+if (mode === "sandbox" || mode === "regular") { setMode(mode); if (state.plays === 0 && state.credits === 0) setTimeout(() => toast("👋 Welcome to Emmy's Arcade! Walk to the 💳 kiosk to load your card."), 1200); }
+else { setMode("sandbox"); localStorage.removeItem(MODE_KEY); chooseMode(); }
+
 // debug/automation hook (used by the Playwright checks)
-window.__arcade = { get world() { return world; }, interact, startGame, closeGame, get state() { return state; }, GAMES };
+window.__arcade = { get world() { return world; }, interact, startGame, closeGame, get state() { return state; }, GAMES, setMode, get mode() { return mode; } };

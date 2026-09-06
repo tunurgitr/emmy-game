@@ -9,7 +9,7 @@
 //    world.exitGame() → camera returns to third-person
 //    world.keys — Set of held keys (shared with games)
 // ==========================================================================
-import { THREE, rnd, ri, clamp, pick, lerp, mat, box, cyl, sphere, torus, emojiSprite, emojiPlane, textPlane, textTexture, carpetTexture, woodTexture, blobShadow, makeKid, approach } from "./lib.js";
+import { THREE, rnd, ri, clamp, pick, lerp, mat, box, cyl, sphere, torus, emojiSprite, emojiPlane, textPlane, textTexture, carpetTexture, woodTexture, blobShadow, makeKid, approach, makePlush, PLUSH_KINDS } from "./lib.js";
 
 const ROOM_W = 46, ROOM_D = 36; // x, z extents
 const EYE = 1.55;
@@ -26,7 +26,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   const interactables = []; // {id, kind, front:Vector3, eye:Vector3, look:Vector3, label, group, hit:[meshes]}
   const animated = []; // fns(dt, t)
 
-  buildRoom(scene, obstacles, animated);
+  buildRoom(scene, obstacles, animated, interactables);
   buildKiosk(scene, obstacles, interactables, animated);
   buildPrizeCounter(scene, obstacles, interactables, animated);
   layoutCabinets(scene, games, obstacles, interactables, animated);
@@ -43,8 +43,12 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   const move = { x: 0, y: 0 }; // joystick vector (-1..1)
   let override = null, transition = null, running = false, paused = false, docked = false;
   const pointers = new Map(); let joyPid = null, lookPid = null, joyOrigin = null, downInfo = null;
+  const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   const joy = document.createElement("div"); joy.className = "joy"; joy.innerHTML = `<div class="knob"></div>`; ui.appendChild(joy); const knob = joy.firstElementChild;
-  const setJoy = (visible, cx, cy, dx = 0, dy = 0) => { joy.style.display = visible ? "block" : "none"; if (visible) { joy.style.left = `${cx - 60}px`; joy.style.top = `${cy - 60}px`; knob.style.transform = `translate(${dx}px, ${dy}px)`; } };
+  // on touch devices the joystick base is always visible bottom-left (it re-centers under your thumb when you touch)
+  const restJoy = () => { if (isTouch) { joy.style.display = "block"; joy.style.left = "26px"; joy.style.top = ""; joy.style.bottom = "max(30px, env(safe-area-inset-bottom))"; joy.classList.add("rest"); knob.style.transform = ""; } else joy.style.display = "none"; };
+  const setJoy = (visible, cx, cy, dx = 0, dy = 0) => { if (!visible) { restJoy(); return; } joy.classList.remove("rest"); joy.style.display = "block"; joy.style.bottom = ""; joy.style.left = `${cx - 60}px`; joy.style.top = `${cy - 60}px`; knob.style.transform = `translate(${dx}px, ${dy}px)`; };
+  restJoy();
   const ndc = new THREE.Vector2(); const ray = new THREE.Raycaster();
   const evt = (e) => { const r = canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); const cam = override ? override.camera : camera; ray.setFromCamera(ndc, cam); return { x: ndc.x, y: ndc.y, sx: e.clientX - r.left, sy: e.clientY - r.top, ray, id: e.pointerId, W: r.width, H: r.height }; };
 
@@ -111,7 +115,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
       if (d < R) { if (d < 1e-4) { const px = Math.min(Math.abs(player.x - (o.x - o.w / 2)), Math.abs(o.x + o.w / 2 - player.x)), pz = Math.min(Math.abs(player.z - (o.z - o.d / 2)), Math.abs(o.z + o.d / 2 - player.z)); if (px < pz) player.x = player.x < o.x ? o.x - o.w / 2 - R : o.x + o.w / 2 + R; else player.z = player.z < o.z ? o.z - o.d / 2 - R : o.z + o.d / 2 + R; } else { player.x = nx + dx / d * R; player.z = nz + dz / d * R; } if (autoTarget && !autoInteract) autoTarget = null; } }
     kid.group.position.set(player.x, 0, player.z);
     let dy = player.yaw - kid.group.rotation.y; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; kid.group.rotation.y += dy * Math.min(1, dt * 12);
-    kid.walk(t, player.speed / SP);
+    kid.walk(t, player.speed / SP, dt);
     // camera follow (with wall clamp)
     camPos.set(player.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist, EYE + Math.sin(camPitch) * camDist, player.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist);
     camPos.x = clamp(camPos.x, -ROOM_W / 2 + 0.5, ROOM_W / 2 - 0.5); camPos.z = clamp(camPos.z, -ROOM_D / 2 + 0.5, ROOM_D / 2 - 0.5);
@@ -162,7 +166,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
 //  The hall — carpet, timber walls, pitched wood ceiling with big trusses,
 //  warm lights, log columns, windows, a climbing wall and a little cabin.
 // ==========================================================================
-function buildRoom(scene, obstacles, animated) {
+function buildRoom(scene, obstacles, animated, interactables) {
   const W = ROOM_W, D = ROOM_D, wallH = 7, ridgeH = 12;
   // floor
   const carpet = carpetTexture(); carpet.repeat.set(9, 7);
@@ -206,13 +210,25 @@ function buildRoom(scene, obstacles, animated) {
   const cw = box(6, wallH + 3.5, 1.4, mat.std(0xb9a58a, { roughness: 1 }), -17, (wallH + 3.5) / 2, -D / 2 + 1.4); scene.add(cw); obstacles.push({ x: -17, z: -D / 2 + 1.4, w: 6.4, d: 1.8 });
   const holdCols = [0xff3dd6, 0x00e5ff, 0xffd54a, 0x00c853, 0xf4433f, 0x7a3cff];
   for (let i = 0; i < 70; i++) scene.add(sphere(rnd(0.1, 0.18), mat.gloss(pick(holdCols)), -17 + rnd(-2.7, 2.7), rnd(0.5, wallH + 3), -D / 2 + 2.15));
-  const cwSign = textPlane(["🧗 CLIMB"], 3, 0.8, { bg: "#00c853", color: "#fff", size: 100 }); cwSign.position.set(-17, wallH + 2.6, -D / 2 + 2.15); scene.add(cwSign);
-  // little cabin (back-right) — "Snack Shack"
+  const cwSign = textPlane(["🧗 ROCK WALL — FREE!"], 4, 0.8, { bg: "#00c853", color: "#fff", size: 100 }); cwSign.position.set(-17, wallH + 2.6, -D / 2 + 2.15); scene.add(cwSign);
+  scene.add(box(3.5, 0.15, 1.2, mat.std(0x3d8bfd), -17, 0.07, -D / 2 + 3.0)); // crash mat
+  cw.userData.wallSpot = { x: -17, z: -D / 2 + 2.3 };
+  scene.userData.climbWall = cw;
+  // little cabin (back-right) — the OPEN "Snack Shack" with a serving window, menu and a worker
   const cx = 16, cz = -D / 2 + 3;
   scene.add(box(7, 3.4, 4.5, mat.wood(0x9a6234), cx, 1.7, cz)); obstacles.push({ x: cx, z: cz, w: 7.4, d: 5 });
   const roof = new THREE.Mesh(new THREE.ConeGeometry(5.4, 2.4, 4), mat.std(0x5a3a22)); roof.position.set(cx, 4.55, cz); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, 0.75); scene.add(roof);
-  scene.add(box(1.2, 2.2, 0.1, mat.std(0x3a2414), cx - 1.6, 1.1, cz + 2.28)); scene.add(box(1.6, 1.1, 0.1, skyMat, cx + 1.4, 2, cz + 2.28));
-  const cabinSign = textPlane(["🍕 SNACK SHACK 🥤"], 5.2, 0.9, { bg: "#ffd54a", color: "#4a2b00", size: 90 }); cabinSign.position.set(cx, 3.05, cz + 2.3); scene.add(cabinSign);
+  scene.add(box(3.2, 1.6, 0.3, mat.std(0x1a0f0a), cx + 0.4, 1.9, cz + 2.2)); // serving window (dark interior)
+  scene.add(box(3.6, 0.12, 0.9, mat.gloss(0xffd54a), cx + 0.4, 1.12, cz + 2.55)); // counter shelf
+  for (const dx of [-1.7, 1.7]) scene.add(box(0.12, 1.7, 0.12, mat.std(0x3a2414), cx + 0.4 + dx, 1.95, cz + 2.4));
+  const awning = box(4, 0.08, 1.2, mat.std(0xef5350), cx + 0.4, 2.85, cz + 2.7); awning.rotation.x = 0.25; scene.add(awning); for (let i = 0; i < 6; i++) scene.add(box(0.66, 0.06, 1.2, mat.std(i % 2 ? 0xffffff : 0xef5350), cx + 0.4 - 1.65 + i * 0.66, 2.86, cz + 2.7).rotateX(0.25));
+  const menu = textPlane(["MENU", "🍕 $3  🌭 $2.50  🍟 $2", "🥤 $1.50  🍦 $2  🍿 $1.50  🍭 $2.50"], 3.0, 1.1, { bg: "#fff8e1", color: "#4a2b00", size: 56 }); menu.position.set(cx - 2.6, 2.0, cz + 2.28); scene.add(menu);
+  for (let i = 0; i < 5; i++) { const f = emojiSprite(["🍕", "🌭", "🍟", "🥤", "🍿"][i], 0.42); f.position.set(cx - 1.0 + i * 0.7, 1.4, cz + 2.55); scene.add(f); }
+  const chef = makeKid({ shirt: 0xffffff, pants: 0xef5350, hair: 0x222222, hairStyle: "bun", skin: 0xe0ac8a, mood: "excited", hat: "👨‍🍳" }); chef.group.position.set(cx + 0.4, 0.15, cz + 1.4); scene.add(chef.group);
+  animated.push((dt, t) => { chef.parts.armL.rotation.x = -0.4 + Math.sin(t * 3) * 0.3; chef.group.position.y = 0.15 + Math.abs(Math.sin(t * 2.5)) * 0.03; });
+  const cabinSign = textPlane(["🍕 SNACK SHACK 🥤", "OPEN!"], 5.2, 1.1, { bg: "#ffd54a", color: "#4a2b00", size: 90 }); cabinSign.position.set(cx, 3.5, cz + 2.3); scene.add(cabinSign);
+  const shackIt = { id: "snack", kind: "snack", label: "🍕 Snack Shack — buy a snack or work a shift", front: new THREE.Vector3(cx + 0.4, 0, cz + 4.2), eye: new THREE.Vector3(cx + 0.4, 1.7, cz + 4.4), look: new THREE.Vector3(cx + 0.4, 1.6, cz + 2.2), group: null, hit: [] };
+  const shackHit = box(4, 3.4, 1, mat.basic(0xffffff, { transparent: true, opacity: 0 }), cx + 0.4, 1.7, cz + 2.4); shackHit.userData.interactable = shackIt; scene.add(shackHit); shackIt.hit.push(shackHit); shackIt.group = shackHit; interactables.push(shackIt);
   // wall art / posters
   const posters = ["🎮", "🕹️", "👾", "🏁", "🎟️", "🎯", "🦖", "🚀"];
   posters.forEach((p, i) => { const pl = emojiPlane(p, 2.2); const left = i % 2 === 0; pl.position.set(left ? -W / 2 + 0.06 : W / 2 - 0.06, 3.6, -12 + Math.floor(i / 2) * 7); pl.rotation.y = left ? Math.PI / 2 : -Math.PI / 2; scene.add(pl); });
@@ -249,7 +265,7 @@ function buildPrizeCounter(scene, obstacles, interactables, animated) {
   for (let r = 0; r < 3; r++) { g.add(box(8.6, 0.08, 0.7, mat.std(0xc48b4c), 0, 1.5 + r * 1.05, -0.3)); for (let i = 0; i < 6; i++) { const sp = emojiSprite(prizeEmojis[(r * 6 + i) % prizeEmojis.length], 0.8); sp.position.set(-3.6 + i * 1.44, 1.95 + r * 1.05, -0.25); g.add(sp); } }
   const sign = textPlane(["🎟️ PRIZE COUNTER 🎟️"], 7, 1, { bg: "#7a3cff", color: "#fff", size: 100, glow: "#fff" }); sign.position.set(0, 4.8, -0.3); g.add(sign);
   for (const s of [-1, 1]) g.add(box(0.1, 4.6, 0.1, mat.neon(0xffd54a, 1), s * 4.55, 2.3, -0.3));
-  const clerk = makeKid({ shirt: 0x7a3cff, pants: 0x222244, face: "😄", hair: 0x222222 }); clerk.group.position.set(1.2, 0, 0.4); g.add(clerk.group);
+  const clerk = makeKid({ shirt: 0x7a3cff, pants: 0x222244, mood: "excited", hair: 0x222222, hairStyle: "curly", skin: 0x8d5a3c }); clerk.group.position.set(1.2, 0, 0.4); g.add(clerk.group);
   const tag = textPlane(["prizes!"], 1.2, 0.35, { bg: "#fff", color: "#7a3cff", size: 60 }); tag.position.set(1.2, 2.15, 0.6); g.add(tag);
   scene.add(g); obstacles.push({ x, z: z + 1.2, w: 9.4, d: 1.5 }); obstacles.push({ x, z: z - 0.6, w: 9.4, d: 1 });
   const it = { id: "prizes", kind: "prizes", label: "🏪 Trade tickets for prizes", front: new THREE.Vector3(x, 0, z + 2.6), eye: new THREE.Vector3(x, 1.7, z + 2.8), look: new THREE.Vector3(x, 1.8, z - 0.3), group: g, hit: [g] }; g.userData.interactable = it; interactables.push(it);
@@ -260,14 +276,18 @@ function buildPrizeCounter(scene, obstacles, interactables, animated) {
 //  Cabinets — one procedural machine per game, lit up with neon.
 // ==========================================================================
 const SPOTS = [ // x, z, facing (radians; 0 = faces +z i.e. toward entrance)
-  { x: -13, z: 2, ry: Math.PI / 2 }, { x: -13, z: -3, ry: Math.PI / 2 }, { x: -13, z: -8, ry: Math.PI / 2 },
-  { x: 13, z: 2, ry: -Math.PI / 2 }, { x: 13, z: -3, ry: -Math.PI / 2 }, { x: 13, z: -8, ry: -Math.PI / 2 },
-  { x: -4, z: -9, ry: 0 }, { x: 4, z: -9, ry: 0 },
-  { x: -4.5, z: 4, ry: Math.PI }, { x: 4.5, z: 4, ry: Math.PI },
+  { x: -13, z: 3, ry: Math.PI / 2 }, { x: -13, z: -2, ry: Math.PI / 2 }, { x: -13, z: -7, ry: Math.PI / 2 },
+  { x: 13, z: 3, ry: -Math.PI / 2 }, { x: 13, z: -2, ry: -Math.PI / 2 }, { x: 13, z: -7, ry: -Math.PI / 2 },
+  { x: -5, z: -9, ry: 0 }, { x: 5, z: -9, ry: 0 },
+  { x: -5, z: 3, ry: Math.PI }, { x: 5, z: 3, ry: Math.PI },
+  { x: -18, z: 8, ry: Math.PI / 2 }, { x: 18, z: 8, ry: -Math.PI / 2 }, { x: -9, z: -13, ry: 0 }, { x: 9, z: -13, ry: 0 },
 ];
 function layoutCabinets(scene, games, obstacles, interactables, animated) {
-  games.forEach((def, i) => {
-    const spot = SPOTS[i % SPOTS.length];
+  let si = 0;
+  games.forEach((def) => {
+    if (def.cabinet === "none") return; // jobs are started from the shack / counter
+    if (def.cabinet === "wall") { const w = scene.userData.climbWall; const sp = w.userData.wallSpot; const it = { id: def.id, kind: "game", def, label: `${def.emoji} Climb the Rock Wall (FREE!)`, front: new THREE.Vector3(sp.x, 0, sp.z + 1.4), eye: new THREE.Vector3(sp.x, 1.6, sp.z + 1.6), look: new THREE.Vector3(sp.x, 4, sp.z - 1), group: w, hit: [w] }; w.userData.interactable = it; interactables.push(it); return; }
+    const spot = SPOTS[si++ % SPOTS.length];
     const { group, w, d, screen, neon, viewDist = 0.9, lookY } = buildCabinet(def);
     group.position.set(spot.x, 0, spot.z); group.rotation.y = spot.ry; scene.add(group);
     // footprint (axis-aligned; swap w/d when rotated 90°)
@@ -276,7 +296,7 @@ function layoutCabinets(scene, games, obstacles, interactables, animated) {
     const front = new THREE.Vector3(spot.x, 0, spot.z).addScaledVector(fwd, d / 2 + 1.1);
     const eye = new THREE.Vector3(spot.x, EYE + (viewDist > 1.5 ? 0.3 : 0), spot.z).addScaledVector(fwd, d / 2 + viewDist);
     const look = new THREE.Vector3(spot.x, lookY ?? (screen ? screen.getWorldPosition(new THREE.Vector3()).y : 1.4), spot.z);
-    const it = { id: def.id, kind: "game", def, label: `${def.emoji} Play ${def.name} (🪙 ${def.cost})`, front, eye, look, group, hit: [group] };
+    const it = { id: def.id, kind: "game", def, label: def.cost ? `${def.emoji} Play ${def.name} (🪙 ${def.cost})` : `${def.emoji} Play ${def.name} (FREE!)`, front, eye, look, group, hit: [group] };
     group.userData.interactable = it; interactables.push(it);
     const ph = rnd(0, 6);
     animated.push((dt, t) => { for (const n of neon) n.material.emissiveIntensity = 1.2 + Math.sin(t * 3 + ph) * 0.5; });
@@ -301,14 +321,19 @@ function buildCabinet(def) {
       for (const z of [-0.65, 0.65]) { const wh = torus(0.28, 0.1, mat.std(0x111), 0, 0.3, z); wh.rotation.y = Math.PI / 2; bike.add(wh); const rim = torus(0.29, 0.03, neonM(), 0, 0.3, z); rim.rotation.y = Math.PI / 2; neon.push(rim); bike.add(rim); }
       const bars = cyl(0.03, 0.03, 0.7, mat.metal(), 8, 0, 1.0, -0.6); bars.rotation.z = Math.PI / 2; bike.add(bars); g.add(bike);
       strip(-0.78, 1.2, -0.62, 1.9); strip(0.78, 1.2, -0.62, 1.9); break; }
-    case "claw": {
-      w = 1.7; d = 1.5;
-      g.add(box(1.6, 1.0, 1.4, body, 0, 0.5, 0)); g.add(box(1.6, 0.2, 1.4, dark, 0, 2.5, 0)); marquee(2.75, 1.6); g.add(box(1.6, 0.5, 1.4, dark, 0, 2.75, -0.05));
-      const glass = box(1.5, 1.4, 1.3, mat.glass(0xaee8ff, 0.18), 0, 1.7, 0); g.add(glass);
-      for (const [x, z] of [[-0.75, -0.65], [0.75, -0.65], [-0.75, 0.65], [0.75, 0.65]]) { strip(x, 1.7, z, 1.4); }
-      for (let i = 0; i < 7; i++) { const s = emojiSprite(pick(["🧸", "🦄", "🐙", "🐼", "⭐", "🎁"]), 0.42); s.position.set(rnd(-0.55, 0.55), 1.2, rnd(-0.45, 0.45)); g.add(s); }
-      const claw = new THREE.Group(); claw.position.set(0.2, 2.2, 0); claw.add(cyl(0.02, 0.02, 0.5, mat.metal(), 6, 0, 0, 0)); for (const a of [0, 2.1, 4.2]) { const f = box(0.04, 0.3, 0.04, mat.metal(), Math.cos(a) * 0.12, -0.35, Math.sin(a) * 0.12); f.rotation.z = Math.cos(a) * 0.4; f.rotation.x = -Math.sin(a) * 0.4; claw.add(f); } g.add(claw);
-      g.add(box(0.5, 0.5, 0.1, mat.std(0x111), 0.4, 0.65, 0.71)); screen = null; break; }
+    case "claw": { // a proper claw crane: lit base, glass box on chrome posts, gantry, plush pile, joystick panel
+      w = 1.9; d = 1.7;
+      g.add(box(1.8, 1.0, 1.6, mat.gloss(0x1b1340), 0, 0.5, 0)); const basePanel = textPlane(["🦾 CLAW"], 1.6, 0.34, { bg: `#${c.getHexString()}`, color: "#1a1040", size: 80 }); basePanel.position.set(0, 0.6, 0.81); g.add(basePanel);
+      g.add(box(1.6, 0.04, 1.4, mat.std(0xe91e63), 0, 1.0, 0)); for (let i = 0; i < 10; i++) g.add(sphere(0.03, mat.gloss(pick([0xff9ec7, 0xffd54a, 0x00e5ff])), rnd(-0.7, 0.7), 1.03, rnd(-0.6, 0.6), 6));
+      for (const [x, z, bw, bd] of [[0, -0.7, 1.6, 0.02], [-0.8, 0, 0.02, 1.4], [0.8, 0, 0.02, 1.4], [0, 0.7, 1.6, 0.02]]) g.add(box(bw, 1.4, bd, mat.glass(0xaee8ff, 0.14), x, 1.72, z));
+      for (const [x, z] of [[-0.8, -0.7], [0.8, -0.7], [-0.8, 0.7], [0.8, 0.7]]) { g.add(box(0.08, 1.4, 0.08, mat.metal(0xdfe6ee), x, 1.72, z)); strip(x, 1.72, z, 1.4); }
+      g.add(box(1.8, 0.35, 1.6, mat.gloss(0x1b1340), 0, 2.6, 0)); marquee(2.6, 1.7); for (let i = 0; i < 6; i++) g.add(sphere(0.03, mat.neon(i % 2 ? 0xffd54a : 0xffffff, 1.5), -0.65 + i * 0.26, 2.4, 0.7, 6));
+      const pile = [...PLUSH_KINDS].sort(() => Math.random() - 0.5).slice(0, 6); pile.forEach((k, i) => { const pl = makePlush(k, 0.55); pl.position.set(-0.5 + (i % 3) * 0.5, 1.02, -0.35 + Math.floor(i / 3) * 0.6); pl.rotation.y = rnd(0, 6); g.add(pl); });
+      g.add(box(1.6, 0.05, 0.05, mat.metal(), 0, 2.35, 0.1)); const carriage = box(0.16, 0.1, 0.16, mat.metal(0x8899aa), 0.2, 2.3, 0.1); g.add(carriage);
+      const claw = new THREE.Group(); claw.position.set(0.2, 1.9, 0.1); claw.add(cyl(0.012, 0.012, 0.4, mat.std(0xdddddd), 6, 0, 0.2, 0)); claw.add(sphere(0.06, mat.metal(0xdfe6ee))); for (const a of [0, 2.1, 4.2]) { const f = box(0.03, 0.26, 0.03, mat.metal(), Math.cos(a) * 0.1, -0.13, Math.sin(a) * 0.1); f.rotation.z = Math.cos(a) * 0.45; f.rotation.x = -Math.sin(a) * 0.45; claw.add(f); } g.add(claw); g.userData.claw = claw;
+      g.add(box(1.0, 0.1, 0.4, mat.gloss(0x2a1a5e), 0.2, 1.05, 0.95)); g.add(cyl(0.025, 0.025, 0.22, mat.metal(), 8, -0.1, 1.2, 0.95)); g.add(sphere(0.06, mat.gloss(0xf4433f), -0.1, 1.33, 0.95)); g.add(cyl(0.07, 0.07, 0.04, mat.neon(0x00c853, 0.8), 16, 0.4, 1.12, 0.95));
+      g.add(box(0.5, 0.35, 0.06, mat.std(0x111), -0.55, 0.45, 0.81)); // prize door
+      screen = null; break; }
     case "pod": { // VR pod
       w = 2.2; d = 2.2;
       g.add(cyl(1.0, 1.1, 0.3, dark, 24, 0, 0.15, 0));
@@ -360,6 +385,30 @@ function buildCabinet(def) {
       for (const s of [-1, 1]) strip(s * 0.74, 1.4, 0.9, 2.4);
       const cage = box(1.5, 2.4, 1.9, mat.std(0xffffff, { transparent: true, opacity: 0.12, wireframe: true }), 0, 1.6, 0); g.add(cage);
       g.add(sphere(0.14, mat.gloss(0xff7043), 0.2, 0.55, 0.7)); marquee(3.0, 1.5); g.add(box(1.5, 0.5, 0.2, dark, 0, 3.0, -1.05)); break; }
+    case "pusher": { // coin pusher — glass box over a coin field with a moving bar
+      w = 1.8; d = 1.6;
+      g.add(box(1.7, 1.0, 1.5, body, 0, 0.5, 0)); g.add(box(1.5, 0.04, 1.3, mat.gloss(0x3949ab), 0, 1.02, 0));
+      for (let i = 0; i < 24; i++) g.add(cyl(0.06, 0.06, 0.02, mat.gloss(0xffd54a, { metalness: 0.5, roughness: 0.3, emissive: 0xffb300, emissiveIntensity: 0.3 }), 12, rnd(-0.65, 0.65), 1.04, rnd(-0.5, 0.55)));
+      g.add(box(1.5, 0.12, 0.35, mat.metal(0xb0bec5), 0, 1.09, -0.45)); for (const [x, z, bw, bd] of [[0, -0.65, 1.5, 0.02], [-0.75, 0, 0.02, 1.3], [0.75, 0, 0.02, 1.3]]) g.add(box(bw, 0.8, bd, mat.glass(0xaee8ff, 0.14), x, 1.42, z));
+      g.add(box(1.7, 0.3, 1.5, dark, 0, 1.95, 0)); marquee(1.95, 1.6); strip(-0.75, 1.42, 0.65, 0.8); strip(0.75, 1.42, 0.65, 0.8);
+      g.add(box(1.7, 0.1, 0.5, mat.gloss(0xffd54a), 0, 0.7, 0.9)); viewDist = 1.5; lookY = 1.3; break; }
+    case "darts": { // balloon dart booth
+      w = 3.0; d = 1.6;
+      g.add(box(2.8, 1.0, 0.8, mat.wood(0x8d5a2b), 0, 0.5, 0.3)); g.add(box(2.8, 2.6, 0.2, mat.std(0xd84315), 0, 1.5, -0.6));
+      for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) { const b = sphere(0.12, mat.gloss(pick([0xef5350, 0x42a5f5, 0x66bb6a, 0xab47bc, 0xffd54a])), -1.1 + k * 0.44, 0.9 + r * 0.55, -0.48); b.scale.set(1, 1.15, 1); g.add(b); }
+      for (const dx of [-1.35, 1.35]) g.add(box(0.12, 3.0, 0.12, mat.std(0x3a2414), dx, 1.5, -0.6)); marquee(3.0, 2.8); g.add(box(2.8, 0.5, 0.2, dark, 0, 3.0, -0.6));
+      for (let i = 0; i < 3; i++) g.add(cyl(0.01, 0.01, 0.25, mat.metal(0xffd54a), 6, -0.4 + i * 0.4, 1.12, 0.35).rotateX(1.2)); strip(-1.35, 1.5, -0.5, 2.8); strip(1.35, 1.5, -0.5, 2.8); break; }
+    case "bowl": { // mini bowling lane
+      w = 1.4; d = 4.0;
+      g.add(box(1.3, 0.6, 3.8, body, 0, 0.3, 0)); g.add(box(1.0, 0.04, 3.4, mat.wood(0xd9a066), 0, 0.62, 0.1)); for (const s of [-1, 1]) g.add(box(0.1, 0.15, 3.8, dark, s * 0.6, 0.68, 0));
+      for (let r = 0; r < 4; r++) for (let k = 0; k <= r; k++) g.add(new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.12, 4, 8), mat.gloss(0xffffff)).translateX((k - r / 2) * 0.16).translateY(0.75).translateZ(-1.5 - r * 0.14));
+      g.add(sphere(0.09, mat.gloss(0x7a3cff), 0, 0.73, 1.4)); g.add(box(1.3, 1.2, 0.3, dark, 0, 1.3, -1.95)); marquee(1.9, 1.3); g.add(box(1.3, 0.4, 0.3, dark, 0, 1.9, -1.95)); strip(0, 0.5, 1.92, 1.2, true); break; }
+    case "dance": { // dance floor pad with a screen tower
+      w = 2.6; d = 2.6;
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) g.add(box(0.78, 0.08, 0.78, mat.neon(pick([0x00e5ff, 0xff3dd6, 0x00e676, 0xffd54a]), 0.5), i * 0.82, 0.04, j * 0.82 + 0.3));
+      g.add(box(1.6, 2.6, 0.5, dark, 0, 1.3, -1.1)); screen = attract([def.emoji, def.name], 1.4, 1.0); screen.position.set(0, 1.7, -0.84); g.add(screen); marquee(2.85, 1.6); g.add(box(1.6, 0.5, 0.5, dark, 0, 2.85, -1.1));
+      for (const dx of [-0.85, 0.85]) { const sp = box(0.3, 0.5, 0.3, mat.std(0x111), dx, 0.35, -1.0); g.add(sp); } strip(-0.8, 1.3, -0.84, 2.6); strip(0.8, 1.3, -0.84, 2.6);
+      neon.push(...g.children.filter((m) => m.material && m.material.emissive && m.position.y < 0.1)); break; }
     case "wheel": {
       w = 2.4; d = 1.2;
       g.add(box(2.0, 0.8, 1.0, body, 0, 0.4, 0)); const wheel = new THREE.Group(); wheel.position.set(0, 2.1, 0.2);

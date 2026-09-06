@@ -18,7 +18,46 @@
     .stats { display: flex; gap: 8px; }
     #hud.ingame .topbar .left { visibility: hidden; }
     .pill { font-weight: 900; padding: 8px 14px; border-radius: 999px; font-size: 15px; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
-    .credits { color: #1a1040; background: var(--cyan); } .tickets { color: #4a2b00; background: var(--gold); }
+    .credits { color: #1a1040; background: var(--cyan); } .tickets { color: #4a2b00; background: var(--gold); } .money { color: #0b3d1a; background: #a5f3a0; } .boost { color: #fff; background: #ff9800; font-size: 12px; }
+    .cost.money { color: #0b3d1a; background: #a5f3a0; }
+    .joy.rest { opacity: .55; }
+    .boostnote { color: #ffd54a !important; font-weight: 800; }
+    .won.money { color: #a5f3a0; text-shadow: 0 0 12px rgba(165,243,160,.7); }
+    .owned.claw { background: var(--cyan); color: #1a1040; left: -6px; right: auto; }
+    .jobrow { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+    .jobrow .note { color: var(--muted); font-size: 13px; }
+    /* mode picker */
+    .modes { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .modecard { flex: 1 1 240px; max-width: 300px; border-radius: 22px; padding: 22px 18px; cursor: pointer; border: 3px solid transparent; color: #fff; text-align: center; font-family: inherit; transition: transform .12s; }
+    .modecard:hover { transform: translateY(-4px); border-color: #fff; }
+    .modecard .ico { font-size: 56px; } .modecard h3 { font-size: 22px; margin: 6px 0; } .modecard p { font-size: 14px; opacity: .92; line-height: 1.4; }
+    .modecard.sandbox { background: linear-gradient(160deg, #00c853, #00838f); } .modecard.regular { background: linear-gradient(160deg, #ff9800, #c62828); }
+    /* Inkbound-style cards */
+    .tcard.ink, .tcard.crit { width: 132px; height: 184px; }
+    .binder .tcard.ink, .binder .tcard.crit { width: 118px; height: 165px; }
+    .tcard .back { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 4px solid #fff; }
+    .tcard .bk-ring { width: 56px; height: 56px; border-radius: 50%; border: 4px solid; display: flex; align-items: center; justify-content: center; font-size: 26px; background: rgba(255,255,255,.08); }
+    .tcard .bk-title { font-size: 11px; font-weight: 900; letter-spacing: 2px; }
+    .tcard .front.ib { padding: 0; overflow: hidden; border: 5px solid var(--ink); background: linear-gradient(180deg, #f7f3ea, #e9e2d3); color: #222; display: block; text-align: left; }
+    .ib-art { height: 46%; overflow: hidden; border-bottom: 2px solid var(--inkd); } .ib-art svg { width: 100%; height: 100%; display: block; }
+    .ib-cost { position: absolute; top: 4px; left: 4px; width: 26px; height: 30px; background: var(--inkd); color: #fff; font-weight: 900; font-size: 14px; display: flex; align-items: center; justify-content: center; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+    .ib-cost.inkable { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--ink); }
+    .ib-ink { position: absolute; top: 4px; right: 5px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+    .ib-name { padding: 3px 6px 0; line-height: 1.05; } .ib-name b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; } .ib-name i { display: block; font-size: 8.5px; color: #555; font-style: italic; }
+    .ib-type { margin: 2px 6px; font-size: 7.5px; font-weight: 800; color: #fff; background: var(--inkd); border-radius: 4px; padding: 1px 5px; display: inline-block; }
+    .ib-text { padding: 0 6px; font-size: 7px; line-height: 1.25; color: #333; height: 34px; overflow: hidden; }
+    .ib-str, .ib-wil { position: absolute; bottom: 4px; width: 22px; height: 24px; color: #fff; font-weight: 900; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    .ib-str { left: 5px; background: #333; clip-path: polygon(50% 0, 100% 30%, 100% 100%, 0 100%, 0 30%); } .ib-wil { right: 5px; background: var(--inkd); clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%); }
+    .ib-lore { position: absolute; right: 4px; top: 30%; writing-mode: vertical-rl; color: var(--inkd); font-size: 9px; letter-spacing: 1px; background: rgba(255,255,255,.75); border-radius: 6px; padding: 3px 1px; }
+    .ib-rar { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 16px; height: 16px; } .ib-rar svg { width: 100%; height: 100%; display: block; }
+    .foil-tag { position: absolute; top: 46%; right: 4px; transform: translateY(-100%); font-size: 7px; font-weight: 900; background: linear-gradient(90deg,#ff5da2,#ffe14d,#3d8bfd); color: #222; padding: 1px 5px; border-radius: 4px; }
+    /* Critter Clash cards */
+    .tcard .front.cc { padding: 4px; border: 5px solid var(--tc); background: linear-gradient(180deg, #fffbe6, #fff); color: #222; display: flex; flex-direction: column; text-align: left; gap: 2px; }
+    .cc-head { display: flex; justify-content: space-between; align-items: center; font-size: 10px; } .cc-head b { font-size: 10.5px; } .cc-hp { color: #c62828; font-weight: 900; font-size: 9px; } .cc-hp i { font-style: normal; }
+    .cc-art { height: 40%; border: 2px solid #b08d57; border-radius: 3px; overflow: hidden; } .cc-art svg { width: 100%; height: 100%; display: block; }
+    .cc-type { font-size: 7px; font-weight: 800; text-align: center; background: var(--tc); border-radius: 999px; padding: 1px 6px; margin: 1px auto; color: #222; }
+    .cc-atk { display: flex; align-items: center; gap: 4px; font-size: 7.5px; border-bottom: 1px solid #ddd; padding: 1px 0; } .cc-atk span:nth-child(2) { flex: 1; font-weight: 700; } .cc-atk b { font-size: 9px; } .cc-en { background: var(--tc); border-radius: 50%; width: 11px; height: 11px; display: inline-flex; align-items: center; justify-content: center; font-size: 7px; }
+    .cc-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: 6.5px; color: #555; } .cc-rar { display: inline-flex; align-items: center; gap: 2px; } .cc-rar svg { width: 9px; height: 9px; }
     .pill.bump { animation: bump .4s ease; } @keyframes bump { 30% { transform: scale(1.25); } }
 
     /* walking prompt */
@@ -131,7 +170,7 @@
     .tcard .front { transform: rotateY(180deg); background: linear-gradient(160deg, #fff, #eef); color: #222; border: 4px solid var(--rc, #ccc); padding: 5px; }
     .tcard .front .art { font-size: 40px; line-height: 1; } .tcard .front .nm { font-size: 10px; font-weight: 900; text-align: center; line-height: 1.1; } .tcard .front .ty { font-size: 8px; font-weight: 700; color: #666; }
     .tcard .front .hp { position: absolute; top: 4px; right: 6px; font-size: 9px; font-weight: 900; color: #c62828; } .tcard .front .rar { position: absolute; bottom: 3px; left: 6px; font-size: 9px; }
-    .tcard.holo .front { background: linear-gradient(115deg, #fff 20%, #ffe0f6 35%, #dcecff 50%, #ddffe9 65%, #fff 80%); background-size: 300% 300%; animation: holo 3s linear infinite; }
+    .tcard.holo .front::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 6px; background: linear-gradient(115deg, transparent 20%, rgba(255,224,246,.55) 35%, rgba(220,236,255,.55) 50%, rgba(221,255,233,.55) 65%, transparent 80%); background-size: 300% 300%; animation: holo 3s linear infinite; mix-blend-mode: screen; }
     @keyframes holo { 0%{background-position:0% 0%} 100%{background-position:100% 100%} }
     .binder { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-content: flex-start; overflow: auto; height: 100%; padding: 6px; width: 100%; }
     .binder .tcard { width: 84px; height: 118px; } .binder .tcard .front .art { font-size: 32px; }
@@ -154,10 +193,13 @@
     <div class="topbar">
       <div class="left" style="display:flex;gap:8px">
         <a class="ghost" href="index.html">← Games</a>
-        <button class="ghost" id="mute">🔊 Sound</button>
+        <button class="ghost" id="mute">🔊</button>
+        <button class="ghost" id="modeBtn">🏖️ Sandbox</button>
       </div>
       <div class="stats">
-        <div class="pill credits" id="creditsPill">🪙 0 credits</div>
+        <div class="pill boost" id="boostPill" style="display:none"></div>
+        <div class="pill money" id="moneyPill">💵 $∞</div>
+        <div class="pill credits" id="creditsPill">🪙 0</div>
         <div class="pill tickets" id="ticketsPill">🎟️ 0</div>
       </div>
     </div>
@@ -183,12 +225,13 @@
     <div class="cardrow">
       <div class="acard"><div class="brand">🕹️ EMMY'S ARCADE</div><div class="chip"></div><div class="star">⭐</div><div class="name">EMMY  ★  VIP PLAYER</div><div class="bal"><span id="cardCredits">🪙 0</span><span id="cardTickets">🎟️ 0</span></div></div>
       <div class="cardinfo">
-        <div class="wallet">💵 Your wallet: <b>$∞</b> (unlimited money — lucky you!)</div>
+        <div class="wallet" id="wallet"></div>
         <p id="cardHint"></p>
         <div class="loadbtns">
-          <button class="act btn-green" id="load10">💵 $10 → 10 credits</button>
-          <button class="act btn-blue" id="load50">💵 $50 → 55 credits</button>
-          <button class="act btn-purple" id="load100">💵 $100 → 120 credits</button>
+          <button class="act btn-gold" id="load5">💵 $5 → 6 credits</button>
+          <button class="act btn-green" id="load10">💵 $10 → 13 credits</button>
+          <button class="act btn-blue" id="load50">💵 $50 → 70 credits</button>
+          <button class="act btn-purple" id="load100">💵 $100 → 150 credits</button>
         </div>
       </div>
     </div>
@@ -198,9 +241,27 @@
     <button class="mclose" data-close="prizeModal">✕</button>
     <h2>🏪 Prize Counter</h2>
     <p class="sub">Trade your 🎟️ tickets for prizes — every prize is something you can really play with!</p>
-    <div class="tabs"><button class="tab active" data-tab="counter">🎟️ Prizes to win</button><button class="tab" data-tab="shelf">🧸 My prizes</button></div>
+    <div class="tabs"><button class="tab active" data-tab="counter">🎟️ Prizes to win</button><button class="tab" data-tab="shelf">🧸 My prizes <span id="shelfCount"></span></button></div>
     <div class="grid" id="prizes"></div>
     <div class="grid" id="shelf" style="display:none"></div>
+    <div class="jobrow"><span class="note">Need money? 💼</span><button class="act btn-purple" id="prizeJob">🎁 Work a shift at the Prize Booth</button></div>
+  </div></div>
+
+  <div class="modal" id="snackModal"><div class="mbox">
+    <button class="mclose" data-close="snackModal">✕</button>
+    <h2>🍕 Snack Shack</h2>
+    <p class="sub">Snacks cost <b>money</b>, not tickets — and every snack gives you a boost! <span id="snackWallet"></span></p>
+    <div class="grid" id="snackMenu"></div>
+    <div class="jobrow"><span class="note">Want to earn money? 💼</span><button class="act btn-gold" id="snackJob">🧑‍🍳 Work a shift at the Snack Shack</button></div>
+  </div></div>
+
+  <div class="modal" id="modeModal"><div class="mbox narrow" style="max-width:700px">
+    <h2>🕹️ Welcome to Emmy's Arcade!</h2>
+    <p class="sub">How do you want to play today? (You can switch anytime with the mode button at the top.)</p>
+    <div class="modes">
+      <button class="modecard sandbox" id="pickSandbox"><div class="ico">🏖️</div><h3>Sandbox Mode</h3><p>Unlimited money! Load your card as much as you like and play every game.</p></button>
+      <button class="modecard regular" id="pickRegular"><div class="ico">💼</div><h3>Regular Mode</h3><p>Start with $5. Earn money by working shifts at the Snack Shack and Prize Booth — do a good job and get paid (with tips)!</p></button>
+    </div>
   </div></div>
 
   <div class="modal" id="playModal"><div class="mbox narrow" id="prizeBox">
