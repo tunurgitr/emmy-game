@@ -41,7 +41,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   // ---- input --------------------------------------------------------------
   const keys = new Set();
   const move = { x: 0, y: 0 }; // joystick vector (-1..1)
-  let override = null, transition = null, running = false, paused = false, docked = false;
+  let override = null, transition = null, running = false, paused = false, docked = false, focus = false;
   const pointers = new Map(); let joyPid = null, lookPid = null, joyOrigin = null, downInfo = null;
   const isTouch = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   const joy = document.createElement("div"); joy.className = "joy"; joy.innerHTML = `<div class="knob"></div>`; ui.appendChild(joy); const knob = joy.firstElementChild;
@@ -77,6 +77,28 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   window.addEventListener("keyup", (e) => keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key));
   window.addEventListener("blur", () => keys.clear());
 
+  // ---- gamepad (any standard controller): left stick walks, right stick looks, A interacts ----
+  const pad = { lx: 0, ly: 0, rx: 0, ry: 0, buttons: [], connected: false };
+  const prevBtn = []; const cursor = document.createElement("div"); cursor.className = "padcursor"; cursor.style.display = "none"; ui.appendChild(cursor); let cur = { x: 0.5, y: 0.5 };
+  const dz = (v) => (Math.abs(v) < 0.14 ? 0 : v);
+  function pollPad() {
+    const gps = navigator.getGamepads ? navigator.getGamepads() : []; let gp = null; for (const g of gps) if (g && g.connected) { gp = g; break; }
+    pad.connected = !!gp; if (!gp) { cursor.style.display = "none"; return; }
+    pad.lx = dz(gp.axes[0] || 0); pad.ly = dz(gp.axes[1] || 0); pad.rx = dz(gp.axes[2] || 0); pad.ry = dz(gp.axes[3] || 0);
+    const pressed = gp.buttons.map((b) => b.pressed); const edges = pressed.map((p, i) => p && !prevBtn[i]); const released = pressed.map((p, i) => !p && prevBtn[i]); prevBtn.length = 0; prevBtn.push(...pressed); pad.buttons = pressed;
+    if (override) { // virtual cursor: right stick (or left) moves it, A taps at it
+      const W = canvas.clientWidth || innerWidth, H = canvas.clientHeight || innerHeight; const mx = pad.rx || pad.lx, my = pad.ry || pad.ly;
+      cur.x = clamp(cur.x + mx * 0.9 / 60, 0.02, 0.98); cur.y = clamp(cur.y + my * 0.9 / 60, 0.02, 0.98);
+      cursor.style.display = "block"; cursor.style.left = `${cur.x * W}px`; cursor.style.top = `${cur.y * H}px`; cursor.classList.toggle("down", !!pressed[0]);
+      const fake = { clientX: canvas.getBoundingClientRect().left + cur.x * W, clientY: canvas.getBoundingClientRect().top + cur.y * H, pointerId: 999 };
+      if (edges[0]) override.onDown && override.onDown(evt(fake)); else if (pressed[0]) override.onMove && override.onMove(evt(fake)); if (released[0]) override.onUp && override.onUp(evt(fake));
+      edges.forEach((e, i) => { if (e && override.onPad) override.onPad(i); }); if (edges[1] && onPadBack) onPadBack();
+    } else {
+      cursor.style.display = "none"; camYaw -= pad.rx * 2.4 / 60; camPitch = clamp(camPitch - pad.ry * 1.6 / 60, 0.08, 1.1);
+      if (edges[0] && nearest && !transition) onInteract(nearest); if (edges[1] && onPadBack) onPadBack();
+    }
+  }
+  let onPadBack = null;
   const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), tmpV = new THREE.Vector3();
   function tapToWalk(p) {
     const meshes = interactables.flatMap((i) => i.hit);
@@ -93,8 +115,10 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
     for (const f of animated) f(dt, t);
     if (transition) { transition(dt); return; }
     if (docked) return; // parked in front of a machine (camera stays put until exitGame)
-    // movement input
-    let mx = move.x, mz = move.y;
+    if (focus) { // "My look" preview: face the camera and hold still
+      kid.group.rotation.y = camYaw; kid.walk(t, 0, dt); camPos.set(player.x + Math.sin(camYaw) * 3.2, 1.7, player.z + Math.cos(camYaw) * 3.2); camera.position.lerp(camPos, Math.min(1, dt * 6)); camLook.set(player.x, 1.05, player.z); camera.lookAt(camLook); return; }
+    // movement input (joystick / keys / gamepad left stick)
+    let mx = move.x + (pad.connected ? pad.lx : 0), mz = move.y + (pad.connected ? pad.ly : 0);
     if (keys.has("w") || keys.has("ArrowUp")) mz -= 1; if (keys.has("s") || keys.has("ArrowDown")) mz += 1;
     if (keys.has("a") || keys.has("ArrowLeft")) mx -= 1; if (keys.has("d") || keys.has("ArrowRight")) mx += 1;
     if (keys.has("q")) camYaw += 1.8 * dt; if (keys.has("e") && !nearest) camYaw -= 1.8 * dt;
@@ -132,6 +156,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   function frame(now) {
     if (!running) return; requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now; if (paused) return;
+    pollPad();
     if (override) { try { override.update(dt); renderer.render(override.scene, override.camera); } catch (err) { console.error(err); } }
     else { update(dt); renderer.render(scene, camera); }
   }
@@ -150,13 +175,15 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   function exitGame() { override = null; docked = false; transition = null; camYaw = savedYaw; camera.position.set(player.x + Math.sin(camYaw) * camDist, EYE + 2, player.z + Math.cos(camYaw) * camDist); resize(); }
 
   return {
-    renderer, scene, camera, keys, interactables,
+    renderer, scene, camera, keys, interactables, pad,
+    onPadBack(fn) { onPadBack = fn; },
     start() { if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } },
     stop() { running = false; },
     pause(v) { paused = v; if (!v) last = performance.now(); },
     setOverride(o) { override = o; if (o) { o.camera.aspect = (canvas.clientWidth || innerWidth) / (canvas.clientHeight || innerHeight); o.camera.updateProjectionMatrix(); } },
     enterGame, exitGame, resize,
-    setAvatar(a) { scene.remove(kid.group); const k = makeKid(a); kid.group = k.group; kid.walk = k.walk; scene.add(kid.group); },
+    setAvatar(a) { const ry = kid.group.rotation.y; scene.remove(kid.group); const k = makeKid(a); kid.group = k.group; kid.walk = k.walk; kid.parts = k.parts; kid.group.position.set(player.x, 0, player.z); kid.group.rotation.y = ry; scene.add(kid.group); },
+    focusPlayer(on) { focus = on; if (on) { player.yaw = camYaw + Math.PI; } },
     playerPos: () => ({ x: player.x, z: player.z }),
     size: () => ({ W: canvas.clientWidth || innerWidth, H: canvas.clientHeight || innerHeight }),
   };
@@ -229,6 +256,26 @@ function buildRoom(scene, obstacles, animated, interactables) {
   const cabinSign = textPlane(["🍕 SNACK SHACK 🥤", "OPEN!"], 5.2, 1.1, { bg: "#ffd54a", color: "#4a2b00", size: 90 }); cabinSign.position.set(cx, 3.5, cz + 2.3); scene.add(cabinSign);
   const shackIt = { id: "snack", kind: "snack", label: "🍕 Snack Shack — buy a snack or work a shift", front: new THREE.Vector3(cx + 0.4, 0, cz + 4.2), eye: new THREE.Vector3(cx + 0.4, 1.7, cz + 4.4), look: new THREE.Vector3(cx + 0.4, 1.6, cz + 2.2), group: null, hit: [] };
   const shackHit = box(4, 3.4, 1, mat.basic(0xffffff, { transparent: true, opacity: 0 }), cx + 0.4, 1.7, cz + 2.4); shackHit.userData.interactable = shackIt; scene.add(shackHit); shackIt.hit.push(shackHit); shackIt.group = shackHit; interactables.push(shackIt);
+  // restrooms (right wall, near the entrance): a little building with two doors and a sign
+  const rx = W / 2 - 2.6, rz = 6;
+  scene.add(box(5, 3.4, 4.2, mat.std(0xe8e0d0), rx, 1.7, rz)); obstacles.push({ x: rx, z: rz, w: 5.4, d: 4.6 }); scene.add(box(5.2, 0.3, 4.4, mat.std(0x5a3a22), rx, 3.5, rz));
+  for (const [dz, col, ic] of [[-1.0, 0x3d8bfd, "🚹"], [1.0, 0xff3dd6, "🚺"]]) { scene.add(box(0.1, 2.2, 1.1, mat.gloss(col), rx - 2.55, 1.1, rz + dz)); const sp = emojiSprite(ic, 0.5); sp.position.set(rx - 2.7, 1.9, rz + dz); scene.add(sp); scene.add(sphere(0.05, mat.metal(0xffd54a), rx - 2.65, 1.05, rz + dz + 0.4, 8)); }
+  const rrSign = textPlane(["🚻 RESTROOMS"], 2.6, 0.6, { bg: "#3d8bfd", color: "#fff", size: 90 }); rrSign.position.set(rx - 2.62, 2.85, rz); rrSign.rotation.y = -Math.PI / 2; scene.add(rrSign);
+  const rrIt = { id: "restroom", kind: "restroom", label: "🚻 Use the restroom", front: new THREE.Vector3(rx - 4.2, 0, rz), eye: new THREE.Vector3(rx - 4.4, 1.6, rz), look: new THREE.Vector3(rx - 2.5, 1.5, rz), hit: [] };
+  const rrHit = box(0.4, 3, 3.2, mat.basic(0xffffff, { transparent: true, opacity: 0 }), rx - 2.6, 1.5, rz); rrHit.userData.interactable = rrIt; scene.add(rrHit); rrIt.hit.push(rrHit); rrIt.group = rrHit; interactables.push(rrIt);
+  // water fountain beside the restrooms
+  const fx = rx - 3.2, fz = rz - 3.4;
+  scene.add(box(0.7, 0.9, 0.6, mat.metal(0xb0bec5), fx, 0.45, fz)); scene.add(box(0.7, 0.08, 0.6, mat.gloss(0xeceff1), fx, 0.93, fz)); scene.add(cyl(0.03, 0.03, 0.12, mat.metal(), 8, fx, 1.02, fz + 0.15)); obstacles.push({ x: fx, z: fz, w: 0.9, d: 0.8 });
+  const drops = []; for (let i = 0; i < 6; i++) { const dr = sphere(0.02, mat.gloss(0x9fdfff, { transparent: true, opacity: 0.85 }), fx, 1.1, fz + 0.15, 6); scene.add(dr); drops.push({ m: dr, t: i / 6 }); }
+  animated.push((dt) => { for (const d of drops) { d.t = (d.t + dt * 1.2) % 1; d.m.position.set(fx + d.t * 0.12, 1.1 + Math.sin(d.t * Math.PI) * 0.16 - d.t * 0.05, fz + 0.15 + d.t * 0.05); } });
+  const fSign = textPlane(["🚰 WATER"], 1.2, 0.3, { bg: "#00e5ff", color: "#1a1040", size: 70 }); fSign.position.set(fx, 1.5, fz); scene.add(fSign);
+  const fIt = { id: "fountain", kind: "fountain", label: "🚰 Drink some water", front: new THREE.Vector3(fx, 0, fz + 1.2), eye: new THREE.Vector3(fx, 1.6, fz + 1.3), look: new THREE.Vector3(fx, 1.0, fz), hit: [] };
+  const fHit = box(0.9, 1.4, 0.8, mat.basic(0xffffff, { transparent: true, opacity: 0 }), fx, 0.7, fz); fHit.userData.interactable = fIt; scene.add(fHit); fIt.hit.push(fHit); fIt.group = fHit; interactables.push(fIt);
+  // trash cans: by the snack shack, by the entrance, by the prize counter
+  for (const [tx, tz] of [[13.5, -D / 2 + 6], [3.5, D / 2 - 3.5], [-6, -D / 2 + 7]]) {
+    const can = new THREE.Group(); can.position.set(tx, 0, tz); can.add(cyl(0.32, 0.28, 0.9, mat.std(0x2e7d32), 16, 0, 0.45, 0)); can.add(cyl(0.34, 0.34, 0.08, mat.std(0x1b5e20), 16, 0, 0.92, 0)); can.add(cyl(0.16, 0.16, 0.04, mat.std(0x111), 12, 0, 0.97, 0)); const lbl = textPlane(["🗑️ TRASH"], 0.5, 0.18, { bg: "#fff", color: "#1b5e20", size: 60 }); lbl.position.set(0, 0.55, 0.33); can.add(lbl); scene.add(can); obstacles.push({ x: tx, z: tz, w: 0.8, d: 0.8 });
+    const tIt = { id: "trash" + tx, kind: "trash", label: "🗑️ Throw away your trash", front: new THREE.Vector3(tx, 0, tz + 1.0), eye: new THREE.Vector3(tx, 1.5, tz + 1.1), look: new THREE.Vector3(tx, 0.7, tz), hit: [can], group: can }; can.userData.interactable = tIt; interactables.push(tIt);
+  }
   // wall art / posters
   const posters = ["🎮", "🕹️", "👾", "🏁", "🎟️", "🎯", "🦖", "🚀"];
   posters.forEach((p, i) => { const pl = emojiPlane(p, 2.2); const left = i % 2 === 0; pl.position.set(left ? -W / 2 + 0.06 : W / 2 - 0.06, 3.6, -12 + Math.floor(i / 2) * 7); pl.rotation.y = left ? Math.PI / 2 : -Math.PI / 2; scene.add(pl); });
@@ -281,6 +328,7 @@ const SPOTS = [ // x, z, facing (radians; 0 = faces +z i.e. toward entrance)
   { x: -5, z: -9, ry: 0 }, { x: 5, z: -9, ry: 0 },
   { x: -5, z: 3, ry: Math.PI }, { x: 5, z: 3, ry: Math.PI },
   { x: -18, z: 8, ry: Math.PI / 2 }, { x: 18, z: 8, ry: -Math.PI / 2 }, { x: -9, z: -13, ry: 0 }, { x: 9, z: -13, ry: 0 },
+  { x: -18, z: -2, ry: Math.PI / 2 }, { x: 18, z: -2, ry: -Math.PI / 2 }, { x: -9, z: 8, ry: Math.PI }, { x: 9, z: 8, ry: Math.PI }, { x: 0, z: -3, ry: Math.PI }, { x: 0, z: 8, ry: 0 },
 ];
 function layoutCabinets(scene, games, obstacles, interactables, animated) {
   let si = 0;
@@ -409,6 +457,33 @@ function buildCabinet(def) {
       g.add(box(1.6, 2.6, 0.5, dark, 0, 1.3, -1.1)); screen = attract([def.emoji, def.name], 1.4, 1.0); screen.position.set(0, 1.7, -0.84); g.add(screen); marquee(2.85, 1.6); g.add(box(1.6, 0.5, 0.5, dark, 0, 2.85, -1.1));
       for (const dx of [-0.85, 0.85]) { const sp = box(0.3, 0.5, 0.3, mat.std(0x111), dx, 0.35, -1.0); g.add(sp); } strip(-0.8, 1.3, -0.84, 2.6); strip(0.8, 1.3, -0.84, 2.6);
       neon.push(...g.children.filter((m) => m.material && m.material.emissive && m.position.y < 0.1)); break; }
+    case "gallery": { // shooting gallery booth: counter + backdrop with ducks on rails
+      w = 3.0; d = 1.8;
+      g.add(box(2.8, 0.9, 0.7, mat.wood(0x8d5a2b), 0, 0.45, 0.5)); g.add(box(2.8, 2.6, 0.2, mat.wood(0x6d4c41), 0, 1.5, -0.7));
+      for (let r = 0; r < 2; r++) { g.add(box(2.6, 0.05, 0.2, mat.std(0x3e2723), 0, 1.0 + r * 0.7, -0.5)); for (let k = 0; k < 4; k++) { const dk = new THREE.Group(); dk.add(sphere(0.1, mat.gloss(0xffeb3b))); dk.add(sphere(0.07, mat.gloss(0xffeb3b), 0.08, 0.12, 0)); dk.position.set(-1.0 + k * 0.66 + r * 0.3, 1.12 + r * 0.7, -0.5); g.add(dk); } }
+      g.add(box(2.8, 0.15, 0.3, mat.gloss(0x26c6da), 0, 0.98, -0.5)); marquee(2.95, 2.8); g.add(box(2.8, 0.5, 0.2, dark, 0, 2.95, -0.7)); strip(-1.35, 1.5, -0.6, 2.6); strip(1.35, 1.5, -0.6, 2.6); break; }
+    case "hammer": { // strongman tower
+      w = 1.6; d = 1.8;
+      g.add(box(0.36, 3.6, 0.24, mat.wood(0x8d5a2b), 0, 1.8, -0.4)); for (let i = 0; i < 8; i++) g.add(box(0.42, 0.05, 0.28, mat.neon(i >= 6 ? 0xf4433f : i >= 4 ? 0xffd54a : 0x00c853, 0.6), 0, 0.5 + i * 0.4, -0.4));
+      const bl = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.28, 12), mat.metal(0xffd54a)); bl.position.set(0, 3.8, -0.4); g.add(bl);
+      g.add(box(1.0, 0.15, 0.5, mat.metal(0x666), 0.4, 0.08, 0.5)); const hm = new THREE.Group(); hm.position.set(0.9, 0.1, 0.7); hm.add(cyl(0.03, 0.03, 1.1, mat.wood(0x8d5a2b), 8, 0, 0.55, 0)); hm.add(box(0.36, 0.22, 0.22, mat.metal(0x546e7a), 0, 1.15, 0)); hm.rotation.z = 0.5; g.add(hm);
+      marquee(4.2, 1.6); g.add(box(1.6, 0.5, 0.2, dark, 0, 4.2, -0.4)); break; }
+    case "rings": { // ring toss table with bottles
+      w = 2.2; d = 2.0;
+      g.add(box(2.0, 0.9, 1.8, mat.wood(0x8d5a2b), 0, 0.45, 0)); g.add(box(2.0, 0.04, 1.8, mat.std(0x26a69a), 0, 0.92, 0));
+      for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) { const col = pick([0x4caf50, 0x2196f3, 0x9c27b0, 0xff7043]); g.add(cyl(0.06, 0.07, 0.24, mat.gloss(col), 10, -0.6 + k * 0.4, 1.06, -0.4 + r * 0.4)); g.add(cyl(0.025, 0.05, 0.12, mat.gloss(col), 8, -0.6 + k * 0.4, 1.24, -0.4 + r * 0.4)); }
+      g.add(torus(0.1, 0.02, mat.gloss(0xef5350), 0.5, 0.95, 0.7).rotateX(Math.PI / 2)); g.add(cyl(0.04, 0.04, 1.8, mat.metal(), 8, -0.9, 1.8, -0.8)); marquee(2.8, 1.8); break; }
+    case "memory": { // memory table with glowing tiles
+      w = 2.2; d = 1.8;
+      g.add(box(2.0, 0.9, 1.6, body, 0, 0.45, 0)); g.add(box(2.0, 0.05, 1.6, mat.gloss(0x14102a), 0, 0.92, 0));
+      for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) g.add(box(0.36, 0.04, 0.3, mat.neon(0x7e57c2, 0.4), -0.66 + k * 0.44, 0.97, -0.45 + r * 0.42));
+      g.add(cyl(0.04, 0.04, 1.6, mat.metal(), 8, 0, 1.7, -0.7)); marquee(2.6, 1.8); strip(0, 0.5, 0.82, 1.9, true); break; }
+    case "goal": { // mini soccer goal on turf
+      w = 3.2; d = 3.0;
+      g.add(box(3.0, 0.06, 2.8, mat.std(0x4caf50, { roughness: 1 }), 0, 0.03, 0)); for (const x of [-1.1, 1.1]) g.add(cyl(0.04, 0.04, 1.4, mat.gloss(0xffffff), 8, x, 0.7, -1.1)); g.add(cyl(0.04, 0.04, 2.2, mat.gloss(0xffffff), 8, 0, 1.4, -1.1).rotateZ(Math.PI / 2));
+      g.add(box(2.2, 1.4, 0.7, mat.std(0xffffff, { wireframe: true, transparent: true, opacity: 0.4 }), 0, 0.7, -1.45)); g.add(sphere(0.14, mat.gloss(0xffffff), 0.2, 0.17, 0.8));
+      const kp = makeKid({ shirt: 0xff9800, hairStyle: "short", mood: "neutral" }); kp.group.scale.setScalar(0.7); kp.group.position.set(0, 0.06, -0.9); g.add(kp.group);
+      g.add(cyl(0.04, 0.04, 2.4, mat.metal(), 8, -1.4, 1.2, 1.2)); marquee(2.5, 2.0); break; }
     case "wheel": {
       w = 2.4; d = 1.2;
       g.add(box(2.0, 0.8, 1.0, body, 0, 0.4, 0)); const wheel = new THREE.Group(); wheel.position.set(0, 2.1, 0.2);

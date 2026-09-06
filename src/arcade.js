@@ -7,9 +7,11 @@ import { createWorld } from "./arcade3d/world.js";
 import { wheel, claw, vr, race, laser } from "./arcade3d/games1.js";
 import { hockey, fish, skee, mole, hoops } from "./arcade3d/games2.js";
 import { pusher, darts, bowling, dance, climb, snackjob, prizejob } from "./arcade3d/games3.js";
+import { gallery, hammer, rings, memory, penalty } from "./arcade3d/games4.js";
 import { PRIZES, prizeById, playPrize, SNACKS } from "./arcade-prizes.js";
+import { THREE, makeKid } from "./arcade3d/lib.js";
 
-const GAMES = [race, claw, vr, wheel, laser, hockey, fish, skee, mole, hoops, pusher, darts, bowling, dance, climb, snackjob, prizejob];
+const GAMES = [race, claw, vr, wheel, laser, hockey, fish, skee, mole, hoops, pusher, darts, bowling, dance, gallery, hammer, rings, memory, penalty, climb, snackjob, prizejob];
 const $ = (id) => document.getElementById(id);
 const TICKET_BONUS = 1.5; // generous arcade: every payout ×1.5
 
@@ -63,6 +65,7 @@ function setMuteLabel() { $("mute").textContent = muted ? "🔇" : "🔊"; }
 $("mute").onclick = () => { muted = !muted; localStorage.setItem("emmy.muted", muted ? "1" : "0"); setMuteLabel(); if (!muted) SFX.tap(); };
 setMuteLabel();
 
+const LOOK_KEY = "emmy.arcade.avatar";
 // --------------------------------------------------------------------------
 //  Modes & state — Sandbox (unlimited money) / Regular (earn money at jobs)
 // --------------------------------------------------------------------------
@@ -70,7 +73,7 @@ const MODE_KEY = "emmy.arcade.mode";
 let mode = localStorage.getItem(MODE_KEY); // "sandbox" | "regular" | null (not chosen yet)
 const saveKey = () => `emmy.arcade.save.v2.${mode}`;
 let state = null;
-function fresh() { return { credits: 0, tickets: 0, money: mode === "regular" ? 5 : 0, prizes: {}, best: {}, plays: 0, cards: {}, foils: {}, candy: 0, totalTickets: 0, earned: 0, boost: null, shifts: 0 }; }
+function fresh() { return { credits: 0, tickets: 0, money: mode === "regular" ? 5 : 0, prizes: {}, best: {}, plays: 0, cards: {}, foils: {}, candy: 0, totalTickets: 0, earned: 0, boost: null, shifts: 0, needs: { food: 100, water: 100, potty: 100 }, trash: null }; }
 function load() { try { const raw = localStorage.getItem(saveKey()); if (raw) return { ...fresh(), ...JSON.parse(raw) }; } catch {} return fresh(); }
 function save() { if (state) localStorage.setItem(saveKey(), JSON.stringify(state)); }
 const unlimited = () => mode === "sandbox";
@@ -115,8 +118,16 @@ function flyTo(targetEl, glyph, n) {
     document.body.appendChild(s); setTimeout(() => s.remove(), 1200 + i * 50); }
 }
 const BOOST_LABEL = { double: "🍕 DOUBLE tickets next game", free: "🥤 next game FREE", lucky: "🍭 +50% tickets next game" };
+// ---- needs: hunger / thirst / bathroom. They drain slowly while you're in the arcade;
+//      when one is empty you have to eat, drink at the fountain, or visit the restroom before playing.
+const NEED_RATE = { food: 100 / 540, water: 100 / 420, potty: 100 / 660 }; // seconds to drain from full
+const NEED_FIX = { food: "grab a bite at the 🍕 Snack Shack", water: "drink at the 🚰 water fountain", potty: "visit the 🚻 restroom" };
+function tickNeeds(dt) { if (!state || active || modalOpen) return; let changed = false; for (const k of Object.keys(NEED_RATE)) { const v = state.needs[k]; state.needs[k] = Math.max(0, v - NEED_RATE[k] * dt); if (Math.floor(v) !== Math.floor(state.needs[k])) changed = true; if (v > 0 && state.needs[k] === 0) { SFX.error(); toast(`${k === "food" ? "🍕 You're hungry!" : k === "water" ? "💧 You're thirsty!" : "🚻 You need the restroom!"} Go ${NEED_FIX[k]} before playing more games.`, 4000); } } if (changed) renderNeeds(); }
+function renderNeeds() { if (!state) return; for (const k of ["food", "water", "potty"]) { const v = state.needs[k]; const el = $("need" + k[0].toUpperCase() + k.slice(1)); el.style.width = `${v}%`; const row = el.closest(".need"); row.classList.toggle("low", v > 0 && v < 30); row.classList.toggle("empty", v <= 0); } $("trashHeld").style.display = state.trash ? "" : "none"; $("trashHeld").textContent = state.trash ? `${state.trash} holding trash — find a 🗑️` : ""; }
+function emptyNeed() { return ["food", "water", "potty"].find((k) => state.needs[k] <= 0); }
+setInterval(() => { tickNeeds(1); save(); }, 1000);
 function renderPills() {
-  if (!state) return;
+  if (!state) return; renderNeeds();
   $("creditsPill").textContent = `🪙 ${state.credits}`; $("ticketsPill").textContent = `🎟️ ${state.tickets}`; $("moneyPill").textContent = `💵 ${fmt$(money())}`;
   $("boostPill").style.display = state.boost ? "" : "none"; $("boostPill").textContent = BOOST_LABEL[state.boost] || "";
   $("cardCredits").textContent = `🪙 ${state.credits}`; $("cardTickets").textContent = `🎟️ ${state.tickets}`;
@@ -130,7 +141,7 @@ function renderPills() {
 // --------------------------------------------------------------------------
 let modalOpen = null;
 function openModal(id) { closeModal(); modalOpen = id; $(id).classList.add("show"); world && world.pause(true); }
-function closeModal() { if (!modalOpen) return; if (modalOpen === "playModal") closePrizePlay(); $(modalOpen).classList.remove("show"); modalOpen = null; world && world.pause(false); }
+function closeModal() { if (!modalOpen) return; if (modalOpen === "playModal") closePrizePlay(); if (modalOpen === "lookModal" && lookPrev) { lookPrev.stop(); lookPrev = null; } $(modalOpen).classList.remove("show"); modalOpen = null; world && world.pause(false); }
 document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => { closeModal(); SFX.tap(); }));
 document.querySelectorAll(".modal:not(#modeModal)").forEach((m) => m.addEventListener("pointerdown", (e) => { if (e.target === m) closeModal(); }));
 window.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (modalOpen) closeModal(); else if (active) closeGame(); } });
@@ -155,6 +166,7 @@ function buySnack(id) {
   openPlayView({ kind: "snack", ...s }, () => { $("snackModal").classList.add("show"); modalOpen = "snackModal"; renderSnacks(); }, (snack) => {
     if (snack.boost === "tickets") { state.tickets += snack.tickets; bump($("ticketsPill")); flyTo($("ticketsPill"), "🎟️", snack.tickets); toast(`+${snack.tickets} tickets! 🎟️`); }
     else { state.boost = snack.boost; toast(`Boost active: ${BOOST_LABEL[snack.boost]}!`); }
+    state.needs.food = 100; if (snack.id === "soda") state.needs.water = 100; state.trash = snack.id === "soda" ? "🥤" : snack.id === "icecream" ? "🍦" : "🧻"; setTimeout(() => toast("Please throw your wrapper away in a 🗑️ trash can — tidy kids get bonus tickets!", 3500), 1800);
     save(); renderPills();
   });
 }
@@ -207,7 +219,7 @@ let world = null, nearest = null;
 try {
   world = createWorld($("view"), {
     games: GAMES, ui: $("hud"),
-    avatar: { shirt: 0xff3dd6, pants: 0x3d8bfd, hairStyle: "ponytail", hair: 0x8a5a2b, eyes: 0x4a8f3f, mood: "happy" },
+    avatar: loadLook(),
     onPrompt(it) { nearest = it; const p = $("prompt"); if (it && !active) { p.classList.add("show"); $("interact").textContent = it.label; $("interact").className = `act ${it.kind === "game" ? "btn-green" : it.kind === "kiosk" ? "btn-blue" : it.kind === "snack" ? "btn-gold" : "btn-pink"}`; } else p.classList.remove("show"); },
     onInteract(it) { interact(it); },
   });
@@ -222,8 +234,44 @@ function interact(it) {
   if (it.kind === "kiosk") { renderPills(); openModal("kioskModal"); }
   else if (it.kind === "prizes") { tab = "counter"; renderPrizes(); openModal("prizeModal"); }
   else if (it.kind === "snack") { renderSnacks(); openModal("snackModal"); }
-  else if (it.kind === "game") startGame(it.def);
+  else if (it.kind === "restroom") useFacility("potty");
+  else if (it.kind === "fountain") useFacility("water");
+  else if (it.kind === "trash") { if (!state.trash) { toast("You're not holding any trash right now. Nice and tidy! 👍"); return; } const t = state.trash; state.trash = null; state.tickets += 5; save(); renderPills(); SFX.ding(); flyTo($("ticketsPill"), "🎟️", 5); toast(`${t} → 🗑️ Thanks for keeping the arcade clean! +5 tickets`); }
+  else if (it.kind === "game") { const e = emptyNeed(); if (e) { SFX.error(); toast(`${e === "food" ? "🍕 Too hungry to play!" : e === "water" ? "💧 Too thirsty to play!" : "🚻 You really need the restroom first!"} Go ${NEED_FIX[e]}.`, 3500); return; } startGame(it.def); }
 }
+// restroom / water fountain: a short, friendly animation that refills the bar
+function useFacility(kind) {
+  openModal("rrModal"); const steps = kind === "potty" ? [["🚪", "Going in…"], ["🧻", "…"], ["🚽", "Flush!"], ["🧼", "Washing hands"], ["🧴", "Drying off"], ["✨", "All better!"]] : [["🚰", "Leaning in…"], ["💧", "Gulp"], ["💧", "Gulp gulp"], ["😌", "Ahh, refreshing!"]];
+  $("rrTitle").textContent = kind === "potty" ? "🚻 Restroom" : "🚰 Water Fountain"; $("rrSub").textContent = kind === "potty" ? "Everybody needs a break sometimes." : "Stay hydrated, champ!";
+  let i = 0; const go = () => { const [ic, tx] = steps[i]; $("rrIcon").textContent = ic; $("rrText").textContent = tx; $("rrFill").style.width = `${((i + 1) / steps.length) * 100}%`; SFX.tick(); i++; if (i < steps.length) setTimeout(go, 650); else setTimeout(() => { state.needs[kind] = 100; if (kind === "water") state.needs.potty = Math.max(0, state.needs.potty - 8); save(); renderNeeds(); closeModal(); SFX.ding(); toast(kind === "potty" ? "🚻 All set! Hands washed. Back to the games!" : "💧 Refreshed! Back to the games!"); }, 700); }; go();
+}
+// ---- character customization ----
+
+const LOOK = { skin: [0xffd6b8, 0xf1c9a5, 0xe0ac8a, 0xc68642, 0x8d5a3c, 0x5c3a21], hair: [0x6b3e1e, 0x222222, 0xe8c36a, 0xa33a1e, 0x8a5a2b, 0xd7ccc8, 0xff3dd6, 0x3d8bfd], hairStyle: ["long", "short", "ponytail", "curly", "bun"], eyes: [0x3b6ea5, 0x4a8f3f, 0x6b3e1e, 0x8e44ad, 0x222222], shirt: [0xff3dd6, 0x3d8bfd, 0x00c853, 0xffd54a, 0x7a3cff, 0xff7043, 0xffffff, 0x222244], pants: [0x3d8bfd, 0x222244, 0xff3dd6, 0x8d5a2b, 0x00c853, 0xeeeeee], shoes: [0xffffff, 0x222222, 0xff3dd6, 0x00e5ff, 0xffd54a], mood: ["happy", "excited", "neutral"], hat: [null, "🎩", "🧢", "👑", "🎀", "🌸", "⭐"] };
+const MOOD_LABEL = { happy: "😊 Smile", excited: "😄 Big grin", neutral: "🙂 Calm" }; const STYLE_LABEL = { long: "Long", short: "Short", ponytail: "Ponytail", curly: "Curly", bun: "Bun" };
+function loadLook() { const d = { shirt: 0xff3dd6, pants: 0x3d8bfd, hairStyle: "ponytail", hair: 0x8a5a2b, eyes: 0x4a8f3f, mood: "happy", skin: 0xffd6b8, shoes: 0xffffff, hat: null }; try { return { ...d, ...JSON.parse(localStorage.getItem(LOOK_KEY) || "{}") }; } catch { return d; } }
+let look = loadLook();
+const hex = (c) => "#" + c.toString(16).padStart(6, "0");
+function renderLook() {
+  const o = $("lookOpts"); o.innerHTML = "";
+  const row = (label, key, items, render) => { const r = document.createElement("div"); r.className = "lookrow"; r.innerHTML = `<div class="lbl">${label}</div>`; items.forEach((v) => { const el = render(v); el.classList.toggle("sel", look[key] === v); el.onclick = () => { look[key] = v; localStorage.setItem(LOOK_KEY, JSON.stringify(look)); world.setAvatar(look); lookPrev && lookPrev.refresh(); SFX.tap(); renderLook(); }; r.appendChild(el); }); o.appendChild(r); };
+  const sw = (c) => { const d = document.createElement("div"); d.className = "swatch"; d.style.background = hex(c); return d; };
+  const chip = (t) => { const b = document.createElement("button"); b.className = "chip"; b.textContent = t; return b; };
+  row("Skin", "skin", LOOK.skin, sw); row("Hair color", "hair", LOOK.hair, sw); row("Hair style", "hairStyle", LOOK.hairStyle, (v) => chip(STYLE_LABEL[v])); row("Eyes", "eyes", LOOK.eyes, sw);
+  row("Expression", "mood", LOOK.mood, (v) => chip(MOOD_LABEL[v])); row("Shirt", "shirt", LOOK.shirt, sw); row("Pants", "pants", LOOK.pants, sw); row("Shoes", "shoes", LOOK.shoes, sw); row("Hat", "hat", LOOK.hat, (v) => chip(v || "None"));
+}
+// live preview of the character inside the modal
+let lookPrev = null;
+function startLookPreview() {
+  const stage = $("lookPreview"); stage.innerHTML = ""; const r = stage.getBoundingClientRect(); const W = Math.max(100, r.width), H = Math.max(100, r.height);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(W, H); renderer.domElement.style.cssText = "width:100%;height:100%;display:block"; stage.appendChild(renderer.domElement);
+  const scene = new THREE.Scene(); scene.add(new THREE.HemisphereLight(0xffffff, 0x404060, 1.2)); const d = new THREE.DirectionalLight(0xffffff, 1.2); d.position.set(2, 4, 3); scene.add(d);
+  const camera = new THREE.PerspectiveCamera(35, W / H, 0.1, 50); camera.position.set(0, 1.25, 3.4); camera.lookAt(0, 1.0, 0);
+  let kid = null; const setKid = () => { if (kid) scene.remove(kid.group); kid = makeKid(look); scene.add(kid.group); };
+  setKid(); let raf = 0, t = 0, last = performance.now(); const frame = (now) => { raf = requestAnimationFrame(frame); const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt; kid.group.rotation.y = Math.sin(t * 0.7) * 0.5; kid.walk(t, 0, dt); renderer.render(scene, camera); }; raf = requestAnimationFrame(frame);
+  lookPrev = { refresh: setKid, stop() { cancelAnimationFrame(raf); renderer.dispose(); stage.innerHTML = ""; } };
+}
+$("lookBtn").onclick = () => { if (active) return; SFX.tap(); renderLook(); openModal("lookModal"); startLookPreview(); };
 
 // --------------------------------------------------------------------------
 //  Game harness — first-person 3D games rendered by the world's renderer
@@ -248,14 +296,14 @@ function runGame(def) {
   $("gBanner").innerHTML = ""; $("gTip").textContent = def.tip;
   const { W, H } = world.size();
   const api = {
-    W, H, sfx: SFX, tone, keys: world.keys, hud: $("gameHud"), awardPrize: (id) => { awardPrize(id); const p = prizeById(id); if (p) toast(`${p.emoji} ${p.name} added to your prize shelf!`); },
+    W, H, sfx: SFX, tone, keys: world.keys, pad: world.pad, hud: $("gameHud"), awardPrize: (id) => { awardPrize(id); const p = prizeById(id); if (p) toast(`${p.emoji} ${p.name} added to your prize shelf!`); },
     setScore: (t) => ($("gScore").textContent = t), setTip: (t) => ($("gTip").textContent = t),
     finish(amount, title, detail) { if (!active || active.finished) return; active.finished = true; setTimeout(() => endGame(def, amount, title, detail), 300); },
   };
   try {
     const ctrl = def.create(api); active.ctrl = ctrl;
     $("vignette").classList.toggle("show", def.id === "vr");
-    world.setOverride({ scene: ctrl.scene, camera: ctrl.camera, update: (dt) => { if (!active.finished) ctrl.update(dt); }, onDown: (p) => !active.finished && ctrl.onDown && ctrl.onDown(p), onMove: (p) => !active.finished && ctrl.onMove && ctrl.onMove(p), onUp: (p) => !active.finished && ctrl.onUp && ctrl.onUp(p), onKey: (k) => !active.finished && ctrl.onKey && ctrl.onKey(k) });
+    world.setOverride({ scene: ctrl.scene, camera: ctrl.camera, update: (dt) => { if (!active.finished) ctrl.update(dt); }, onDown: (p) => !active.finished && ctrl.onDown && ctrl.onDown(p), onMove: (p) => !active.finished && ctrl.onMove && ctrl.onMove(p), onUp: (p) => !active.finished && ctrl.onUp && ctrl.onUp(p), onKey: (k) => !active.finished && ctrl.onKey && ctrl.onKey(k), onPad: (b) => { if (active.finished) { if (b === 0) ($("bAgain") || $("bBack"))?.click(); return; } if (b === 0 && $("bStart")) { $("bStart").click(); return; } ctrl.onPad && ctrl.onPad(b); } });
   } catch (err) { console.error(err); toast("That machine is out of order 😅 (credits refunded)"); state.credits += active.cost; save(); renderPills(); closeGame(); }
 }
 function endGame(def, amount, title, detail) {
@@ -283,6 +331,8 @@ function closeGame() {
   if (wasPlaying) toast("Left early — no refunds at the arcade! 😄");
 }
 $("gQuit").onclick = closeGame;
+if (world) world.onPadBack(() => { if (modalOpen) closeModal(); else if (active) closeGame(); });
+window.addEventListener("gamepadconnected", () => toast("🎮 Controller connected! Left stick walks, right stick looks, A = play/tap, B = back.", 4000));
 
 // --------------------------------------------------------------------------
 //  Boot

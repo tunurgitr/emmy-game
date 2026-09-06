@@ -192,6 +192,7 @@ export const vr = {
       onKey(k) { if (k === "ArrowLeft") yaw += 0.2; if (k === "ArrowRight") yaw -= 0.2; if (k === "ArrowUp") pitch = Math.min(1, pitch + 0.15); if (k === "ArrowDown") pitch = Math.max(-1, pitch - 0.15); if (k === " ") { const r = new THREE.Raycaster(camera.position, camera.getWorldDirection(new THREE.Vector3())); fire({ ray: r }); } },
       update(dt) {
         if (over) return; time -= dt; parts.update(dt);
+        if (api.pad) { yaw -= api.pad.rx * 2.2 * dt; pitch = clamp(pitch - api.pad.ry * 1.8 * dt, -1, 1); }
         euler.set(pitch, yaw, 0); camera.quaternion.setFromEuler(euler);
         spawnT -= dt; if (spawnT <= 0) { spawnT = rnd(0.5, 1.0); spawn(); }
         for (let i = bugs.length - 1; i >= 0; i--) { const b = bugs[i]; const d = b.position.length(); const step = b.userData.sp * dt; b.position.multiplyScalar(Math.max(0.01, (d - step) / d)); b.rotation.y += b.userData.spin * dt; b.lookAt(0, 0, 0); b.rotateY(b.userData.spin * performance.now() / 1000);
@@ -232,11 +233,12 @@ export const race = {
     const end = () => { const tix = clamp(Math.floor(dist / 25) + coinN * 2, 1, 80); api.finish(tix, lives > 0 ? "🏁 Finish line!" : "💥 Crashed out!", `${Math.floor(dist)}m and ${coinN} coins → ${tix} tickets`); };
     return std({
       scene, camera,
-      onDown(p) { targetX = clamp(p.x * 6, -4.5, 4.5); }, onMove(p) { targetX = clamp(p.x * 6, -4.5, 4.5); },
+      onDown(p) { targetX = clamp(p.x * 7, -4.5, 4.5); }, onMove(p) { targetX = clamp(p.x * 7, -4.5, 4.5); },
       update(dt) {
         if (over) return; parts.update(dt); time -= dt;
-        if (api.keys.has("ArrowLeft") || api.keys.has("a")) targetX = clamp(px - 6 * dt * 6, -4.5, 4.5); if (api.keys.has("ArrowRight") || api.keys.has("d")) targetX = clamp(px + 6 * dt * 6, -4.5, 4.5);
-        const opx = px; px = approach(px, targetX, 7, dt); tilt = approach(tilt, (px - opx) / dt * -0.06, 8, dt);
+        if (api.keys.has("ArrowLeft") || api.keys.has("a")) targetX = clamp(px - 14 * dt * 6, -4.5, 4.5); if (api.keys.has("ArrowRight") || api.keys.has("d")) targetX = clamp(px + 14 * dt * 6, -4.5, 4.5);
+        if (api.pad && Math.abs(api.pad.lx) > 0.15) targetX = clamp(px + api.pad.lx * 14 * dt * 6, -4.5, 4.5);
+        const opx = px; px = approach(px, targetX, 16, dt); tilt = approach(tilt, (px - opx) / dt * -0.06, 8, dt);
         speed = Math.min(52, speed + 0.6 * dt); if (hurt > 0) hurt -= dt; const s = hurt > 0 ? speed * 0.45 : speed; dist += s * dt;
         camera.position.set(px, 1.6, 0); camera.rotation.set(-0.08, 0, tilt * 0.4); bike.position.x = px; bike.rotation.z = tilt; bike.rotation.y = -tilt * 0.5; fw.rotation.x += s * dt * 3;
         for (const d of dashes) { d.position.z += s * dt; if (d.position.z > 10) d.position.z -= 320; }

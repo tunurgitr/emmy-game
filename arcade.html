@@ -21,6 +21,28 @@
     .credits { color: #1a1040; background: var(--cyan); } .tickets { color: #4a2b00; background: var(--gold); } .money { color: #0b3d1a; background: #a5f3a0; } .boost { color: #fff; background: #ff9800; font-size: 12px; }
     .cost.money { color: #0b3d1a; background: #a5f3a0; }
     .joy.rest { opacity: .55; }
+    .needs { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 46px); right: 12px; display: flex; gap: 8px; align-items: center; }
+    .need { display: flex; align-items: center; gap: 4px; background: rgba(20,10,50,.65); border-radius: 999px; padding: 4px 8px; }
+    .need span { font-size: 13px; } .need .bar { width: 54px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.15); overflow: hidden; }
+    .need .fill { height: 100%; width: 100%; background: #00c853; border-radius: 4px; transition: width .4s, background .4s; }
+    .need.low .fill { background: #ff9800; } .need.empty .fill { background: #f4433f; } .need.empty { animation: needblink 1s infinite; }
+    @keyframes needblink { 50% { box-shadow: 0 0 0 3px rgba(244,67,63,.6); } }
+    .trashheld { background: rgba(20,10,50,.65); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 800; }
+    #hud.ingame .needs { display: none; }
+    .padcursor { position: fixed; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 3px rgba(0,229,255,.7), 0 0 14px #00e5ff; pointer-events: none; z-index: 30; }
+    .padcursor.down { background: rgba(255,255,255,.6); transform: scale(.8); }
+    .padcursor::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #fff; }
+    /* customize */
+    .lookrow { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 8px 0; align-items: center; }
+    .lookrow .lbl { width: 100%; text-align: left; font-size: 13px; color: var(--muted); font-weight: 800; margin-top: 6px; }
+    .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); cursor: pointer; }
+    .swatch.sel { border-color: #fff; box-shadow: 0 0 0 3px var(--neon); }
+    .chip { font-family: inherit; font-weight: 800; font-size: 13px; padding: 8px 14px; border-radius: 999px; border: 2px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: #fff; cursor: pointer; }
+    .chip.sel { background: var(--neon); border-color: var(--neon); }
+    .lookpreview { height: 260px; border-radius: 18px; overflow: hidden; background: radial-gradient(circle at 50% 30%, rgba(255,255,255,.12), rgba(0,0,0,.2)); position: relative; margin-bottom: 8px; }
+    /* restroom / fountain */
+    .rrstage { height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: 64px; }
+    .progress { width: 70%; height: 16px; border-radius: 8px; background: rgba(255,255,255,.15); overflow: hidden; } .progress .fill { height: 100%; width: 0; background: linear-gradient(90deg,#00e5ff,#00c853); transition: width .2s; }
     .boostnote { color: #ffd54a !important; font-weight: 800; }
     .won.money { color: #a5f3a0; text-shadow: 0 0 12px rgba(165,243,160,.7); }
     .owned.claw { background: var(--cyan); color: #1a1040; left: -6px; right: auto; }
@@ -195,6 +217,7 @@
         <a class="ghost" href="index.html">← Games</a>
         <button class="ghost" id="mute">🔊</button>
         <button class="ghost" id="modeBtn">🏖️ Sandbox</button>
+        <button class="ghost" id="lookBtn">👕 My look</button>
       </div>
       <div class="stats">
         <div class="pill boost" id="boostPill" style="display:none"></div>
@@ -202,6 +225,12 @@
         <div class="pill credits" id="creditsPill">🪙 0</div>
         <div class="pill tickets" id="ticketsPill">🎟️ 0</div>
       </div>
+    </div>
+    <div class="needs" id="needs">
+      <div class="need" data-need="food" title="Hunger"><span>🍕</span><div class="bar"><div class="fill" id="needFood"></div></div></div>
+      <div class="need" data-need="water" title="Thirst"><span>💧</span><div class="bar"><div class="fill" id="needWater"></div></div></div>
+      <div class="need" data-need="potty" title="Bathroom"><span>🚻</span><div class="bar"><div class="fill" id="needPotty"></div></div></div>
+      <div class="trashheld" id="trashHeld" style="display:none"></div>
     </div>
     <div id="prompt"><button class="act btn-green" id="interact">▶ Play</button></div>
     <div id="hint">🕹️ Drag to look around • tap the floor or a machine to walk there • WASD / arrows</div>
@@ -269,6 +298,20 @@
     <div class="pname" id="pName"></div>
     <div class="pstage" id="pStage"></div>
     <div class="ptip" id="pTip"></div>
+  </div></div>
+
+  <div class="modal" id="lookModal"><div class="mbox" style="max-width:760px">
+    <button class="mclose" data-close="lookModal">✕</button>
+    <h2>👕 My Look</h2>
+    <p class="sub">Make Emmy look like you! Changes show up right away.</p>
+    <div class="lookpreview" id="lookPreview"></div>
+    <div id="lookOpts"></div>
+  </div></div>
+
+  <div class="modal" id="rrModal"><div class="mbox narrow">
+    <h2 id="rrTitle">🚻 Restroom</h2>
+    <p class="sub" id="rrSub"></p>
+    <div class="rrstage"><div id="rrIcon">🚪</div><div class="progress"><div class="fill" id="rrFill"></div></div><div id="rrText" style="font-size:15px;font-weight:800"></div></div>
   </div></div>
 
   <div id="loading"><div class="spin">🕹️</div><div>Opening the arcade…</div></div>

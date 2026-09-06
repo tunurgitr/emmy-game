@@ -68,12 +68,21 @@ A **walkable 3D arcade** (Three.js, all procedural geometry) modelled on a big t
 - **💼 Regular mode** — start with $5 and **earn money by working**: a 60-second **Snack Shack shift** (take orders, tap the right snacks in order, ring the bell — speed earns tips) or a **Prize Booth shift** (hand kids the plushie on their ticket receipt). Do a good job and you get paid; wrong orders earn nothing. Money buys card credits and snacks.
 - Progress saves separately per mode; switch anytime from the top bar.
 
+### Staying comfy — hunger, thirst & bathroom
+Three little bars under your tickets slowly drain while you play. When one empties you can't start a game until you fix it: **grab a bite** at the Snack Shack (which hands you a wrapper — drop it in a **🗑️ trash can** for +5 tickets), **drink** at the **🚰 water fountain**, or visit the **🚻 restrooms** by the entrance (a short, friendly hand-washing animation refills the bar). Everything stays kid-appropriate.
+
+### Make it yours
+**👕 My look** lets you customize your character live: skin tone, hair color and style (long, short, ponytail, curly, bun), eye color, expression, shirt, pants, shoes and a hat. Faces are soft and friendly — simple eyes, gentle smiles, blinking.
+
+### Controller support
+Plug in any standard gamepad: left stick walks, right stick looks, **A** interacts / starts / taps (an on-screen cursor appears inside games so every tap game works), **B** goes back. Turbo Racer steers with the left stick, VR Blaster looks with the right stick, and Dance Floor uses the D-pad or face buttons.
+
 ### Walking around
 - Third-person camera. On iPad: an always-visible **virtual joystick** (bottom-left) plus drag-to-look on the right, or just **tap the floor / a machine** and Emmy walks there. Desktop: WASD/arrows + mouse drag, `E`/Enter to interact.
 - Walk up to anything glowing and a "▶ Play" prompt appears; the camera **flies in** and the game plays in **first-person**.
 - **💳 Card kiosk** (entrance) turns money into credits. **🍕 Snack Shack** sells snacks for money — every snack gives a boost (double tickets, a free game, +50% tickets, or instant tickets). **🏪 Prize Counter** trades tickets for prizes and is where you sign up for a Prize Booth shift.
 
-### Games — 15 machines, each a real 3D scene (payouts are generous: every win ×1.5)
+### Games — 20 machines, each a real 3D scene (payouts are generous: every win ×1.5)
 | | |
 |---|---|
 | **🏎️ Turbo Racer** — sit-down bike, first-person highway | **🦾 Claw Machine** — a real claw crane full of *shaped* plushies (bear, panda, frog, dino, octopus, whale, star, gift, unicorn, duck); what you grab goes on your shelf |
@@ -83,6 +92,9 @@ A **walkable 3D arcade** (Three.js, all procedural geometry) modelled on a big t
 | **🐹 Whack-a-Mole** · **🏀 Hoop Shot** | **🪙 Coin Pusher** — drop coins, the bar shoves the pile off the edge |
 | **🎈 Balloon Darts** — swipe to throw darts at drifting balloons | **🎳 Bowling** — swipe to roll, curve with a sideways swipe, strikes pay big |
 | **🕺 Dance Floor** — rhythm game on a lit dance floor (tap pads or arrow keys) | **🧗 Rock Wall** — FREE: tap the glowing holds to climb to the bell |
+| **🦆 Shooting Gallery** — ducks, targets and gold stars glide by on rails | **🔨 Strongman Hammer** — time the power meter, ring the bell |
+| **🍾 Ring Toss** — toss rings onto bottle necks (gold bottle = 10) | **🧠 Memory Match** — flip 3D tiles, find all 8 pairs |
+| **⚽ Penalty Kick** — swipe past a diving goalie in front of a cheering crowd | |
 
 ### Prize Counter — every prize is interactive (and affordable)
 | Prize | What you can do with it |
@@ -128,7 +140,7 @@ npm run preview  # preview the production build
 | `game.html` + `src/game.js` | Fidget Trading (UI, state, turns, boxes, fidget zone, chat) |
 | `arcade.html` + `src/arcade.js` | Emmy's Arcade hub — HUD, arcade card, prize counter, first-person game harness |
 | `src/arcade3d/world.js` | The walkable 3D hall: room, trusses, lights, cabinets, kiosk, prize counter, character, controls, camera fly-in |
-| `src/arcade3d/games1.js`, `games2.js`, `games3.js` | The 15 first-person 3D games + the 2 jobs (each is a `{create(api) → {scene, camera, update…}}` controller) |
+| `src/arcade3d/games1.js` … `games4.js` | The 20 first-person 3D games + the 2 jobs (each is a `{create(api) → {scene, camera, update…}}` controller) |
 | `src/arcade3d/lib.js` | Shared Three.js helpers — textures, materials, particles, the human-faced kid character, shaped plushies |
 | `src/arcade-prizes.js` + `src/canvas2d.js` | Prize catalog, snack menu, the two card sets with SVG art generator, and the interactive prize views |
 | `src/toys.js` | Toy catalog, rarity tiers, and trade/offer/box logic |

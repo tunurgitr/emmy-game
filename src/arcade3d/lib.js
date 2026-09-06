@@ -151,19 +151,18 @@ export function makeKid({ shirt = 0xff3dd6, pants = 0x3d8bfd, skin = 0xffd6b8, h
   // eyes: white + iris + pupil + highlight, eyebrows
   const eyeParts = [];
   for (const x of [-0.11, 0.11]) {
-    const white = sphere(0.062, mat.std(0xffffff, { roughness: 0.3 }), x, 1.56, 0.245, 14); white.scale.set(1, 1.15, 0.6); g.add(white); eyeParts.push(white);
-    const iris = sphere(0.036, mat.std(eyes, { roughness: 0.3 }), x, 1.56, 0.28, 12); g.add(iris);
-    const pupil = sphere(0.018, mat.std(0x111111), x, 1.56, 0.305, 8); g.add(pupil);
-    const hl = sphere(0.008, mat.basic(0xffffff), x + 0.012, 1.575, 0.318, 6); g.add(hl);
-    const brow = box(0.09, 0.016, 0.02, hairM, x, 1.64, 0.26); brow.rotation.z = x < 0 ? -0.12 : 0.12; if (mood === "excited") brow.position.y += 0.015; g.add(brow);
-    const lash = box(0.1, 0.012, 0.02, mat.std(0x222222), x, 1.605, 0.26); g.add(lash);
+    const white = sphere(0.05, mat.std(0xffffff, { roughness: 0.3 }), x, 1.56, 0.255, 14); white.scale.set(1, 1.1, 0.55); g.add(white); eyeParts.push(white);
+    const iris = sphere(0.032, mat.std(eyes, { roughness: 0.3 }), x, 1.555, 0.278, 12); iris.scale.z = 0.6; g.add(iris);
+    const pupil = sphere(0.017, mat.std(0x111111), x, 1.555, 0.292, 8); pupil.scale.z = 0.5; g.add(pupil);
+    const hl = sphere(0.007, mat.basic(0xffffff), x + 0.01, 1.568, 0.3, 6); g.add(hl);
+    const brow = box(0.08, 0.014, 0.02, hairM, x, 1.63, 0.262); brow.rotation.z = x < 0 ? -0.1 : 0.1; g.add(brow);
   }
   // nose + mouth + cheeks
   const nose = sphere(0.028, skinM, 0, 1.49, 0.29, 10); nose.scale.set(1, 0.8, 0.8); g.add(nose);
   const mouthM = mat.std(0xc94a5a, { roughness: 0.5 });
-  if (mood === "excited") { const m = sphere(0.05, mouthM, 0, 1.415, 0.26, 12); m.scale.set(1.3, 0.9, 0.5); g.add(m); const teeth = box(0.08, 0.02, 0.01, mat.basic(0xffffff), 0, 1.43, 0.285); g.add(teeth); }
-  else if (mood === "neutral") { const m = box(0.09, 0.018, 0.02, mouthM, 0, 1.415, 0.28); g.add(m); }
-  else { const smile = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.013, 8, 16, Math.PI), mouthM); smile.position.set(0, 1.435, 0.275); smile.rotation.z = Math.PI; g.add(smile); }
+  if (mood === "excited") { const m = sphere(0.035, mouthM, 0, 1.42, 0.27, 12); m.scale.set(1.4, 1, 0.4); g.add(m); }
+  else if (mood === "neutral") { const smile = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.011, 8, 16, Math.PI), mouthM); smile.position.set(0, 1.44, 0.278); smile.rotation.z = Math.PI; g.add(smile); }
+  else { const smile = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 8, 16, Math.PI), mouthM); smile.position.set(0, 1.44, 0.276); smile.rotation.z = Math.PI; g.add(smile); }
   for (const x of [-0.17, 0.17]) { const ch = new THREE.Mesh(new THREE.CircleGeometry(0.035, 12), mat.basic(0xff9aa8, { transparent: true, opacity: 0.55 })); ch.position.set(x, 1.46, 0.262); ch.lookAt(x * 3, 1.46, 1.2); g.add(ch); }
   // hair
   const cap = sphere(0.315, hairM, 0, 1.58, -0.03, 24); cap.scale.set(1.02, 0.82, 1.02); g.add(cap);
@@ -177,7 +176,7 @@ export function makeKid({ shirt = 0xff3dd6, pants = 0x3d8bfd, skin = 0xffd6b8, h
   let blinkT = rnd(1, 4);
   return { group: g, parts: { legL, legR, armL, armR, head, body }, walk(t, speed, dt = 0.016) {
     const s = Math.sin(t * 10) * Math.min(1, speed) * 0.6; legL.rotation.x = s; legR.rotation.x = -s; armL.rotation.x = -s; armR.rotation.x = s; body.position.y = 0.85 + Math.abs(Math.sin(t * 10)) * 0.04 * Math.min(1, speed);
-    blinkT -= dt; const bl = blinkT < 0 ? Math.max(0.15, 1 - Math.sin(Math.min(1, -blinkT / 0.15) * Math.PI)) : 1; for (const e of eyeParts) e.scale.y = 1.15 * bl; if (blinkT < -0.15) blinkT = rnd(2, 5);
+    blinkT -= dt; const bl = blinkT < 0 ? Math.max(0.15, 1 - Math.sin(Math.min(1, -blinkT / 0.15) * Math.PI)) : 1; for (const e of eyeParts) e.scale.y = 1.1 * bl; if (blinkT < -0.15) blinkT = rnd(2, 5);
   } };
 }
 
