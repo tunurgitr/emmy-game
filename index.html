@@ -3,33 +3,60 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Emmy's Fidget Trading — Start</title>
+  <title>Emmy's Games</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
       min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 22px; padding: 24px; text-align: center;
+      gap: 26px; padding: 24px; text-align: center; color: #4a2b6b;
       background: linear-gradient(160deg, #ffe0f6 0%, #dcecff 50%, #ddffe9 100%);
     }
-    .toys-float { font-size: 46px; letter-spacing: 6px; animation: bob 2.5s ease-in-out infinite; }
+    .toys-float { font-size: 44px; letter-spacing: 6px; animation: bob 2.5s ease-in-out infinite; }
     @keyframes bob { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-10px);} }
-    h1 { font-size: clamp(30px, 8vw, 60px); color: #4a2b6b; text-shadow: 0 3px 0 #fff; }
+    h1 { font-size: clamp(34px, 8vw, 64px); text-shadow: 0 3px 0 #fff; }
     p.sub { color: #6b5a86; font-size: 18px; max-width: 520px; }
-    a.play {
-      text-decoration: none; font-weight: 900; font-size: 26px; color: #fff;
-      background: #00c853; padding: 18px 46px; border-radius: 22px;
-      box-shadow: 0 8px 0 #00993f; transition: transform .1s;
+    .games { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 820px; }
+    a.card {
+      flex: 1 1 300px; max-width: 380px; text-decoration: none; color: #fff; border-radius: 28px; padding: 26px 22px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; overflow: hidden;
+      box-shadow: 0 14px 0 rgba(0,0,0,.14), 0 24px 50px rgba(60,40,90,.25); transition: transform .12s;
     }
-    a.play:active { transform: translateY(5px); box-shadow: 0 3px 0 #00993f; }
-    a.mock { color: #8a79a6; text-decoration: none; font-size: 14px; font-weight: 600; }
+    a.card:hover { transform: translateY(-4px); }
+    a.card:active { transform: translateY(6px); box-shadow: 0 6px 0 rgba(0,0,0,.14), 0 10px 20px rgba(60,40,90,.25); }
+    a.card .icon { font-size: 78px; line-height: 1; filter: drop-shadow(0 6px 10px rgba(0,0,0,.25)); }
+    a.card .title { font-size: 28px; font-weight: 900; text-shadow: 0 2px 0 rgba(0,0,0,.2); }
+    a.card .desc { font-size: 15px; opacity: .95; font-weight: 600; line-height: 1.35; }
+    a.card .play { margin-top: 8px; background: #fff; color: #333; font-weight: 900; font-size: 18px; padding: 10px 26px; border-radius: 999px; box-shadow: 0 5px 0 rgba(0,0,0,.18); }
+    a.trading { background: linear-gradient(160deg, #3ea16a, #24734a); }
+    a.trading .play { color: #24734a; }
+    a.arcade  { background: linear-gradient(160deg, #6b2fd6 0%, #2a1a5e 100%); }
+    a.arcade .play { color: #6b2fd6; }
+    a.arcade::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 15%, rgba(255,0,200,.45), transparent 40%), radial-gradient(circle at 85% 80%, rgba(0,229,255,.4), transparent 40%); pointer-events: none; }
+    a.arcade > * { position: relative; }
+    .new { position: absolute; top: 14px; right: -34px; background: #ffd000; color: #6a4a00; font-weight: 900; font-size: 12px; padding: 4px 40px; transform: rotate(35deg); letter-spacing: 1px; }
+    a.mock { color: #8a79a6; text-decoration: none; font-size: 13px; font-weight: 600; }
   </style>
 </head>
 <body>
-  <div class="toys-float">🫧 🌀 🧊 🌈 💎 🦄 👑</div>
-  <h1>Emmy's<br>Fidget Trading</h1>
-  <p class="sub">Trade fidget toys with Foxy the fox! 🦊 Accept the deal, decline it, or ask for more — and see how good each trade is!</p>
-  <a class="play" href="game.html">▶ Play!</a>
+  <div class="toys-float">🫧 🌀 🕹️ 🎟️ 💎 🦄 🧸</div>
+  <h1>Emmy's Games</h1>
+  <p class="sub">Pick a game to play! 🎮</p>
+  <div class="games">
+    <a class="card trading" href="game.html" id="playTrading">
+      <div class="icon">🦊</div>
+      <div class="title">Fidget Trading</div>
+      <div class="desc">Trade fidget toys with Foxy, open mystery boxes, and play with every toy in 3D!</div>
+      <div class="play">▶ Play</div>
+    </a>
+    <a class="card arcade" href="arcade.html" id="playArcade">
+      <div class="new">NEW!</div>
+      <div class="icon">🕹️</div>
+      <div class="title">Emmy's Arcade</div>
+      <div class="desc">Load up your arcade card, win tickets in 10 games, and trade them for prizes you can actually play with!</div>
+      <div class="play">▶ Play</div>
+    </a>
+  </div>
   <a class="mock" href="mockups.html">(design mockups)</a>
 </body>
 </html>

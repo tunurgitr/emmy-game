@@ -1,6 +1,9 @@
-# 🎉 Emmy's Fidget Trading
+# 🎉 Emmy's Games
 
-A cheerful, [neal.fun](https://neal.fun)-style **fidget-toy trading game** for kids (built for a 10-year-old named Emmy). Trade fidget toys with a friendly buddy, haggle for coins, collect all the rarities, open mystery boxes, and play with each toy in its own satisfying way.
+Two cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built for a 10-year-old named Emmy), picked from one landing page:
+
+- **🦊 Emmy's Fidget Trading** — trade fidget toys with a friendly buddy, haggle for coins, collect all the rarities, open mystery boxes, and play with each toy in its own satisfying way.
+- **🕹️ Emmy's Arcade** — a *Sneaky Sasquatch*-style arcade simulator: load an arcade card with (unlimited!) money, win tickets in 10 mini-games, and trade them for prizes you can actually play with.
 
 **▶ Play it live: https://tunurgitr.github.io/emmy-game/**
 
@@ -56,6 +59,40 @@ Tuned for iPad/touchscreens — big tap targets, no double-tap zoom lag, pointer
 
 ---
 
+## 🕹️ Emmy's Arcade
+
+A **walkable 3D arcade** (Three.js, all procedural geometry) modelled on a big timber-truss family arcade hall: wood plank walls, a pitched wooden ceiling with king-post trusses and warm pendant lights, patterned carpet, log columns, daylight windows, a climbing wall, a Snack Shack cabin, balloons under the roof, and glowing arcade cabinets everywhere.
+
+- **Walk around in third-person.** On iPad: left thumb = virtual joystick, right thumb = drag to look, or just **tap the floor / tap a machine** and Emmy walks there. On desktop: WASD/arrows + mouse drag, `E`/Enter to interact.
+- **Walk up to a machine** and a "▶ Play" prompt appears; the camera **flies into the cabinet** and the game plays in **first-person**.
+- Your wallet has **unlimited money** — walk to the glowing **💳 card kiosk** by the entrance to load credits onto your arcade card. Games cost 2–4 credits and pay out 🎟️ tickets that fly onto your card.
+- The **🏪 Prize Counter** at the back wall (with a clerk and shelves of prizes) is where tickets become prizes.
+
+### Games — 10 machines, each a real 3D scene
+| | |
+|---|---|
+| **🏎️ Turbo Racer** — sit-down motorbike cabinet; first-person highway with traffic, coins, trees | **🦾 Claw Machine** — look into the glass box; drag the claw over plush prizes, release to drop |
+| **🥽 VR Blaster** — a VR pod; drag to look around space, tap to blast UFOs and asteroids | **🎡 Ticket Wheel** — a real spinning prize wheel; swipe to spin, 2–200 tickets (★ jackpot) |
+| **🔫 Laser Tag** — neon arena behind a curtain; robots pop up behind barriers, don't zap the kids | **🏒 Air Hockey** — real table, drag your paddle on the surface, first to 5 vs the robot |
+| **🎣 Gone Fishin'** — on a dock over animated water; cast, tap the ❗ bite, hold to keep the fish in the green zone | **🎳 Skee-Ball** — swipe to roll up the lane and ramp into tilted rings |
+| **🐹 Whack-a-Mole** — moles pop out of a 3D table, tap to bonk with the hammer | **🏀 Hoop Shot** — swipe to shoot at a moving hoop with rim & backboard physics |
+
+Every cabinet remembers your **best ticket haul**.
+
+### Prize Counter — every prize is interactive
+| Prize | What you can do with it |
+|---|---|
+| 🍬 Candy Bag | Unwrap and munch 10 candies |
+| 🏐 Bouncy Ball | Flick it around a box with real bouncing physics |
+| 🪀 Glow Yo-Yo · 🫧 Galaxy Slime · 🧸 Teddy · 🦄 Unicorn · 🦎 GIANT Axolotl · 🏆 Trophy | **Real 3D toys** rendered with the Fidget Zone engine — hold to **squish** the stuffies, flick the yo-yo, polish the trophy |
+| 🪄 Glow Wand | Draw glowing rainbow light trails |
+| 🃏 Pokémon Pack · ✨ Lorcana Pack | Rip open a 5-card booster, flip each card (holo & secret rares!), and keep a **binder** collection |
+| 📱 iPad | A tablet with exactly **one** app installed: Emmy's Fidget Trading, playable right inside it |
+
+Progress (card balance, tickets, prizes, card binders) saves locally, separately from the trading game.
+
+---
+
 ## 🎨 Design decisions
 
 - **3D toys, emoji everywhere else.** The Fidget Zone renders toys as procedural 3D models (real lighting/reflections, no asset files, generated at runtime so it works offline); the backpack, trade mat, and boxes stay emoji + CSS for speed. Three.js loads only when you open a toy.
@@ -81,10 +118,15 @@ npm run preview  # preview the production build
 ### Project layout
 | Path | What |
 |---|---|
-| `game.html` + `src/game.js` | The main game (UI, state, turns, boxes, fidget zone, chat) |
+| `index.html` | Landing page — pick Fidget Trading or the Arcade |
+| `game.html` + `src/game.js` | Fidget Trading (UI, state, turns, boxes, fidget zone, chat) |
+| `arcade.html` + `src/arcade.js` | Emmy's Arcade hub — HUD, arcade card, prize counter, first-person game harness |
+| `src/arcade3d/world.js` | The walkable 3D hall: room, trusses, lights, cabinets, kiosk, prize counter, character, controls, camera fly-in |
+| `src/arcade3d/games1.js`, `src/arcade3d/games2.js` | The 10 first-person 3D games (each is a `{create(api) → {scene, camera, update…}}` controller) |
+| `src/arcade3d/lib.js` | Shared Three.js helpers — emoji sprites, text/wood/carpet textures, materials, particles, kid character |
+| `src/arcade-prizes.js` + `src/canvas2d.js` | Prize catalog, card sets, and the interactive prize views (3D toys via `fidget3d.js`, iPad, packs…) |
 | `src/toys.js` | Toy catalog, rarity tiers, and trade/offer/box logic |
 | `src/fidget3d.js` | Lazy-loaded Three.js scene — procedural 3D toy archetypes |
-| `index.html` | Title screen |
 | `mockups.html`, `mockup-a.html`, `mockup-b.html` | Early design mockups (kept for reference) |
 | `.github/workflows/deploy.yml` | Auto-builds & deploys to GitHub Pages on push to `main` |
 
