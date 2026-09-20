@@ -1468,6 +1468,11 @@ function resetGame() {
   openPicker();
   render();
 }
+function askReset() { SFX.tap(); $("confirmReset").classList.add("show"); }
+function closeResetAsk() { $("confirmReset").classList.remove("show"); }
+$("resetNo").onclick = () => { SFX.tap(); closeResetAsk(); };
+$("resetYes").onclick = () => { closeResetAsk(); resetGame(); SFX.buy(); toast("↻ Brand new game — have fun!"); };
+$("confirmReset").onclick = (e) => { if (e.target.id === "confirmReset") closeResetAsk(); };
 
 // ---- wire up ----
 $("propose").onclick = propose;
@@ -1477,7 +1482,7 @@ $("restock").onclick = () => {
   if (state.coins < 10) { SFX.error(); toast("Not enough coins to restock!"); return; }
   state.coins -= 10; state.shop = makeShopStock(); SFX.buy(); render();
 };
-$("reset").onclick = resetGame;
+$("reset").onclick = askReset;
 $("playerAvatar").onclick = openPicker;
 
 // mode toggle

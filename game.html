@@ -122,6 +122,12 @@
     .buybtn:not(:disabled):active { transform: scale(.95); }
 
     /* avatar picker overlay */
+    #confirmReset { position: fixed; inset: 0; background: rgba(60,40,90,.55); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 86; padding: 20px; }
+    #confirmReset.show { display: flex; }
+    .reset-btns { display: flex; flex-direction: column; gap: 10px; }
+    .reset-btns button { font-family: inherit; font-weight: 900; font-size: 16px; cursor: pointer; border: none; border-radius: 16px; padding: 14px 18px; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.15); }
+    .reset-btns .keep { background: #3ea16a; }
+    .reset-btns .wipe { background: #e5534b; }
     #picker { position: fixed; inset: 0; background: rgba(60,40,90,.55); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 80; padding: 20px; }
     #picker.show { display: flex; }
     .picker-box { background: #fff; border-radius: 26px; padding: 26px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(60,40,90,.4); }
@@ -367,6 +373,17 @@
       <div class="lucky-bar"><div class="lucky-fill" id="luckyFill"></div></div>
     </div>
     <div class="grid box-grid" id="boxes"></div>
+  </div>
+
+  <div id="confirmReset">
+    <div class="picker-box">
+      <h2>↻ Start over?</h2>
+      <p>This erases all your toys, coins and mystery boxes, and starts a brand new game. You can’t undo it!</p>
+      <div class="reset-btns">
+        <button class="keep" id="resetNo">⬅ No, keep my toys</button>
+        <button class="wipe" id="resetYes">↻ Yes, start a new game</button>
+      </div>
+    </div>
   </div>
 
   <div id="picker">

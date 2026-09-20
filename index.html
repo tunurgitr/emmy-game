@@ -36,6 +36,15 @@
     a.arcade > * { position: relative; }
     .new { position: absolute; top: 14px; right: -34px; background: #ffd000; color: #6a4a00; font-weight: 900; font-size: 12px; padding: 4px 40px; transform: rotate(35deg); letter-spacing: 1px; }
     a.mock { color: #8a79a6; text-decoration: none; font-size: 13px; font-weight: 600; }
+    .reset-link { background: none; border: none; font-family: inherit; color: #8a79a6; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: underline; }
+    .sheet { position: fixed; inset: 0; background: rgba(60,40,90,.55); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; padding: 20px; }
+    .sheet.show { display: flex; }
+    .sheet-box { background: #fff; border-radius: 26px; padding: 26px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(60,40,90,.4); }
+    .sheet-box h2 { font-size: 24px; margin-bottom: 8px; }
+    .sheet-box p { font-size: 14px; color: #6b5a86; margin-bottom: 16px; line-height: 1.4; }
+    .sheet-box button { width: 100%; font-family: inherit; font-weight: 900; font-size: 16px; cursor: pointer; border: none; border-radius: 16px; padding: 14px 18px; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.15); margin-bottom: 10px; }
+    .sheet-box .keep { background: #3ea16a; }
+    .sheet-box .wipe { background: #e5534b; }
   </style>
 </head>
 <body>
@@ -57,6 +66,32 @@
       <div class="play">▶ Play</div>
     </a>
   </div>
-  <a class="mock" href="mockups.html">(design mockups)</a>
+  <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center">
+    <a class="mock" href="mockups.html">(design mockups)</a>
+    <button class="reset-link" id="resetAll">↻ Start over (clear all my progress)</button>
+  </div>
+
+  <div class="sheet" id="resetSheet">
+    <div class="sheet-box">
+      <h2>↻ Start over?</h2>
+      <p>This erases everything in <b>both</b> games — toys, coins, arcade tickets, prizes, high scores and your look. You can’t undo it!</p>
+      <button class="keep" id="resetNo">⬅ No, keep my games</button>
+      <button class="wipe" id="resetYes">↻ Yes, erase everything</button>
+    </div>
+  </div>
+
+  <script>
+    const sheet = document.getElementById("resetSheet");
+    document.getElementById("resetAll").onclick = () => sheet.classList.add("show");
+    document.getElementById("resetNo").onclick = () => sheet.classList.remove("show");
+    sheet.onclick = (e) => { if (e.target === sheet) sheet.classList.remove("show"); };
+    document.getElementById("resetYes").onclick = () => {
+      // every save this project writes is namespaced under "emmy."
+      Object.keys(localStorage).filter((k) => k.startsWith("emmy.")).forEach((k) => localStorage.removeItem(k));
+      sheet.classList.remove("show");
+      const p = document.querySelector("p.sub");
+      p.textContent = "✨ All cleared! Both games are brand new.";
+    };
+  </script>
 </body>
 </html>

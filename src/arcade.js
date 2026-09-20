@@ -90,6 +90,24 @@ $("pickSandbox").onclick = () => { SFX.tap(); setMode("sandbox"); $("modeModal")
 $("pickRegular").onclick = () => { SFX.tap(); setMode("regular"); $("modeModal").classList.remove("show"); toast(`💼 Regular mode — you have ${fmt$(state.money)}. Work a shift at the Snack Shack or Prize Booth to earn more!`, 4000); };
 $("modeBtn").onclick = () => { if (active) return; SFX.tap(); chooseMode(); };
 
+// ---- start over: wipe saved progress (this mode, or everything) ----
+$("resetBtn").onclick = () => { if (active) return; SFX.tap(); openModal("resetModal"); };
+$("resetCancel").onclick = () => { SFX.tap(); closeModal(); };
+$("resetMode").onclick = () => {
+  localStorage.removeItem(saveKey());
+  state = fresh(); save(); renderPills(); renderPrizes();
+  closeModal(); SFX.ding(); toast("↻ All fresh! Your card, tickets and prizes are back to the start.", 3500);
+};
+$("resetAll").onclick = () => {
+  for (const m of ["sandbox", "regular"]) localStorage.removeItem(`emmy.arcade.save.v2.${m}`);
+  localStorage.removeItem(LOOK_KEY);
+  localStorage.removeItem(MODE_KEY);
+  look = loadLook(); world && world.setAvatar(look);
+  state = fresh(); save(); renderPills(); renderPrizes();
+  closeModal(); SFX.ding(); toast("🧹 Everything erased — brand new arcade!", 3500);
+  chooseMode();
+};
+
 // --------------------------------------------------------------------------
 //  UI helpers
 // --------------------------------------------------------------------------
