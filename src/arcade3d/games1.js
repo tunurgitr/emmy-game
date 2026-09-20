@@ -156,7 +156,7 @@ export const claw = {
 // ==========================================================================
 export const vr = {
   id: "vr", name: "VR Blaster", emoji: "🥽", cost: 4, color: 0x00e676, cabinet: "pod", payout: "up to 90 🎟️",
-  tip: "🥽 Drag to look around, TAP the space bugs to blast them before they reach you! 40 seconds.",
+  tip: "🥽 Drag to look around — you always shoot at the ring in the middle. Line a bug up until the ring turns gold, then tap to blast it! ⬅️➡️ arrows warn you about sneaky ones. Starts easy, gets wilder — 40 seconds!",
   create(api) {
     const scene = baseScene(0x020112); scene.add(new THREE.AmbientLight(0xffffff, 0.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(5, 3, 8); scene.add(sun);
     const camera = fpCamera(api.W, api.H, [0, 0, 0], [0, 0, -1], 70);
@@ -167,34 +167,87 @@ export const vr = {
     // cockpit frame
     const frame = new THREE.Group(); camera.add(frame); scene.add(camera);
     const guns = [-0.4, 0.4].map((x) => { const g = new THREE.Group(); g.position.set(x, -0.42, -1.7); g.add(cyl(0.025, 0.04, 0.5, mat.metal(0x9aa4b0), 12).rotateX(Math.PI / 2)); g.add(cyl(0.018, 0.018, 0.16, mat.neon(0x00e676, 1.5), 8, 0, 0, -0.3).rotateX(Math.PI / 2)); frame.add(g); return g; });
-    const reticle = torus(0.06, 0.006, mat.neon(0x00e676, 2), 0, 0, -2); frame.add(reticle);
+    // you always fire straight down the middle, so the reticle *is* the aim point: make it read.
+    const reticle = torus(0.09, 0.008, mat.neon(0x00e676, 2), 0, 0, -2); frame.add(reticle);
+    const retDot = sphere(0.012, mat.neon(0x00e676, 2), 0, 0, -2, 10); frame.add(retDot);
+    const retTicks = [[0, 0.15], [0, -0.15], [0.15, 0], [-0.15, 0]].map(([x, y]) => { const t = box(x ? 0.05 : 0.008, x ? 0.008 : 0.05, 0.008, mat.neon(0x00e676, 1.6), x, y, -2); frame.add(t); return t; });
+    const retMats = [reticle.material, retDot.material, ...retTicks.map((t) => t.material)];
+    // a bug can close in from outside the view — point it out instead of letting it sneak up
+    const warnL = emojiSprite("⬅️", 0.34), warnR = emojiSprite("➡️", 0.34);
+    warnL.position.set(-0.62, 0, -1.4); warnR.position.set(0.62, 0, -1.4);
+    warnL.visible = warnR.visible = false; frame.add(warnL); frame.add(warnR);
     const BUG_BUILD = [
       () => { const g = new THREE.Group(); g.add(sphere(0.6, mat.gloss(0x7a3cff))); g.add(cyl(1.1, 1.1, 0.15, mat.metal(0xc0c8d0), 24)); const f = emojiSprite("👾", 0.9); f.position.z = 0.5; g.add(f); return g; },
       () => { const g = new THREE.Group(); g.add(sphere(0.55, mat.gloss(0xf4433f))); const f = emojiSprite("👽", 0.9); f.position.z = 0.45; g.add(f); return g; },
       () => { const g = new THREE.Group(); const a = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75, 0), mat.std(0x8a7a6a, { roughness: 1 })); g.add(a); return g; },
       () => { const g = new THREE.Group(); g.add(sphere(0.5, mat.gloss(0xffd54a))); const r = torus(0.85, 0.08, mat.gloss(0xff9800)); r.rotation.x = 1.3; g.add(r); return g; },
     ];
-    const bugs = [], beams = []; let yaw = 0, pitch = 0, time = 40, score = 0, hp = 3, over = false, spawnT = 0, drag = null, dragDist = 0;
+    const TOTAL = 40;
+    const bugs = [], beams = []; let yaw = 0, pitch = 0, time = TOTAL, score = 0, hp = 3, over = false, spawnT = 1.5, drag = null, dragDist = 0, lockedOn = false;
     const euler = new THREE.Euler(0, 0, 0, "YXZ");
-    const spawn = () => { const b = pick(BUG_BUILD)(); const a = yaw + rnd(-1.3, 1.3), p = pitch + rnd(-0.6, 0.6); const dist = rnd(40, 55); b.position.set(-Math.sin(a) * Math.cos(p) * dist, Math.sin(p) * dist, -Math.cos(a) * Math.cos(p) * dist); b.userData.sp = rnd(6, 10) + (40 - time) * 0.12; b.userData.spin = rnd(-2, 2); scene.add(b); bugs.push(b); };
-    const fire = (p) => {
-      api.sfx.laser(); const hit = p.ray.intersectObjects(bugs, true)[0];
-      const target = hit ? hit.point : p.ray.ray.at(40, new THREE.Vector3());
+    // 0 at the start of the round → 1 at the end; everything scary scales off it.
+    const ramp = () => clamp((TOTAL - time) / TOTAL, 0, 1);
+    const spawn = () => {
+      const r = ramp(); const b = pick(BUG_BUILD)();
+      // early bugs appear close to where you're already looking, so they're findable
+      const cone = lerp(0.5, 1.3, r), a = yaw + rnd(-cone, cone), p = pitch + rnd(-cone * 0.45, cone * 0.45);
+      const dist = rnd(45, 60);
+      b.position.set(-Math.sin(a) * Math.cos(p) * dist, Math.sin(p) * dist, -Math.cos(a) * Math.cos(p) * dist);
+      b.userData.sp = rnd(lerp(2.6, 7, r), lerp(4, 10, r)); b.userData.spin = rnd(-2, 2); scene.add(b); bugs.push(b);
+    };
+    // Aim is always the middle of the viewport — you turn the view to line a bug up.
+    // A pixel-perfect centre ray would need ~1° of accuracy on a distant bug, so instead
+    // anything inside the reticle ring counts: pick the bug nearest the middle whose own
+    // angular size overlaps the ring. The gold lock-on uses the very same test, so the
+    // ring always tells the truth about what a shot will hit.
+    const RING = Math.atan2(0.09, 2) + 0.02; // the reticle's half-angle, plus a little kindness
+    const fwd = new THREE.Vector3(), dir = new THREE.Vector3();
+    const aim = () => { // → the bug a shot would hit, or null
+      camera.updateMatrixWorld(); camera.getWorldDirection(fwd);
+      let best = null, bestOff = Infinity;
+      for (const b of bugs) {
+        const d = b.position.length(); dir.copy(b.position).divideScalar(d || 1);
+        const off = Math.acos(clamp(dir.dot(fwd), -1, 1)) - Math.atan2(0.9, d); // 0.9 ≈ bug radius
+        if (off < RING && off < bestOff) { bestOff = off; best = b; }
+      }
+      return best;
+    };
+    const fire = () => {
+      api.sfx.laser(); const hit = aim();
+      const target = hit ? hit.position.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(40);
       for (const g of guns) { const from = g.getWorldPosition(new THREE.Vector3()); const geo = new THREE.BufferGeometry().setFromPoints([from, target]); const ln = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x00e676, transparent: true, opacity: 1 })); scene.add(ln); beams.push({ ln, t: 0.15 }); }
-      if (hit) { let o = hit.object; while (o.parent && !bugs.includes(o)) o = o.parent; const d = o.position.length(); const pts = Math.max(1, Math.round(d / 8)); score += pts; parts.burst(o.position, 0x00e676, 30, 4, 1); scene.remove(o); bugs.splice(bugs.indexOf(o), 1); api.sfx.ding(); api.setTip(`💥 +${pts} (far shots score more!)`); }
+      if (hit) { const d = hit.position.length(); const pts = Math.max(1, Math.round(d / 8)); score += pts; parts.burst(hit.position, 0x00e676, 30, 4, 1); scene.remove(hit); bugs.splice(bugs.indexOf(hit), 1); api.sfx.ding(); api.setTip(`💥 +${pts} (far shots score more!)`); }
+      else api.setTip("Missed! Line a bug up inside the ring — it turns gold — then tap. 🎯");
       api.setScore(`⭐ ${score}   ❤️ ${hp}`);
     };
     return std({
       scene, camera,
       onDown(p) { drag = { x: p.sx, y: p.sy }; dragDist = 0; },
       onMove(p) { if (!drag) return; yaw -= (p.sx - drag.x) * 0.0035; pitch = clamp(pitch - (p.sy - drag.y) * 0.0035, -1.0, 1.0); dragDist += Math.hypot(p.sx - drag.x, p.sy - drag.y); drag = { x: p.sx, y: p.sy }; },
-      onUp(p) { if (!drag) return; drag = null; if (dragDist < 12 && !over) fire(p); },
-      onKey(k) { if (k === "ArrowLeft") yaw += 0.2; if (k === "ArrowRight") yaw -= 0.2; if (k === "ArrowUp") pitch = Math.min(1, pitch + 0.15); if (k === "ArrowDown") pitch = Math.max(-1, pitch - 0.15); if (k === " ") { const r = new THREE.Raycaster(camera.position, camera.getWorldDirection(new THREE.Vector3())); fire({ ray: r }); } },
+      onUp(p) { if (!drag) return; drag = null; if (dragDist < 12 && !over) fire(); },
+      onKey(k) { if (k === "ArrowLeft") yaw += 0.2; if (k === "ArrowRight") yaw -= 0.2; if (k === "ArrowUp") pitch = Math.min(1, pitch + 0.15); if (k === "ArrowDown") pitch = Math.max(-1, pitch - 0.15); if (k === " " && !over) fire(); },
       update(dt) {
         if (over) return; time -= dt; parts.update(dt);
         if (api.pad) { yaw -= api.pad.rx * 2.2 * dt; pitch = clamp(pitch - api.pad.ry * 1.8 * dt, -1, 1); }
         euler.set(pitch, yaw, 0); camera.quaternion.setFromEuler(euler);
-        spawnT -= dt; if (spawnT <= 0) { spawnT = rnd(0.5, 1.0); spawn(); }
+        // slow, sparse start that tightens up as the round goes on
+        const r = ramp(); const gap = lerp(2.4, 0.7, r * r);
+        const maxBugs = Math.round(lerp(3, 7, r)); // never more on screen than you could deal with
+        spawnT -= dt; if (spawnT <= 0) { spawnT = rnd(gap * 0.8, gap * 1.25); if (bugs.length < maxBugs) { spawn(); if (r > 0.7 && bugs.length < maxBugs && Math.random() < (r - 0.7) * 0.8) spawn(); } }
+        // warn about anything closing in from outside the view
+        let wl = false, wr = false;
+        for (const b of bugs) {
+          if (b.position.length() > 22) continue;                       // only ones getting close
+          const ndc = b.position.clone().project(camera);
+          if (ndc.z < 1 && Math.abs(ndc.x) <= 1 && Math.abs(ndc.y) <= 1) continue; // already on screen
+          const local = camera.worldToLocal(b.position.clone());        // -z is straight ahead
+          if (local.x < 0) wl = true; else wr = true;                   // turn this way to find it
+        }
+        warnL.visible = wl; warnR.visible = wr;
+        if (wl || wr) { const pulse = 0.34 * (1 + Math.sin(performance.now() / 120) * 0.18); warnL.scale.setScalar(pulse); warnR.scale.setScalar(pulse); }
+        // lock-on: the reticle lights up gold when a bug is lined up in it
+        const on = !!aim();
+        if (on !== lockedOn) { lockedOn = on; const col = on ? 0xffd54a : 0x00e676; for (const m of retMats) { m.color.setHex(col); m.emissive && m.emissive.setHex(col); } reticle.scale.setScalar(on ? 1.35 : 1); if (on) api.sfx.tick(); }
         for (let i = bugs.length - 1; i >= 0; i--) { const b = bugs[i]; const d = b.position.length(); const step = b.userData.sp * dt; b.position.multiplyScalar(Math.max(0.01, (d - step) / d)); b.rotation.y += b.userData.spin * dt; b.lookAt(0, 0, 0); b.rotateY(b.userData.spin * performance.now() / 1000);
           if (d < 2.5) { scene.remove(b); bugs.splice(i, 1); hp--; api.sfx.crash(); api.setTip("Ouch! One got through! 😵"); api.setScore(`⭐ ${score}   ❤️ ${hp}`); parts.burst(new THREE.Vector3(0, 0, -2), 0xff4444, 40, 3); if (hp <= 0) { over = true; api.finish(clamp(score, 0, 90), "Overrun by space bugs!", `${score} points → ${clamp(score, 0, 90)} tickets`); } } }
         for (let i = beams.length - 1; i >= 0; i--) { const b = beams[i]; b.t -= dt; b.ln.material.opacity = Math.max(0, b.t * 6); if (b.t <= 0) { scene.remove(b.ln); b.ln.geometry.dispose(); beams.splice(i, 1); } }
