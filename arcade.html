@@ -99,7 +99,7 @@
     /* in-game HUD */
     #gameHud { position: absolute; inset: 0; display: none; pointer-events: none; }
     #gameHud.show { display: block; }
-    #gameHud > * { pointer-events: auto; }
+    #gameHud .ghud-top, #gameHud .banner { pointer-events: auto; } /* never the full-screen .vignette — it would eat drags/taps meant for the game */
     .ghud-top { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .gtitle { font-weight: 900; font-size: 18px; text-shadow: 0 0 10px var(--cyan), 0 2px 4px #000; }
     .gscore { font-weight: 900; font-size: 16px; color: var(--gold); text-shadow: 0 2px 4px #000; background: rgba(20,10,50,.55); padding: 6px 12px; border-radius: 999px; }
