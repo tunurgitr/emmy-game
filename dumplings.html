@@ -16,7 +16,7 @@
     .ghost { text-decoration: none; color: var(--ink); font-weight: 800; font-size: 13px; background: rgba(255,255,255,.85); border: 2px solid rgba(255,255,255,.9); cursor: pointer; padding: 7px 13px; border-radius: 999px; font-family: inherit; box-shadow: 0 3px 10px rgba(80,40,60,.18); }
     .ghost:hover { background: #fff; }
     .pill { font-weight: 900; padding: 8px 14px; border-radius: 999px; font-size: 15px; box-shadow: 0 4px 14px rgba(80,40,60,.25); }
-    .coins { color: #5a3a00; background: var(--gold); } .book { color: #fff; background: #e53935; cursor: pointer; border: none; font-family: inherit; } .hens { color: #3a2a10; background: #fff3c4; }
+    .coins { color: #5a3a00; background: var(--gold); } .book { color: #fff; background: #e53935; cursor: pointer; border: none; font-family: inherit; } .hens { color: #3a2a10; background: #fff3c4; } .eggs { color: #5a3a00; background: #fff; }
     .pill.bump { animation: bump .4s ease; } @keyframes bump { 30% { transform: scale(1.25); } }
     #hud.attable .topbar .left .ghost.walkonly, #hud.attable #prompt, #hud.attable #hint { display: none !important; }
     .joy { position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.25); border: 2px solid rgba(255,255,255,.6); display: none; pointer-events: none; z-index: 6; }
@@ -31,7 +31,7 @@
     button.act { font-family: inherit; font-weight: 900; font-size: 17px; cursor: pointer; border: none; border-radius: 18px; padding: 13px 20px; color: #fff; transition: transform .1s, filter .1s; box-shadow: 0 6px 0 rgba(0,0,0,.25), 0 10px 26px rgba(80,40,60,.3); }
     button.act:hover { filter: brightness(1.08); } button.act:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
     button.act:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.4); transform: none; }
-    .btn-red { background: #e53935; } .btn-green { background: #2e9d6a; } .btn-blue { background: #3d8bfd; } .btn-pink { background: #ff5da2; } .btn-gold { background: #f5a300; } .btn-purple { background: #7a3cff; } .btn-white { background: #fff; color: var(--ink); }
+    .btn-red { background: #e53935; } .btn-green { background: #2e9d6a; } .btn-blue { background: #3d8bfd; } .btn-pink { background: #ff5da2; } .btn-gold { background: #f5a300; } .btn-purple { background: #7a3cff; } button.act.btn-white { background: #fff; color: var(--ink); }
 
     /* the play table overlay */
     #tableHud { position: absolute; inset: 0; display: none; pointer-events: none; }
@@ -87,6 +87,11 @@
     .item .odds { font-size: 11px; color: var(--muted); line-height: 1.5; text-align: left; width: 100%; }
     .item .odds b { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
     .item button.act { width: 100%; font-size: 15px; padding: 11px; }
+    .flock { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; max-height: 240px; overflow-y: auto; padding: 4px; }
+    .hen { font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 92px; padding: 8px 4px; border-radius: 16px; border: 3px solid #eadbe2; background: #fff; color: var(--ink); cursor: pointer; }
+    .hen b { font-size: 13px; } .hen small { font-size: 11px; color: var(--muted); font-weight: 800; }
+    .hen.on { border-color: #2e9d6a; background: #eafaf1; } .hen.on small { color: #2e9d6a; }
+    .hdot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); }
     .hencolors { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
     .hencolors button { width: 38px; height: 38px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #ddd; cursor: pointer; }
     .hencolors button.sel { box-shadow: 0 0 0 3px #e53935; }
@@ -143,6 +148,7 @@
       </div>
       <div class="right">
         <span class="pill hens" id="hensPill" style="display:none">🐔 0</span>
+        <span class="pill eggs" id="eggsPill" style="display:none">🧺 0🥚</span>
         <button class="pill book" id="bookPill">📖 0/0</button>
         <span class="pill coins" id="coinsPill">🪙 0</span>
         <button class="ghost" id="musicBtn">🎵</button>

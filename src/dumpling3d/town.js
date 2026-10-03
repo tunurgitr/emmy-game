@@ -8,7 +8,8 @@
 //      renderer shows the override (the steamer table, the catch game) instead.
 //    town.enter(id) / town.exit() — step through a shop door (the hub fades the screen)
 //    town.setDelivery(npc, onArrive) — show a delivery target (beacon, arrow, steamer in hand)
-//    town.addChicken(colorIndex) — a new chicken joins the conga line behind you
+//    town.setFlock(hens, follow) — the first `follow` chickens walk behind you,
+//      the rest live in your chicken yard next to your house
 //
 //  Outdoors and every interior are separate groups in one scene; only the area
 //  you're in is visible, so going inside also makes the frame cheaper.
@@ -50,12 +51,12 @@ export function createTown(canvas, { ui, avatar = {}, onPrompt, onInteract, onPi
   for (const a of Object.values(areas)) for (const fn of a.late || []) fn(animated);
 
   // ---- townsfolk (they wander about, and they're your delivery customers) ----
-  const npcs = TOWNSFOLK.map((T, i) => { const kid = liteKid(T.look); kid.group.position.set(T.x, 0, T.z); outdoor.add(kid.group); return { ...T, kid, hx: T.x, hz: T.z, tx: T.x, tz: T.z, wait: rnd(0, 3), yaw: rnd(0, 6), i }; });
+  const npcs = TOWNSFOLK.map((T, i) => { const kid = liteKid(T.look); kid.group.position.set(T.x, 0, T.z); outdoor.add(kid.group); return { ...T, r: T.r + 3, pace: rnd(2.6, 3.4), kid, hx: T.x, hz: T.z, tx: T.x, tz: T.z, wait: rnd(0, 2), yaw: rnd(0, 6), i }; });
 
   // ---- player -------------------------------------------------------------
   const kid = makeKid(avatar); scene.add(kid.group);
   const player = { x: 0, z: 36, yaw: Math.PI, speed: 0 };
-  let area = areas.out, camYaw = 0, camPitch = 0.36, camDist = 6.4, autoTarget = null, autoInteract = null, doorCool = 0;
+  let area = areas.out, camYaw = 0, camPitch = 0.36, camDist = 6.4, autoTarget = null, autoInteract = null, doorCool = 0, stuckT = 0, stuckD = Infinity;
 
   // ---- input (same feel as the arcade: joystick left, drag-look right, tap to walk) ----
   const keys = new Set(), move = { x: 0, y: 0 };
@@ -87,6 +88,8 @@ export function createTown(canvas, { ui, avatar = {}, onPrompt, onInteract, onPi
     if (e.pointerId === lookPid) { lookPid = null; if (p && p.moved < 8) tapToWalk(evt(e)); }
   };
   canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+  // if the browser ever steals the touch (an overlay, a system gesture), let go of the joystick too
+  canvas.addEventListener("lostpointercapture", (e) => { if (pointers.has(e.pointerId)) up(e); });
   window.addEventListener("keydown", (e) => {
     if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
     if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(e.key)) e.preventDefault(); if (e.repeat) return;
@@ -95,12 +98,14 @@ export function createTown(canvas, { ui, avatar = {}, onPrompt, onInteract, onPi
     if ((e.key === "e" || e.key === "E" || e.key === "Enter" || e.key === " ") && nearest && !paused) onInteract(nearest);
   });
   window.addEventListener("keyup", (e) => { keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key); if (override && override.onKey) override.onKey(e.key, false); });
-  window.addEventListener("blur", () => keys.clear());
+  const letGo = () => { keys.clear(); move.x = move.y = 0; joyPid = lookPid = null; pointers.clear(); restJoy(); };
+  window.addEventListener("blur", letGo); document.addEventListener("visibilitychange", () => { if (document.hidden) letGo(); });
 
   // ---- gamepad: left stick walks, right stick looks, A interacts, B backs out ----
   const pad = { lx: 0, ly: 0, rx: 0, ry: 0, connected: false, buttons: [] }; const prevBtn = [];
   const cursor = document.createElement("div"); cursor.className = "padcursor"; cursor.style.display = "none"; ui.appendChild(cursor); const cur = { x: 0.5, y: 0.5 };
-  const dz = (v) => (Math.abs(v) < 0.14 ? 0 : v); let onPadBack = null, onPadButton = null;
+  // a wide dead zone so a drifting stick doesn't walk you off
+  const dz = (v) => (Math.abs(v) < 0.22 ? 0 : (v - Math.sign(v) * 0.22) / 0.78); let onPadBack = null, onPadButton = null;
   function pollPad() {
     const gps = navigator.getGamepads ? navigator.getGamepads() : []; let gp = null; for (const g of gps) if (g && g.connected) { gp = g; break; }
     pad.connected = !!gp; if (!gp) { cursor.style.display = "none"; return; }
@@ -125,6 +130,7 @@ export function createTown(canvas, { ui, avatar = {}, onPrompt, onInteract, onPi
     const ch = p.ray.intersectObjects(chickens.map((c) => c.ch.group), true)[0];
     if (ch) { const c = chickens.find((c) => { let o = ch.object; while (o) { if (o === c.ch.group) return true; o = o.parent; } return false; }); if (c) { c.ch.flapNow(); onChickenTap && onChickenTap(c); return; } }
     const hit = p.ray.intersectObjects(area.interactables.map((i) => i.hit), false)[0];
+    stuckT = 0; stuckD = Infinity;
     if (hit) { const it = hit.object.userData.interactable; if (it) { autoTarget = it.front.clone(); autoInteract = it; return; } }
     if (p.ray.ray.intersectPlane(floorPlane, tmpV)) { autoTarget = tmpV.clone(); autoInteract = null; }
   }
@@ -137,33 +143,47 @@ export function createTown(canvas, { ui, avatar = {}, onPrompt, onInteract, onPi
     const ch = makeChicken({ color: CHICKEN_COLORS[ci % CHICKEN_COLORS.length] }); ch.group.scale.setScalar(1.25); const lead = chickens.length ? chickens[chickens.length - 1] : player;
     const c = { ch, x: lead.x + rnd(-1, 1), z: lead.z + 1.5, yaw: 0, speed: 0, eggT: rnd(20, 40), ci }; ch.group.position.set(c.x, 0, c.z); ch.group.add(blobShadow(0.35, 0.3)); scene.add(ch.group); chickens.push(c); if (!quiet) ch.flapNow(); return c;
   }
+  const yardHens = [];
+  function setFlock(hens, follow) {
+    for (const c of chickens) scene.remove(c.ch.group); chickens.length = 0;
+    for (const y of yardHens) outdoor.remove(y.ch.group); yardHens.length = 0;
+    hens.slice(0, follow).forEach((ci) => addChicken(ci, true));
+    // the rest potter about the yard (up to 30 shown; the yard is only so big!)
+    hens.slice(follow, follow + 30).forEach((ci) => { const ch = makeChicken({ color: CHICKEN_COLORS[ci % CHICKEN_COLORS.length] }); ch.group.scale.setScalar(1.15); outdoor.add(ch.group);
+      const st = { ch, x: YARD.x + rnd(-4, 4), z: YARD.z + rnd(-2.4, 2.4), tx: YARD.x, tz: YARD.z, wait: rnd(0, 3), ph: rnd(0, 9) }; st.tx = st.x; st.tz = st.z; ch.group.position.set(st.x, 0, st.z); ch.group.rotation.y = rnd(0, 6); yardHens.push(st); });
+  }
+  function updateYard(dt, t) {
+    for (const st of yardHens) { const dx = st.tx - st.x, dz = st.tz - st.z, dd = Math.hypot(dx, dz); let sp = 0;
+      if (dd > 0.1) { sp = 1.4; st.x += (dx / dd) * sp * dt; st.z += (dz / dd) * sp * dt; st.ch.group.rotation.y = Math.atan2(dx, dz); } else if ((st.wait -= dt) < 0) { st.wait = rnd(1, 5); st.tx = YARD.x + rnd(-YARD.w / 2 + 0.7, YARD.w / 2 - 0.7); st.tz = YARD.z + rnd(-YARD.d / 2 + 0.7, YARD.d / 2 - 0.7); }
+      st.ch.group.position.set(st.x, 0, st.z); st.ch.update(dt, t + st.ph, sp / 1.4, sp === 0); }
+  }
   function updateCritters(dt, t) {
     if (area === areas.out) for (const c of coins) { if (c.t > 0) { c.t -= dt; c.g.visible = c.t <= 0; continue; } c.g.rotation.y += dt * 2.4; c.g.position.y = 0.65 + Math.sin(t * 3 + c.x) * 0.08;
       if (Math.hypot(player.x - c.x, player.z - c.z) < 1.2) { c.t = rnd(18, 30); c.g.visible = false; onPickup && onPickup("coin", 2); } }
     chickens.forEach((c, i) => {
       const lead = i ? chickens[i - 1] : player; const dx = lead.x - c.x, dz = lead.z - c.z, d = Math.hypot(dx, dz), gap = i ? 1.15 : 1.5;
-      const want = d > gap ? Math.min(8, (d - gap) * 4) : 0; c.speed = approach(c.speed, want, 8, dt);
+      const want = d > gap ? Math.min(10.5, (d - gap) * 4.5) : 0; c.speed = approach(c.speed, want, 8, dt);
       if (c.speed > 0.05) { c.x += (dx / d) * c.speed * dt; c.z += (dz / d) * c.speed * dt; c.yaw = Math.atan2(dx, dz); }
       c.x = clamp(c.x, area.minX + 0.6, area.maxX - 0.6); c.z = clamp(c.z, area.minZ + 0.6, area.maxZ - 0.6);
       c.ch.group.position.set(c.x, 0, c.z); let dy = c.yaw - c.ch.group.rotation.y; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; c.ch.group.rotation.y += dy * Math.min(1, dt * 8);
       c.ch.update(dt, t + i, Math.min(1, c.speed / 3), c.speed < 0.1 && Math.sin(t * 0.7 + i * 2) > 0.3);
-      if (area === areas.out && (c.eggT -= dt) <= 0) { c.eggT = rnd(35, 60); const golden = Math.random() < 0.08; const e = makeEgg(golden); e.position.set(c.x, 0.2, c.z); e.scale.setScalar(1.3); outdoor.add(e); eggs.push({ m: e, golden, x: c.x, z: c.z, age: 0 }); onPickup && onPickup("laid", golden ? 1 : 0); }
+      if (area === areas.out && (c.eggT -= dt) <= 0) { c.eggT = rnd(25, 45) * Math.max(1, chickens.length / 6); const golden = Math.random() < 0.08; const e = makeEgg(golden); e.position.set(c.x, 0.2, c.z); e.scale.setScalar(1.3); outdoor.add(e); eggs.push({ m: e, golden, x: c.x, z: c.z, age: 0 }); onPickup && onPickup("laid", golden ? 1 : 0); }
     });
-    for (let i = eggs.length - 1; i >= 0; i--) { const e = eggs[i]; e.age += dt; e.m.rotation.z = Math.sin(t * 6) * 0.08 * Math.max(0, 1 - e.age); if (area === areas.out && e.age > 1 && Math.hypot(player.x - e.x, player.z - e.z) < 1.1) { outdoor.remove(e.m); eggs.splice(i, 1); onPickup && onPickup("egg", e.golden ? 25 : 4, e.golden); } }
+    for (let i = eggs.length - 1; i >= 0; i--) { const e = eggs[i]; e.age += dt; e.m.rotation.z = Math.sin(t * 6) * 0.08 * Math.max(0, 1 - e.age); if (area === areas.out && e.age > 0.5 && Math.hypot(player.x - e.x, player.z - e.z) < 1.2) { outdoor.remove(e.m); eggs.splice(i, 1); onPickup && onPickup("egg", 1, e.golden); } }
   }
   function updateNpcs(dt, t) {
     for (const n of npcs) {
       const target = delivery && delivery.npc === n; let sp = 0;
       if (target) n.yaw = Math.atan2(player.x - n.x, player.z - n.z);
-      else { const dx = n.tx - n.x, dz = n.tz - n.z, d = Math.hypot(dx, dz); if (d > 0.15) { sp = 1.3; n.x += (dx / d) * sp * dt; n.z += (dz / d) * sp * dt; n.yaw = Math.atan2(dx, dz); } else if ((n.wait -= dt) < 0) { n.wait = rnd(2, 6); n.tx = n.hx + rnd(-n.r, n.r); n.tz = n.hz + rnd(-n.r, n.r); } }
+      else { const dx = n.tx - n.x, dz = n.tz - n.z, d = Math.hypot(dx, dz); if (d > 0.15) { sp = n.pace; n.x += (dx / d) * sp * dt; n.z += (dz / d) * sp * dt; n.yaw = Math.atan2(dx, dz); } else if ((n.wait -= dt) < 0) { n.wait = rnd(0.8, 2.5); n.tx = n.hx + rnd(-n.r, n.r); n.tz = n.hz + rnd(-n.r, n.r); } }
       n.kid.group.visible = target || Math.hypot(n.x - player.x, n.z - player.z) < 34; if (!n.kid.group.visible) continue;
       n.kid.group.position.set(n.x, 0, n.z); let dy = n.yaw - n.kid.group.rotation.y; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; n.kid.group.rotation.y += dy * Math.min(1, dt * 6);
-      n.kid.walk(t + n.i, sp / 4, dt); if (target) n.kid.parts.armR.rotation.x = -2.6 + Math.sin(t * 8) * 0.4; // waving at you!
+      n.kid.walk(t + n.i, sp / 3.2, dt); if (target) n.kid.parts.armR.rotation.x = -2.6 + Math.sin(t * 8) * 0.4; // waving at you!
     }
   }
 
   // ---- deliveries: a beacon over the customer, an arrow over your head, a steamer in your hands ----
-  let delivery = null;
+  let delivery = null, speedBoost = 1;
   const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 14, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd54a, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide, fog: false })); beacon.visible = false; outdoor.add(beacon);
   const bubble = emojiSprite("🥟", 1.1); bubble.visible = false; outdoor.add(bubble);
   const arrow = new THREE.Group(); const arrowM = new THREE.MeshStandardMaterial({ color: 0xffd54a, emissive: 0xffa000, emissiveIntensity: 0.7 }); const head = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.6, 16), arrowM); head.rotation.x = Math.PI / 2; head.position.z = 0.45; arrow.add(head, box(0.16, 0.08, 0.6, arrowM, 0, 0, 0)); arrow.visible = false; scene.add(arrow);
@@ -180,17 +200,19 @@ export function createTown(canvas, { ui, avatar = {}, onPrompt, onInteract, onPi
   let nearest = null, last = performance.now(), t = 0;
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
   function update(dt) {
-    t += dt; for (const f of animated) f(dt, t); updateCritters(dt, t); if (area === areas.out) updateNpcs(dt, t); updateDelivery(dt, t);
+    t += dt; for (const f of animated) f(dt, t); updateCritters(dt, t); if (area === areas.out) { updateNpcs(dt, t); updateYard(dt, t); } updateDelivery(dt, t);
     doorCool = Math.max(0, doorCool - dt);
     if (focus) { kid.group.rotation.y = camYaw; kid.walk(t, 0, dt); camPos.set(player.x + Math.sin(camYaw) * 3.2, 1.7, player.z + Math.cos(camYaw) * 3.2); clampCam(camPos); camera.position.lerp(camPos, Math.min(1, dt * 6)); camLook.set(player.x, 1.05, player.z); camera.lookAt(camLook); return; }
     let mx = move.x + (pad.connected ? pad.lx : 0), mz = move.y + (pad.connected ? pad.ly : 0);
     if (!paused) { if (keys.has("w") || keys.has("ArrowUp")) mz -= 1; if (keys.has("s") || keys.has("ArrowDown")) mz += 1; if (keys.has("a") || keys.has("ArrowLeft")) mx -= 1; if (keys.has("d") || keys.has("ArrowRight")) mx += 1; if (keys.has("q")) camYaw += 1.8 * dt; }
-    let l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; l = 1; } if (l > 0.05) autoTarget = null;
+    let l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; l = 1; } if (l > 0.05) { autoTarget = null; autoInteract = null; }
     const sy = Math.sin(camYaw), cy = Math.cos(camYaw); let vx = 0, vz = 0;
     if (paused) l = 0;
     if (l > 0.05) { vx = mx * cy + mz * sy; vz = -mx * sy + mz * cy; }
-    else if (autoTarget && !paused) { const dx = autoTarget.x - player.x, dz = autoTarget.z - player.z, d = Math.hypot(dx, dz); if (d < 0.25) { autoTarget = null; if (autoInteract) { const it = autoInteract; autoInteract = null; if (near(it) < 2.8) onInteract(it); } } else { vx = dx / d; vz = dz / d; l = Math.min(1, d); } }
-    const SP = area === areas.out ? (delivery ? 7.4 : 6.4) : 4.6;
+    else if (autoTarget && !paused) { const dx = autoTarget.x - player.x, dz = autoTarget.z - player.z, d = Math.hypot(dx, dz); if (d < 0.25) { autoTarget = null; if (autoInteract) { const it = autoInteract; autoInteract = null; if (near(it) < 2.8) onInteract(it); } } else { vx = dx / d; vz = dz / d; l = Math.min(1, d);
+      // walking into a wall / tree / the pond? if we stop getting closer, give up (and use the shop if we're close enough)
+      if ((stuckT += dt) > 0.5) { if (d > stuckD - 0.3) { const it = autoInteract; autoTarget = null; autoInteract = null; if (it && near(it) < 2.8) onInteract(it); } stuckT = 0; stuckD = d; } } }
+    const SP = (area === areas.out ? (delivery ? 9.2 : 8.2) : 5.4) * speedBoost;
     player.speed = approach(player.speed, l > 0.05 || (autoTarget && !paused) ? SP * Math.max(0.35, l) : 0, 10, dt);
     if (player.speed > 0.01 && (vx || vz)) { player.x += vx * player.speed * dt; player.z += vz * player.speed * dt; player.yaw = Math.atan2(vx, vz); }
     player.x = clamp(player.x, area.minX + 0.6, area.maxX - 0.6); player.z = clamp(player.z, area.minZ + 0.6, area.maxZ - 0.6);
@@ -215,7 +237,7 @@ export function createTown(canvas, { ui, avatar = {}, onPrompt, onInteract, onPi
     chickens.forEach((c, i) => { c.x = x - Math.sin(yaw) * (1.5 + i * 1.1); c.z = z - Math.cos(yaw) * (1.5 + i * 1.1); c.speed = 0; });
     const outside = area === areas.out; scene.background = new THREE.Color(area.bg); scene.fog = outside ? outFog : null; hemi.intensity = outside ? 1.3 : 1.05; sun.intensity = outside ? 2.0 : 0.8; scene.environmentIntensity = outside ? 0.35 : 0.5;
     if (area.id === "home") refreshShelf(area, getOwned());
-    nearest = null; onPrompt(null); autoTarget = null; doorCool = 1.2; snapCamera(); onArea && onArea(area.id);
+    nearest = null; onPrompt(null); autoTarget = null; autoInteract = null; doorCool = 1.2; snapCamera(); onArea && onArea(area.id);
   }
 
   // ---- loop -----------------------------------------------------------------
@@ -238,15 +260,17 @@ export function createTown(canvas, { ui, avatar = {}, onPrompt, onInteract, onPi
     onPadBack(fn) { onPadBack = fn; }, onPadButton(fn) { onPadButton = fn; },
     start() { if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } },
     stop() { running = false; },
-    pause(v) { paused = v; if (v) { move.x = move.y = 0; autoTarget = null; } },
+    pause(v) { paused = v; if (v) { move.x = move.y = 0; autoTarget = null; autoInteract = null; joyPid = null; restJoy(); } },
     setOverride(o) { override = o; restJoy(); if (o) { onPrompt(null); nearest = null; const { W, H } = this.size(); o.camera.aspect = W / H; o.camera.updateProjectionMatrix(); } else cursor.style.display = "none"; },
     get override() { return override; },
     enter(id) { const a = areas[id]; if (!a || !a.spawn) return; moveTo(a, a.spawn.x, a.spawn.z, Math.PI); },
     exit() { const d = areas.out.doors.find((d) => d.id === area.id); if (d) moveTo(areas.out, d.outX, d.outZ, d.yaw); },
     goOutsideTo(id) { const d = areas.out.doors.find((d) => d.id === id); if (d) moveTo(areas.out, d.outX, d.outZ, d.yaw); },
+    setSpeedBoost(m) { speedBoost = m; },
+    setNests(full) { if (areas.coop.nestEggs) areas.coop.nestEggs.visible = full; },
     setDelivery(npc, onArrive) { delivery = npc ? { npc, onArrive } : null; },
     refreshShelf() { if (area.id === "home") refreshShelf(area, getOwned()); },
-    addChicken,
+    addChicken, setFlock, get yardCount() { return yardHens.length; },
     setAvatar(a) { const ry = kid.group.rotation.y; scene.remove(kid.group); const k = makeKid(a); kid.group = k.group; kid.walk = k.walk; kid.parts = k.parts; kid.group.add(carry); kid.group.position.set(player.x, 0, player.z); kid.group.rotation.y = ry; scene.add(kid.group); },
     focusPlayer(on) { focus = on; if (on) player.yaw = camYaw + Math.PI; },
     teleport(x, z) { player.x = x; player.z = z; },
@@ -291,11 +315,11 @@ export const SHOPS = [
   { id: "coop", name: "Farmer Fran's Barn", sign: "🐔 Farmer Fran's Barn", x: -38, z: 2, ry: Math.PI / 2, w: 13, d: 9, h: 6, wall: 0xb5452f, trim: 0xffffff, roof: 0x5b4636, awning: ["#ffffff", "#4caf50"],
     inside: { w: 18, d: 14, h: 6.5, floor: ["#d9b65e", "#cfa94f"], wall: 0xa8452c, bg: 0x3a2010, keeper: { shirt: 0x4caf50, pants: 0x3d6bfd, hair: 0xa33a1e, hairStyle: "curly", hat: "🧢", skin: 0xffd6b8 }, counter: "🐔 Buy chickens" } },
   { id: "dress", name: "Dress-Up Boutique", sign: "👕 Dress-Up Boutique", x: -24, z: 15, ry: Math.PI, w: 12, d: 7, h: 5, wall: 0x7a3cff, trim: 0xffffff, roof: 0x3d1a8a, awning: ["#ffffff", "#9b6bff"],
-    inside: { w: 16, d: 12, h: 5.5, floor: ["#efe6ff", "#ffffff"], wall: 0xf1e8ff, bg: 0x2a1a5e, keeper: { shirt: 0x00c853, hair: 0x222222, hairStyle: "long", skin: 0x8d5a3c }, counter: "👕 Change my look" } },
+    inside: { w: 16, d: 12, h: 5.5, floor: ["#efe6ff", "#ffffff"], wall: 0xf1e8ff, bg: 0x2a1a5e, keeper: { shirt: 0x00c853, hair: 0x222222, hairStyle: "long", skin: 0x8d5a3c }, counter: "👕 Shop hats & outfits" } },
   { id: "swap", name: "Swap Shop", sign: "🔄 Swap Shop", x: 24, z: 15, ry: Math.PI, w: 12, d: 7, h: 5, wall: 0x2e9d6a, trim: 0xfff3c4, roof: 0x1d5e40, awning: ["#fff3c4", "#2e9d6a"],
     inside: { w: 16, d: 12, h: 5.5, floor: ["#e8f5e9", "#ffffff"], wall: 0xe6f6ea, bg: 0x123d2a, keeper: { shirt: 0xffd54a, hair: 0xd7ccc8, hairStyle: "short", skin: 0xe0ac8a, hat: "🎩" }, counter: "🔄 Swap extras for coins" } },
   { id: "home", name: "My House", sign: "🏠 My House", x: 38, z: 2, ry: -Math.PI / 2, w: 13, d: 10, h: 6, wall: 0xfff3c4, trim: 0x3d8bfd, roof: 0x3d8bfd, awning: ["#ffffff", "#3d8bfd"],
-    inside: { w: 22, d: 16, h: 6, floor: null, wall: 0xfff6e8, bg: 0x2a2040, keeper: null, counter: null } },
+    inside: { w: 28, d: 22, h: 6.5, floor: null, wall: 0xfff6e8, bg: 0x2a2040, keeper: null, counter: null } },
 ];
 function buildBuilding(S, out, animated) {
   const g = new THREE.Group(); const wallM = mat.std(S.wall, { roughness: 0.8 }), trimM = mat.std(S.trim, { roughness: 0.6 }), roofM = mat.std(S.roof, { roughness: 0.7 });
@@ -399,7 +423,9 @@ function interiorDeco(S, g, a, { w, d, h, ox, counterZ, obst }) {
     const hay = mat.std(0xe0c060, { roughness: 1 });
     for (const [x, y, z] of [[-7, 0.35, -4], [-6, 0.35, -4], [-6.5, 1.0, -4], [7, 0.35, 4], [7, 0.35, 3], [-7, 0.35, 4]]) g.add(box(0.95, 0.65, 0.7, hay, x, y, z));
     obst(-6.5, -4, 2.2, 1); obst(7, 3.5, 1, 2); obst(-7, 4, 1, 0.8);
-    for (let i = 0; i < 5; i++) { const x = -w / 2 + 2 + i * 1.3; g.add(box(1.1, 0.8, 0.8, mat.wood(0xb8894a), x, 2.2, -d / 2 + 0.5)); const e = makeEgg(i === 2); e.position.set(x, 2.0, -d / 2 + 0.6); g.add(e); }
+    const nest = new THREE.Group(); nest.userData.noMerge = true; g.add(nest); a.nestEggs = nest;
+    for (let i = 0; i < 5; i++) { const x = -w / 2 + 2 + i * 1.3; g.add(box(1.1, 0.8, 0.8, mat.wood(0xb8894a), x, 2.2, -d / 2 + 0.5)); for (let k = 0; k < 2; k++) { const e = makeEgg(i === 2 && k === 0); e.position.set(x - 0.2 + k * 0.4, 2.0, -d / 2 + 0.6); nest.add(e); } }
+    addIt({ id: "nests", kind: "nests", label: "🥚 Collect eggs from the nests", fx: -w / 2 + 4.6, fz: -d / 2 + 2.6 }, -w / 2 + 4.6, -d / 2 + 0.5, 6.6, 3, 1.2);
     a.late.push((anim) => { for (let i = 0; i < 4; i++) { const ch = makeChicken({ color: CHICKEN_COLORS[(i + 1) % CHICKEN_COLORS.length] }); ch.group.scale.setScalar(1.2); g.add(ch.group); const st = { x: rnd(-6, 6), z: rnd(0, 5), tx: 0, tz: 2, wait: rnd(0, 2) }; anim.push((dt, t) => { if (!g.visible) return; const dx = st.tx - st.x, dz = st.tz - st.z, dd = Math.hypot(dx, dz); let sp = 0; if (dd > 0.1) { sp = 1.2; st.x += (dx / dd) * sp * dt; st.z += (dz / dd) * sp * dt; ch.group.rotation.y = Math.atan2(dx, dz); } else if ((st.wait -= dt) < 0) { st.wait = rnd(1, 4); st.tx = rnd(-6, 6); st.tz = rnd(0.5, 5); } ch.group.position.set(st.x, 0, st.z); ch.update(dt, t + i, sp / 1.2, sp === 0); }); } });
   }
   if (S.id === "dress") {
@@ -419,9 +445,10 @@ function interiorDeco(S, g, a, { w, d, h, ox, counterZ, obst }) {
   if (S.id === "home") {
     // shelves for your collection on three walls (filled in when you walk in)
     const shelfM = mat.wood(0x9c6a3a); a.shelfSlots = [];
-    for (const y of [0.75, 1.75, 2.75, 3.75]) {
-      g.add(box(w - 4, 0.1, 0.7, shelfM, 0, y, -d / 2 + 0.45)); for (let i = 0; i < 14; i++) a.shelfSlots.push([-(w - 4) / 2 + 0.6 + i * ((w - 5.2) / 13), y + 0.06, -d / 2 + 0.45, 0]);
-      for (const s of [-1, 1]) { g.add(box(0.7, 0.1, d - 7, shelfM, s * (w / 2 - 0.45), y, -2)); for (let i = 0; i < 9; i++) a.shelfSlots.push([s * (w / 2 - 0.45), y + 0.06, -2 - (d - 8) / 2 + i * ((d - 8) / 8), -s * Math.PI / 2]); }
+    for (const y of [0.7, 1.6, 2.5, 3.4, 4.3]) {
+      const backN = 24, sideN = 15;
+      g.add(box(w - 3, 0.1, 0.7, shelfM, 0, y, -d / 2 + 0.45)); for (let i = 0; i < backN; i++) a.shelfSlots.push([-(w - 4) / 2 + i * ((w - 4) / (backN - 1)), y + 0.06, -d / 2 + 0.45, 0]);
+      for (const s of [-1, 1]) { g.add(box(0.7, 0.1, d - 7, shelfM, s * (w / 2 - 0.45), y, -2)); for (let i = 0; i < sideN; i++) a.shelfSlots.push([s * (w / 2 - 0.45), y + 0.06, -2 - (d - 8) / 2 + i * ((d - 8) / (sideN - 1)), -s * Math.PI / 2]); }
     }
     obst(0, -d / 2 + 0.45, w - 4, 0.8); obst(-(w / 2 - 0.45), -2, 0.8, d - 7); obst(w / 2 - 0.45, -2, 0.8, d - 7);
     const shelfGroup = new THREE.Group(); shelfGroup.userData.noMerge = true; g.add(shelfGroup); a.shelfGroup = shelfGroup;
@@ -435,11 +462,10 @@ function interiorDeco(S, g, a, { w, d, h, ox, counterZ, obst }) {
   }
 }
 function refreshShelf(a, owned) {
-  const g = a.shelfGroup; if (!g) return; while (g.children.length) { const c = g.children.pop(); c.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
+  const g = a.shelfGroup; if (!g) return; const key = CATALOG.filter((k) => owned[k.id]).map((k) => k.id).join(","); if (key === a.shelfKey) return; a.shelfKey = key; while (g.children.length) { const c = g.children.pop(); c.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
   const have = CATALOG.filter((k) => owned[k.id]);
   // dumplings built at low detail, then merged by shared material (faces etc.) so the room stays quick
-  have.slice(0, a.shelfSlots.length).forEach((k, i) => { const [x, y, z, ry] = a.shelfSlots[i]; const dm = buildDumpling(k.id, { lod: 0.35 }); dm.scale.setScalar(0.42); dm.position.set(x, y, z); dm.rotation.y = ry; dm.updateMatrix(); for (const m of [...dm.children]) { m.applyMatrix4(dm.matrix); g.add(m); } });
-  for (let i = have.length; i < Math.min(a.shelfSlots.length, CATALOG.length); i++) { const [x, y, z] = a.shelfSlots[i]; const q = emojiSprite("❔", 0.32); q.position.set(x, y + 0.22, z); q.material.opacity = 0.3; g.add(q); }
+  have.slice(0, a.shelfSlots.length).forEach((k, i) => { const [x, y, z, ry] = a.shelfSlots[i]; const dm = buildDumpling(k.id, { lod: 0.35 }); dm.scale.setScalar(0.36); dm.position.set(x, y, z); dm.rotation.y = ry; dm.updateMatrix(); for (const m of [...dm.children]) { m.applyMatrix4(dm.matrix); g.add(m); } });
   mergeStatic(g);
 }
 // a townsperson / shopkeeper: the static bits (head, hair, face) merged into a few draw calls
@@ -466,6 +492,7 @@ const TOWNSFOLK = [
   { name: "Ruby", x: 40, z: 22, r: 3, look: { shirt: 0xff3dd6, hair: 0x222222, hairStyle: "ponytail", skin: 0x8d5a3c } },
 ];
 const POND = { x: -26, z: 31, r: 7 };
+const YARD = { x: 36.5, z: -15, w: 11, d: 7 };
 function buildOutdoor(g, a, animated) {
   const sky = canvasTex(4, 256, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#5fb6ff"); gr.addColorStop(0.55, "#bfe3ff"); gr.addColorStop(1, "#ffe6f1"); c.fillStyle = gr; c.fillRect(0, 0, w, h); });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(220, 32, 16), new THREE.MeshBasicMaterial({ map: sky, side: THREE.BackSide, fog: false, depthWrite: false })); dome.userData.dyn = true; g.add(dome);
@@ -486,7 +513,7 @@ function buildOutdoor(g, a, animated) {
   // trees: cherry blossoms and leafy ones round the edges and the park
   const trunkM = mat.std(0x7a4f2e, { roughness: 1 }), pinkM = mat.std(0xffb7d5, { roughness: 0.9 }), pinkM2 = mat.std(0xff9ec6, { roughness: 0.9 }), leafM = mat.std(0x4caf50, { roughness: 0.9 }), leafM2 = mat.std(0x66bb6a, { roughness: 0.9 });
   const tree = (x, z, blossom, s = 1) => { g.add(cyl(0.22 * s, 0.32 * s, 2.6 * s, trunkM, 10, x, 1.3 * s, z)); for (let k = 0; k < 4; k++) g.add(sphere(rnd(1.1, 1.6) * s, blossom ? (k % 2 ? pinkM : pinkM2) : k % 2 ? leafM : leafM2, x + rnd(-0.9, 0.9) * s, (3.1 + rnd(0, 1.1)) * s, z + rnd(-0.9, 0.9) * s, 14)); const sh = blobShadow(2 * s, 0.3); sh.position.set(x, 0.02, z); g.add(sh); a.obstacles.push({ x, z, w: 0.6 * s, d: 0.6 * s }); };
-  [[-43, -38], [-36, -39], [-28, -40], [28, -40], [36, -39], [43, -38], [-43, -20], [43, -20], [-43, 20], [43, 20], [-44, 38], [44, 38], [-12, 40], [12, 40], [-16, -40], [16, -40], [-34, 18], [32, 19], [-12, 33], [14, 36], [36, 37], [-38, 38], [-10, -22], [10, -22], [-40, -16], [40, -16], [8, 30]].forEach(([x, z], i) => tree(x, z, i % 3 !== 1, rnd(0.9, 1.25)));
+  [[-43, -38], [-36, -39], [-28, -40], [28, -40], [36, -39], [43, -38], [-43, -20], [43, -20], [-43, 20], [43, 20], [-44, 38], [44, 38], [-12, 40], [12, 40], [-16, -40], [16, -40], [-34, 18], [32, 19], [-12, 33], [14, 36], [36, 37], [-38, 38], [-10, -22], [10, -22], [-40, -16], [44, -26], [8, 30]].forEach(([x, z], i) => tree(x, z, i % 3 !== 1, rnd(0.9, 1.25)));
   // lamp posts along the streets
   const postM = mat.std(0x2f3542, { roughness: 0.5, metalness: 0.5 }), bulbM = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffe08a, emissiveIntensity: 1 });
   for (const [x, z] of [[-6, -38], [6, -38], [-6, 26], [6, 26], [-6, 38], [6, 38], [-30, -6], [-30, 6], [30, -6], [30, 6], [-43, -6], [43, -6], [-43, 6], [43, 6]]) { g.add(cyl(0.08, 0.12, 4, postM, 8, x, 2, z), sphere(0.3, bulbM, x, 4.15, z, 12), cyl(0.32, 0.18, 0.18, postM, 10, x, 4.45, z)); a.obstacles.push({ x, z, w: 0.3, d: 0.3 }); }
@@ -539,6 +566,16 @@ function buildOutdoor(g, a, animated) {
   for (let i = 1; i < 6; i++) for (const x of [penX - 3, penX + 3]) g.add(box(0.14, 1.0, 0.14, fenceM, x, 0.5, penZ - 3 + i));
   for (const z of [penZ - 3, penZ + 3]) g.add(box(6, 0.1, 0.08, fenceM, penX, 0.75, z)); for (const x of [penX - 3, penX + 3]) g.add(box(0.08, 0.1, 6, fenceM, x, 0.75, penZ));
   a.obstacles.push({ x: penX, z: penZ, w: 6.2, d: 6.2 });
+  // your own chicken yard, next to your house: chickens that aren't following you live here
+  const Y = YARD; const yw = Y.w / 2, yd = Y.d / 2;
+  for (let x = -yw; x <= yw + 0.01; x += 1) for (const z of [-yd, yd]) g.add(box(0.14, 1.0, 0.14, fenceM, Y.x + x, 0.5, Y.z + z));
+  for (let z = -yd + 1; z < yd; z += 1) for (const x of [-yw, yw]) g.add(box(0.14, 1.0, 0.14, fenceM, Y.x + x, 0.5, Y.z + z));
+  for (const z of [-yd, yd]) g.add(box(Y.w, 0.1, 0.08, fenceM, Y.x, 0.75, Y.z + z)); for (const x of [-yw, yw]) g.add(box(0.08, 0.1, Y.d, fenceM, Y.x + x, 0.75, Y.z));
+  const hutM = mat.std(0xb5452f), hutR = mat.std(0x5b4636); g.add(box(2.4, 1.6, 1.8, hutM, Y.x + yw - 1.6, 0.8, Y.z - yd + 1.3)); const hr = new THREE.Mesh(new THREE.ConeGeometry(1.9, 1.0, 4), hutR); hr.position.set(Y.x + yw - 1.6, 2.1, Y.z - yd + 1.3); hr.rotation.y = Math.PI / 4; g.add(hr);
+  g.add(box(0.8, 0.9, 0.05, mat.std(0x3a2010), Y.x + yw - 1.6, 0.45, Y.z - yd + 2.21));
+  const ys = textPlane(["🐔 My Chicken Yard"], 3.6, 0.7, { bg: "#fff3c4", color: "#b5452f", size: 90 }); ys.position.set(Y.x, 1.7, Y.z + yd + 0.05); g.add(ys); g.add(box(0.12, 1.6, 0.12, fenceM, Y.x - 1.6, 0.8, Y.z + yd), box(0.12, 1.6, 0.12, fenceM, Y.x + 1.6, 0.8, Y.z + yd));
+  a.obstacles.push({ x: Y.x, z: Y.z, w: Y.w + 0.2, d: Y.d + 0.2 });
+  const yit = { id: "yard", kind: "yard", label: "🐔 My chicken yard", name: "My Chicken Yard", front: new THREE.Vector3(Y.x, 0, Y.z + yd + 1.6) }; hitZone(g, yit, Y.w, 2, Y.d, Y.x, 1, Y.z); a.interactables.push(yit);
   for (const S of SHOPS) buildBuilding(S, a, animated);
 }
 function addFountainDumpling(g, animated) {

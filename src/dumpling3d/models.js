@@ -6,7 +6,7 @@
 //  group's own space so the whole thing can be squished on the CPU (slow
 //  rise!) and sliced in half with clipping planes to peek at the filling.
 // ==========================================================================
-import { THREE, rnd, LOW_TIER } from "../arcade3d/lib.js";
+import { THREE, rnd, LOW_TIER, mergeStatic } from "../arcade3d/lib.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const TAU = Math.PI * 2;
@@ -69,7 +69,7 @@ function lathe(pts, shaper, nu = 112, nv = 64) {
   return surf((u, v) => { if (v !== lv) { lp = curve.getPointAt(v); lv = v; } const th = u * TAU; let r = Math.max(0, lp.x), y = lp.y, a = 0; if (shaper) [r, y, a = 0] = shaper(th, v, r, y); return [Math.cos(th) * r, y, -Math.sin(th) * r, a]; }, nu, nv);
 }
 // crescent family: a squashed spindle bent round a centre, pinched into a crest along the top, optional pleats
-function crescent({ len = 1.2, h = 0.5, w = 0.5, bend = 1.0, pleats = 0, pAmp = 0.07, crest = 0.16, flat = 0.32 }, rand) {
+function crescent({ len = 1.2, h = 0.5, w = 0.5, bend = 1.0, pleats = 0, pAmp = 0.07, crest = 0.16, flat = 0.32, lift = 0 }, rand) {
   const ph = rand() * 6;
   return surf((u, v) => {
     const t = Math.PI * v, s = Math.sin(t), xl = -Math.cos(t), body = Math.pow(s, 0.9);
@@ -79,6 +79,7 @@ function crescent({ len = 1.2, h = 0.5, w = 0.5, bend = 1.0, pleats = 0, pAmp = 
     Y += crest * Math.pow(top, 9) * body;                  // …pinched up into a thin raised seam
     if (pleats) { const ridge = Math.pow(Math.abs(Math.sin(xl * Math.PI * pleats * 0.5 + ph)), 0.5); const m = smooth(0.3, 0.85, c) * smooth(-0.2, 0.3, sn) * body; Z += pAmp * m * ridge; Y += pAmp * 0.9 * Math.pow(top, 6) * ridge * body; }
     Y += 0.018 * Math.sin(xl * 5 + ph) * body; Z *= 1 + 0.03 * Math.sin(xl * 3.3 + ph * 2);   // hand-made unevenness
+    Y += lift * Math.pow(Math.abs(xl), 2.5);              // ends curl up (gold ingot)
     const a = xl * bend, Rc = len / bend;                  // bend the spindle round an arc (half-length = len)
     return [Math.sin(a) * (Rc + Z), Y, Math.cos(a) * (Rc + Z) - Rc];
   }, 96, 84);
@@ -147,6 +148,15 @@ export const SHAPES = {
         const mesh = new THREE.Mesh(inner, m.fill); mesh.userData.noSquishNormals = true; bake(g, mesh); } };
   } },
 };
+SHAPES.peach = { name: "Peach Bun", blush: true, build(rand) {
+  const L = lump(rand);
+  // a longevity peach bun: pointy tip, a crease down one side, a pink blush on top and two leaves
+  const body = lathe([[0, 0], [0.6, 0], [0.92, 0.1], [1.0, 0.32], [0.94, 0.56], [0.74, 0.78], [0.46, 0.96], [0.2, 1.1], [0.04, 1.2], [0, 1.22]],
+    (th, v, r, y) => [r * L(th, v) * (1 - 0.08 * Math.exp(-((angDist(th, Math.PI / 2) / 0.2) ** 2)) * smooth(0.15, 0.6, v)), y]);
+  return { body: groundIt(body), faceY: 0.3,
+    extra(g, b) { const leafM = new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness: 0.6 }); for (const s of [-1, 1]) { const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 10), leafM); leaf.scale.set(1.4, 0.12, 0.6); leaf.position.set(s * 0.55, 0.06, 0.75); leaf.rotation.y = s * 0.5; bake(g, leaf); } } };
+} };
+SHAPES.ingot = { name: "Gold Ingot Dumpling", build(rand) { return { body: groundIt(crescent({ pleats: 0, crest: 0.05, bend: 1.5, lift: 0.42, h: 0.56, w: 0.58, len: 1.05, flat: 0.25 }, rand)), faceY: 0.3, crescent: true }; } };
 export const SHAPE_IDS = Object.keys(SHAPES);
 
 // ---- flavours (themes) -----------------------------------------------------
@@ -161,18 +171,29 @@ export const FLAVOURS = {
   ocean:      { name: "Ocean Wave",         color: 0x56d4cf, finish: "jelly",   rarity: "rare",     fill: "ocean" },
   rainbow:    { name: "Rainbow Swirl",      color: 0xffffff, finish: "glossy",  vc: "rainbow", rarity: "rare", fill: "rainbow" },
   galaxy:     { name: "Grape Galaxy",       color: 0xffffff, finish: "galaxy",  rarity: "super",    fill: "galaxy" },
+  mango:      { name: "Mango Tango",        color: 0xffb84d, finish: "glossy",  rarity: "uncommon", fill: "mango" },
+  mint:       { name: "Mint Chip",          color: 0xaef0d0, finish: "dough",   chips: true, rarity: "uncommon", fill: "mint" },
+  bubbletea:  { name: "Bubble Tea",         color: 0xd9a77a, finish: "glossy",  rarity: "rare",     fill: "boba" },
+  watermelon: { name: "Watermelon Splash",  color: 0xff8098, finish: "shimmer", glit: ["#1a1a1a", "#ffffff", "#7ed957"], rarity: "rare", fill: "watermelon" },
+  frosty:     { name: "Frosty Snowflake",   color: 0xdff4ff, finish: "glitter", glit: ["#ffffff", "#bfe9ff", "#8fd3ff"], rarity: "super", fill: "frosty" },
+  sunset:     { name: "Sunset Dream",       color: 0xffffff, finish: "glossy",  vc: "sunset", rarity: "epic", fill: "sunset" },
+  neon:       { name: "Neon Glow",          color: 0x5dff9e, finish: "glow",    rarity: "epic",     fill: "neon" },
+  opal:       { name: "Opal Shimmer",       color: 0xfff6fb, finish: "holo",    rarity: "mythic",   fill: "opal" },
 };
 export const RARITY = {
   common:   { name: "Common",     color: "#8f9bab", value: 4,   order: 0 },
   uncommon: { name: "Uncommon",   color: "#3ea16a", value: 8,   order: 1 },
   rare:     { name: "Rare",       color: "#2f80ed", value: 16,  order: 2 },
   super:    { name: "Super Rare", color: "#9b51e0", value: 35,  order: 3 },
-  secret:   { name: "Secret",     color: "#ff4fa3", value: 70,  order: 4 },
-  golden:   { name: "Golden",     color: "#f5b700", value: 150, order: 5 },
+  epic:     { name: "Epic",       color: "#ff7a1a", value: 50,  order: 4 },
+  mythic:   { name: "Mythic",     color: "#00b3a4", value: 80,  order: 5 },
+  secret:   { name: "Secret",     color: "#ff4fa3", value: 100, order: 6 },
+  golden:   { name: "Golden",     color: "#f5b700", value: 150, order: 7 },
+  diamond:  { name: "Diamond",    color: "#38c7ff", value: 300, order: 8 },
 };
 const MOODS = ["smile", "smile", "wink", "sleepy", "surprised", "happy"];
 
-// ---- the catalog: 10 shapes × 9 flavours + 7 secret & golden specials -------
+// ---- the catalog: 12 shapes × 17 flavours + 17 specials ---------------------
 const SPECIALS = [
   { id: "golden-bao", name: "Golden Lucky Bao", shape: "xlb", color: 0xffc94a, finish: "gold", rarity: "golden", fill: "gold", mood: "happy", tops: ["crown"], blurb: "The luckiest dumpling in town! Something shiny is hiding inside…" },
   { id: "starlight", name: "Starlight Dumpling", shape: "momo", color: 0xfff6fb, finish: "holo", rarity: "golden", fill: "holo", mood: "smile", blurb: "A holographic chase dumpling that twinkles like the night sky." },
@@ -180,6 +201,16 @@ const SPECIALS = [
   { id: "mood-mochi", name: "Mood Mochi", shape: "mochi", color: 0xc9a7ff, color2: 0xff8fc7, finish: "powder", rarity: "secret", fill: "mood", mood: "smile", blurb: "Squeeze it and watch it change colour!" },
   { id: "shades-bao", name: "Seashell Shades Bao", shape: "bao", color: 0x6fc3ff, finish: "glitter", glit: ["#ffffff", "#bfe8ff", "#2f80ed"], rarity: "secret", fill: "shell", mood: "shades", blurb: "Too cool for the steamer. Sunglasses on, always." },
   { id: "unicorn", name: "Rainbow Unicorn Dumpling", shape: "tangyuan", color: 0xffffff, finish: "glossy", vc: "pastel", rarity: "secret", fill: "rainbow", mood: "happy", tops: ["horn"], blurb: "A magical pastel dumpling with a golden horn." },
+  { id: "panda-bao", name: "Panda Bao", shape: "bao", color: 0xffffff, finish: "dough", rarity: "secret", fill: "choco", mood: "smile", tops: ["panda"], blurb: "A sleepy panda who loves bamboo… and chocolate." },
+  { id: "bunny-mochi", name: "Bunny Mochi", shape: "mochi", color: 0xffeef4, finish: "powder", rarity: "secret", fill: "berry", mood: "happy", tops: ["bunny"], blurb: "Hop hop! Soft, floppy ears and a strawberry heart." },
+  { id: "kitty-bao", name: "Kitty Bao", shape: "tangyuan", color: 0xffcf9e, finish: "dough", rarity: "secret", fill: "ocean", mood: "wink", tops: ["kitty"], blurb: "Meow! Guess what this kitty keeps inside… a fishy friend!" },
+  { id: "froggy-momo", name: "Froggy Momo", shape: "momo", color: 0x8bd66b, finish: "glossy", rarity: "epic", fill: "mint", mood: "happy", tops: ["frog"], blurb: "Ribbit! It has eyes on top AND eyes on the front. Very good at looking." },
+  { id: "piggy-bao", name: "Piggy Bao", shape: "bao", color: 0xffb8c8, finish: "dough", rarity: "epic", fill: "berry", mood: "smile", tops: ["pig"], blurb: "Oink! The roundest, pinkest bao in town." },
+  { id: "pearl-princess", name: "Pearl Princess Mochi", shape: "mochi", color: 0xfff6fb, finish: "holo", rarity: "mythic", fill: "opal", mood: "happy", tops: ["bow", "crown"], blurb: "A shimmering pearl mochi wearing a tiny crown and a bow." },
+  { id: "cosmic-dragon", name: "Cosmic Dragon Bao", shape: "xlb", color: 0xffffff, finish: "galaxy", rarity: "mythic", fill: "galaxy", mood: "surprised", tops: ["horns"], blurb: "A baby dragon made of stars. Rawr (but a friendly rawr)." },
+  { id: "royal-ingot", name: "Royal Gold Ingot", shape: "ingot", color: 0xffc93c, finish: "gold", rarity: "golden", fill: "gold", mood: "happy", tops: ["crown"], blurb: "A lucky gold ingot dumpling fit for a king or queen!" },
+  { id: "diamond-dumpling", name: "Diamond Dumpling", shape: "xlb", color: 0xe8f9ff, finish: "diamond", rarity: "diamond", fill: "diamond", mood: "smile", tops: ["crown"], blurb: "The rarest dumpling of all. It sparkles like a real diamond!" },
+  { id: "wish-peach", name: "Rainbow Wish Peach", shape: "peach", color: 0xffffff, finish: "glossy", vc: "rainbow", rarity: "diamond", fill: "rainbow", mood: "happy", tops: ["bow"], blurb: "Legend says every wish made on this peach comes true." },
   { id: "chicky", name: "Chicky Bao", shape: "tangyuan", color: 0xffe066, finish: "dough", rarity: "secret", fill: "chick", mood: "smile", tops: ["chick"], blurb: "Bawk! A dumpling that thinks it's a chicken. There might be a baby chick inside!" },
 ];
 export const CATALOG = [];
@@ -207,6 +238,15 @@ export const FILLS = {
   mood:    { name: "colour-changing gel", base: "#b06bff", swirl: "#ff7ac0", gel: true, glit: ["#ffffff"] },
   shell:   { name: "sea glitter (and a seashell!)", base: "#2f80ed", gel: true, glit: ["#ffffff", "#bfe8ff"], extra: "shell" },
   chick:   { name: "a baby chick!", base: "#fff2b3", gel: false, extra: "chick" },
+  mango:   { name: "mango jelly", base: "#ffb21a", gel: true, glit: ["#fff2a8", "#ff8a00"] },
+  mint:    { name: "minty choc-chip cream", base: "#9ef0c8", gel: false, bits: ["#3b2216", "#2e170c"] },
+  boba:    { name: "brown sugar boba pearls", base: "#c8874f", gel: true, glit: ["#f3d9b5"], extra: "boba" },
+  watermelon: { name: "juicy watermelon gel", base: "#ff4d6d", gel: true, bits: ["#1a1a1a"], glit: ["#ffd1dc"] },
+  frosty:  { name: "sparkly snow gel", base: "#bfe9ff", gel: true, glit: ["#ffffff", "#e0f7ff", "#8fd3ff"], stars: true },
+  sunset:  { name: "sunset swirl", base: "#ff7a59", swirl: "#b36bff", gel: true, glit: ["#ffe3a3"] },
+  neon:    { name: "neon glow goo", base: "#39ff88", gel: true, glit: ["#ffffff", "#ff3dd6"], glow: true },
+  opal:    { name: "opal shimmer", base: "#e9d9ff", gel: true, glit: ["#a8fff0", "#ffb6ff", "#ffffff"], holo: true },
+  diamond: { name: "diamond sparkle (and a real gem!)", base: "#d8f6ff", gel: true, glit: ["#ffffff", "#a8eaff", "#ffd6ff"], holo: true, extra: "gem" },
 };
 function fillTex(key) {
   const F = FILLS[key];
@@ -240,6 +280,7 @@ export function skinMaterial(finish, k) {
     case "galaxy": Object.assign(o, { map: galaxyTex(), emissive: 0xffffff, emissiveMap: starTex(), emissiveIntensity: 0.9, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.15, sheen: 0.3 }); break;
     case "glow": Object.assign(o, { emissive: new THREE.Color(k.color), emissiveIntensity: 0.55, roughness: 0.4, clearcoat: 0.6 }); break;
     case "gold": Object.assign(o, { metalness: 1, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0, bumpScale: 0.15 }); break;
+    case "diamond": Object.assign(o, LOW_TIER ? { transparent: true, opacity: 0.8, roughness: 0.05, clearcoat: 1, iridescence: 1, map: glitterTex("diamond", ["#ffffff", "#a8eaff", "#ffd6ff"]) } : { transmission: 0.6, thickness: 0.8, ior: 2.0, roughness: 0.04, clearcoat: 1, iridescence: 1, iridescenceIOR: 2.0, map: glitterTex("diamond", ["#ffffff", "#a8eaff", "#ffd6ff"]), emissive: 0xffffff, emissiveMap: starTex(), emissiveIntensity: 0.6, sheen: 0 }); break;
     case "holo": Object.assign(o, { roughness: 0.18, metalness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.7, iridescenceThicknessRange: [180, 900], sheen: 0.3, emissive: 0xffffff, emissiveMap: starTex(), emissiveIntensity: 0.5 }); break;
   }
   return new THREE.MeshPhysicalMaterial(o);
@@ -252,9 +293,11 @@ function vertexColours(geo, k, shape) {
     const y = p.getY(i), t = y / H, x = p.getX(i), z = p.getZ(i);
     if (k.vc === "rainbow") c.setHSL(((t * 0.9 + Math.atan2(z, x) / TAU * 0.15) % 1 + 1) % 1, 0.8, 0.72);
     else if (k.vc === "pastel") c.setHSL(((t * 0.8 + 0.55) % 1), 0.75, 0.86);
+    else if (k.vc === "sunset") c.setHSL(((0.08 - t * 0.28) % 1 + 1) % 1, 0.85, 0.66 - t * 0.08);
     else if (k.vc === "cotton") c.copy(pink).lerp(blue, smooth(0.25, 0.8, t + 0.08 * Math.sin(x * 6 + z * 4)));
     else c.copy(base);
     if (k.finish === "gold" || k.finish === "galaxy" || k.finish === "holo" || k.id === "mood-mochi") c.set(k.finish === "gold" ? 0xffc93c : 0xffffff);
+    if (shape.blush && !k.vc) c.lerp(new THREE.Color(0xff8fa8), smooth(0.55, 1.0, t) * 0.75);
     if (shape.crispy) { const b = smooth(0.14, 0.0, y + 0.02 * Math.sin(x * 23) * Math.sin(z * 17)); c.lerp(brown, b * 0.9); c.lerp(dark, smooth(0.035, 0, y) * 0.6); }
     if (acc && acc[i]) c.lerp(fillC, acc[i]);
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
@@ -299,6 +342,14 @@ function addTops(g, body, k, H) {
     if (t === "horn") { const h = topAt(body, 0, 0.12); if (!h) continue; const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.38, 20, 8), M.gold); horn.position.copy(h.p).add(new V3(0, 0.16, 0.02)); horn.rotation.x = 0.25; bake(g, horn);
       for (const s of [-1, 1]) { const he = topAt(body, s * 0.42, -0.05); if (!he) continue; const ear = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.22, 16), M.pink); ear.position.copy(he.p).add(new V3(0, 0.06, 0)); ear.rotation.z = -s * 0.4; bake(g, ear); }
       const pal = [0xff9ad5, 0xbfeaff, 0xe6ccff, 0xfff3a0]; pal.forEach((c, i) => { const h2 = surfaceHit(body, new V3(-0.15 + i * 0.1, H * 0.95 - i * 0.12, -6), new V3(0, 0, 1)); if (!h2) return; const m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.4, clearcoat: 0.6 })); m.scale.set(1, 1, 0.6); stick(g, m, h2, 0.02); }); }
+    if (t === "panda") { const blk = new THREE.MeshStandardMaterial({ color: 0x1d1d22, roughness: 0.8 }); for (const s of [-1, 1]) { const he = topAt(body, s * 0.55, -0.05); if (he) { const ear = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), blk); ear.scale.z = 0.6; ear.position.copy(he.p).add(new V3(0, 0.08, 0)); bake(g, ear); } const hp = front(body, s * 0.2, H * 0.32 + 0.11); if (hp) { const patch = new THREE.Mesh(new THREE.CircleGeometry(0.1, 20), blk); patch.scale.set(0.85, 1.15, 1); patch.rotation.z = s * 0.5; stick(g, patch, hp, 0.002); } } }
+    if (t === "bunny") { const pinkM = new THREE.MeshStandardMaterial({ color: 0xffb6d1, roughness: 0.7 }), wht = new THREE.MeshStandardMaterial({ color: new THREE.Color(k.color), roughness: 0.9 }); for (const s of [-1, 1]) { const he = topAt(body, s * 0.28, 0); if (!he) continue; const ear = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.55, 6, 12), wht); ear.scale.z = 0.5; ear.position.copy(he.p).add(new V3(s * 0.08, 0.35, 0)); ear.rotation.z = -s * 0.3; bake(g, ear); const inner = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.4, 6, 10), pinkM); inner.scale.z = 0.3; inner.position.copy(he.p).add(new V3(s * 0.08, 0.35, 0.05)); inner.rotation.z = -s * 0.3; bake(g, inner); } }
+    if (t === "kitty") { const furM = new THREE.MeshStandardMaterial({ color: new THREE.Color(k.color).offsetHSL(0, 0, -0.08), roughness: 0.9 }), pinkM = new THREE.MeshStandardMaterial({ color: 0xffb6d1 }); for (const s of [-1, 1]) { const he = topAt(body, s * 0.42, -0.05); if (!he) continue; const ear = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.32, 4), furM); ear.position.copy(he.p).add(new V3(0, 0.12, 0)); ear.rotation.z = -s * 0.35; ear.rotation.y = Math.PI / 4; bake(g, ear); const inner = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.2, 4), pinkM); inner.position.copy(he.p).add(new V3(s * 0.01, 0.11, 0.08)); inner.rotation.z = -s * 0.35; inner.rotation.y = Math.PI / 4; bake(g, inner); } for (const s of [-1, 1]) for (const dy of [-0.03, 0.03]) { const hw = front(body, s * 0.3, H * 0.3 + dy); if (!hw) continue; const wh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.012, 0.012), FM.eye); stick(g, wh, hw, 0.01, s * dy * 4); } }
+    if (t === "frog") { const grn = new THREE.MeshStandardMaterial({ color: new THREE.Color(k.color), roughness: 0.4 }); for (const s of [-1, 1]) { const he = topAt(body, s * 0.25, 0.1); if (!he) continue; const bump = new THREE.Mesh(new THREE.SphereGeometry(0.17, 18, 12), grn); bump.position.copy(he.p).add(new V3(0, 0.08, 0)); bake(g, bump); const w = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), new THREE.MeshStandardMaterial({ color: 0xffffff })); w.position.copy(he.p).add(new V3(0, 0.13, 0.1)); bake(g, w); const pu = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), FM.eye); pu.position.copy(he.p).add(new V3(0, 0.14, 0.18)); bake(g, pu); } }
+    if (t === "pig") { const pinkM = new THREE.MeshStandardMaterial({ color: new THREE.Color(k.color).offsetHSL(0, 0.1, -0.08), roughness: 0.7 }); for (const s of [-1, 1]) { const he = topAt(body, s * 0.5, -0.05); if (!he) continue; const ear = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.25, 3), pinkM); ear.position.copy(he.p).add(new V3(0, 0.08, 0.05)); ear.rotation.z = -s * 0.6; ear.rotation.x = 0.4; bake(g, ear); }
+      const hs = front(body, 0, H * 0.24); if (hs) { const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.08, 24).rotateX(Math.PI / 2), pinkM); stick(g, snout, hs, 0.03); for (const s of [-1, 1]) { const n = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), FM.mouth); stick(g, n, { p: hs.p.clone().add(new V3(s * 0.045, 0, 0)), n: hs.n }, 0.075); } } }
+    if (t === "bow") { const bowM = new THREE.MeshPhysicalMaterial({ color: 0xff5da2, roughness: 0.3, clearcoat: 1 }); const h = topAt(body, 0.35, -0.1); if (h) { for (const s of [-1, 1]) { const loop = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 10), bowM); loop.scale.set(1.3, 0.8, 0.45); loop.position.copy(h.p).add(new V3(s * 0.14, 0.1, 0)); loop.rotation.z = s * 0.4; bake(g, loop); } const knot = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), bowM); knot.position.copy(h.p).add(new V3(0, 0.1, 0.02)); bake(g, knot); } }
+    if (t === "horns") { for (const s of [-1, 1]) { const he = topAt(body, s * 0.3, -0.05); if (!he) continue; const horn = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.3, 14), M.gold); horn.position.copy(he.p).add(new V3(s * 0.04, 0.12, 0)); horn.rotation.z = -s * 0.35; bake(g, horn); } }
     if (t === "chick") { for (let i = -1; i <= 1; i++) { const h = topAt(body, i * 0.09, 0); if (!h) continue; const c = new THREE.Mesh(new THREE.SphereGeometry(0.08 - Math.abs(i) * 0.015, 14, 10), M.red); c.position.copy(h.p).add(new V3(0, 0.05 - Math.abs(i) * 0.015, 0)); bake(g, c); }
       const hb = front(body, 0, H * 0.4); if (hb) { const beak = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.15, 14).rotateX(Math.PI / 2), M.orange); stick(g, beak, hb, 0.06); }
       for (const s of [-1, 1]) { const hw = surfaceHit(body, new V3(s * 6, H * 0.38, 0), new V3(-s, 0, 0)); if (!hw) continue; const w = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffd23d, roughness: 0.7 })); w.scale.set(0.35, 0.7, 1); w.position.copy(hw.p).addScaledVector(hw.n, 0.02); w.rotation.z = s * 0.4; bake(g, w); } }
@@ -315,7 +366,7 @@ export function buildDumpling(kind, { lod = 1 } = {}) {
 }
 function build(kind) {
   const k = typeof kind === "string" ? byId(kind) : kind; const shape = SHAPES[k.shape]; const rand = rng(hash(k.id));
-  const S = shape.build(rand); const finish = shape.force && !["galaxy", "gold", "holo", "glow", "jelly", "glitter"].includes(k.finish) ? (shape.force === "crystal" && k.finish === "powder" ? "crystal" : shape.force) : k.finish;
+  const S = shape.build(rand); const finish = shape.force && !["galaxy", "gold", "holo", "glow", "jelly", "glitter", "diamond"].includes(k.finish) ? (shape.force === "crystal" && k.finish === "powder" ? "crystal" : shape.force) : k.finish;
   const kk = { ...k, finish };
   vertexColours(S.body, kk, shape);
   const g = new THREE.Group(); g.userData.kind = k.id;
@@ -417,10 +468,12 @@ export function makeHalves(kind) {
 function addFillExtra(half, F, c, rad, side) {
   const out = new V3(-side, 0, 0); const at = (dy, dz, lift) => c.clone().add(new V3(out.x * lift, dy, dz));
   if (F.extra === "beads") { const m = new THREE.MeshPhysicalMaterial({ color: 0x9fd0ff, roughness: 0.05, clearcoat: 1, transmission: LOW_TIER ? 0 : 0.6, thickness: 0.2 }); for (let i = 0; i < 9; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(rad * 0.13, 14, 10), m); const a = (i / 9) * TAU; b.position.copy(at(Math.sin(a) * rad * 0.5, Math.cos(a) * rad * 0.5, rad * 0.08)); b.userData.cap = true; half.add(b); } }
+  if (F.extra === "boba") { const m = new THREE.MeshPhysicalMaterial({ color: 0x2b1408, roughness: 0.1, clearcoat: 1 }); for (let i = 0; i < 10; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(rad * 0.12, 14, 10), m); const a = i * 2.4, r = rad * (0.2 + (i % 3) * 0.17); b.position.copy(at(Math.sin(a) * r, Math.cos(a) * r, rad * 0.07)); b.userData.cap = true; half.add(b); } }
   if (F.extra === "chips") { const m = new THREE.MeshStandardMaterial({ color: 0x2e170c, roughness: 0.5 }); for (let i = 0; i < 7; i++) { const b = new THREE.Mesh(new THREE.ConeGeometry(rad * 0.09, rad * 0.12, 8), m); const a = i * 2.4; b.position.copy(at(Math.sin(a) * rad * 0.45, Math.cos(a) * rad * 0.45, rad * 0.1)); b.rotation.z = -side * Math.PI / 2; b.userData.cap = true; half.add(b); } }
   if (side > 0) return; // the surprise friends only sit in the left half
   if (F.extra === "fish") { const fish = makeFish(); fish.scale.setScalar(rad * 0.9); fish.position.copy(at(0, 0, rad * 0.22)); fish.rotation.y = Math.PI / 2; fish.userData.pop = true; half.add(fish); half.userData.friend = fish; }
   if (F.extra === "chick") { const ch = makeChicken({ chick: true }); ch.group.scale.setScalar(rad * 2.6); ch.group.position.copy(at(-rad * 0.75, 0, rad * 0.15)); ch.group.rotation.y = Math.PI / 2; half.add(ch.group); half.userData.friend = ch.group; half.userData.friendAnim = ch; }
+  if (F.extra === "gem") { const gem = new THREE.Mesh(new THREE.OctahedronGeometry(rad * 0.38, 0), new THREE.MeshPhysicalMaterial({ color: 0xbff4ff, roughness: 0.02, metalness: 0.1, clearcoat: 1, iridescence: 1, emissive: 0x4fd8ff, emissiveIntensity: 0.25 })); gem.scale.y = 1.3; gem.position.copy(at(0, 0, rad * 0.3)); half.add(gem); half.userData.friend = gem; }
   if (F.extra === "coin") { const coin = makeCoin(); coin.scale.setScalar(rad * 1.3); coin.position.copy(at(0, 0, rad * 0.25)); coin.rotation.z = Math.PI / 2; half.add(coin); half.userData.friend = coin; }
   if (F.extra === "shell") { const sh = makeShell(); sh.scale.setScalar(rad * 0.9); sh.position.copy(at(-rad * 0.2, 0, rad * 0.2)); sh.rotation.y = Math.PI / 2; half.add(sh); half.userData.friend = sh; }
 }
@@ -456,11 +509,12 @@ export function makeEgg(golden = false) {
 }
 
 // ---- chickens (yes, you can buy a chicken) ----------------------------------------
-export const CHICKEN_COLORS = [{ name: "White", body: 0xf7f3ea, wing: 0xe9e2d4 }, { name: "Brown", body: 0xa65a2a, wing: 0x7f3f1b }, { name: "Golden", body: 0xe0a95c, wing: 0xc98c3f }, { name: "Black", body: 0x2a2a30, wing: 0x1a2a24 }, { name: "Speckled", body: 0xd9d2c5, wing: 0x8a8070 }];
+export const CHICKEN_COLORS = [{ name: "White", body: 0xf7f3ea, wing: 0xe9e2d4 }, { name: "Brown", body: 0xa65a2a, wing: 0x7f3f1b }, { name: "Golden", body: 0xe0a95c, wing: 0xc98c3f }, { name: "Black", body: 0x2a2a30, wing: 0x1a2a24 }, { name: "Speckled", body: 0xd9d2c5, wing: 0x8a8070 }, { name: "Sky Blue", body: 0x8ec5ff, wing: 0x5a9be8 }, { name: "Bubblegum", body: 0xffb3d1, wing: 0xff7fb0 }, { name: "Lavender", body: 0xd2b8ff, wing: 0xa98bea }, { name: "Mint", body: 0xa8f0cf, wing: 0x6fd3a5 }, { name: "Sunshine", body: 0xffe066, wing: 0xffc21a }];
+let chickEye = null; const chickMats = new Map(); const chickMat = (c, o = {}) => { const k = `${c}:${JSON.stringify(o)}`; if (!chickMats.has(k)) chickMats.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: 0.92, ...o })); return chickMats.get(k); };
 export function makeChicken({ color = CHICKEN_COLORS[0], chick = false } = {}) {
-  const g = new THREE.Group(); const soft = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.92 });
+  const g = new THREE.Group(); const soft = (c) => chickMat(c);
   const bodyC = chick ? 0xffe066 : color.body, wingC = chick ? 0xffd23d : color.wing;
-  const legM = new THREE.MeshStandardMaterial({ color: 0xf2a33a, roughness: 0.5 }), beakM = new THREE.MeshStandardMaterial({ color: 0xffb02e, roughness: 0.4 }), red = new THREE.MeshStandardMaterial({ color: 0xe0312b, roughness: 0.55 });
+  const legM = chickMat(0xf2a33a, { roughness: 0.5 }), beakM = chickMat(0xffb02e, { roughness: 0.4 }), red = chickMat(0xe0312b, { roughness: 0.55 }), shineM = chickMat(0xffffff, { emissive: 0xffffff });
   const rig = new THREE.Group(); g.add(rig);
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 18), soft(bodyC)); body.scale.set(0.95, 0.88, chick ? 1 : 1.25); body.position.y = 0.33; rig.add(body);
   const breast = new THREE.Mesh(new THREE.SphereGeometry(0.15, 18, 12), soft(bodyC)); breast.position.set(0, 0.36, 0.14); rig.add(breast);
@@ -471,8 +525,9 @@ export function makeChicken({ color = CHICKEN_COLORS[0], chick = false } = {}) {
   const beak = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.09, 10), beakM); beak.rotation.x = Math.PI / 2; beak.position.set(0, -0.01, chick ? 0.16 : 0.12); head.add(beak);
   if (!chick) { for (let i = 0; i < 3; i++) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.04 - Math.abs(i - 1) * 0.006, 10, 8), red); c.scale.set(0.6, 1, 1); c.position.set(0, 0.11 + (i === 1 ? 0.02 : 0), -0.03 + i * 0.04); head.add(c); }
     const wat = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), red); wat.scale.set(0.8, 1.4, 0.7); wat.position.set(0, -0.07, 0.09); head.add(wat); }
-  const eyeM = glossBlack(); for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(chick ? 0.028 : 0.022, 10, 8), eyeM); e.position.set(s * (chick ? 0.08 : 0.075), 0.03, chick ? 0.11 : 0.06); head.add(e); const sh = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff })); sh.position.set(s * (chick ? 0.088 : 0.082), 0.04, chick ? 0.135 : 0.08); head.add(sh); }
+  const eyeM = chickEye || (chickEye = glossBlack()); for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(chick ? 0.028 : 0.022, 10, 8), eyeM); e.position.set(s * (chick ? 0.08 : 0.075), 0.03, chick ? 0.11 : 0.06); head.add(e); const sh = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 4), shineM); sh.position.set(s * (chick ? 0.088 : 0.082), 0.04, chick ? 0.135 : 0.08); head.add(sh); }
   const legs = []; for (const s of [-1, 1]) { const piv = new THREE.Group(); piv.position.set(s * 0.08, 0.2, 0); const l = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.2, 6), legM); l.position.y = -0.1; piv.add(l); for (const a of [-0.5, 0, 0.5]) { const t = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.09, 5), legM); t.rotation.x = Math.PI / 2; t.position.set(Math.sin(a) * 0.04, -0.195, Math.cos(a) * 0.04); t.rotation.y = a; piv.add(t); } rig.add(piv); legs.push(piv); }
+  for (const grp of [rig, head, ...legs]) mergeStatic(grp); // one draw per material instead of one per part
   let flap = 0;
   return { group: g, head, flapNow() { flap = 0.7; },
     update(dt, t, speed = 0, peck = false) {

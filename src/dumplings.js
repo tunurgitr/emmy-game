@@ -14,7 +14,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 const $ = (id) => document.getElementById(id);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const SAVE_KEY = "emmy.dumpling.save.v1", LOOK_KEY = "emmy.dumpling.avatar";
-const MAX_HENS = 10;
+const MAX_HENS = 50, START_FOLLOW = 3; // new chickens join the line until 3 are following; after that they go to your yard
 
 // --------------------------------------------------------------------------
 //  Sound — generated with Web Audio (shares the mute flag with the other games)
@@ -59,27 +59,31 @@ setMuteLabel();
 // --------------------------------------------------------------------------
 //  State
 // --------------------------------------------------------------------------
-function fresh() { return { coins: 100, owned: {}, opened: 0, freeSteamer: true, hens: [], hat: false, pity: 0, squishBonus: 0, peeked: {} }; }
-function load() { try { const raw = localStorage.getItem(SAVE_KEY); if (raw) return { ...fresh(), ...JSON.parse(raw) }; } catch {} return fresh(); }
+function fresh() { return { coins: 100, owned: {}, opened: 0, freeSteamer: true, hens: [], hat: false, pity: 0, squishBonus: 0, peeked: {}, eggs: { plain: 0, golden: 0 }, eggsSold: 0, nestAt: 0, follow: 0, yardEggs: 0, yardProgress: 0, henNames: [], hats: [], luckyNext: false, speedUntil: 0 }; }
+const HEN_NAMES = ["Nugget", "Clucky", "Peep", "Waffles", "Pancake", "Sunny", "Pip", "Dumpling", "Bok Bok", "Noodle", "Mochi", "Biscuit", "Popcorn", "Feathers", "Cheeky", "Daisy", "Pepper", "Coco", "Taco", "Sprinkles", "Henrietta", "Eggbert", "Chirpy", "Butter", "Ziggy"];
+function henName(i) { return HEN_NAMES[i % HEN_NAMES.length] + (i >= HEN_NAMES.length ? ` ${Math.floor(i / HEN_NAMES.length) + 1}` : ""); }
+const EGG_PRICE = { plain: 5, golden: 30 }, NEST_WAIT = 60000;
+function load() { try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const s = { ...fresh(), ...JSON.parse(raw) }; s.eggs = { plain: 0, golden: 0, ...s.eggs }; s.hats = s.hats || []; if (s.follow == null) s.follow = Math.min(s.hens.length, START_FOLLOW); s.henNames = s.henNames || []; while (s.henNames.length < s.hens.length) s.henNames.push(henName(s.henNames.length)); return s; } } catch {} return fresh(); }
 let state = load();
 function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
 const ownedKinds = () => CATALOG.filter((k) => state.owned[k.id]).length;
 
 // mystery steamers — odds are printed in the shop
 const STEAMERS = {
-  classic: { name: "Bamboo Steamer", ico: "🧺", price: 20, shop: "house", desc: "One mystery squishy dumpling. Which one will it be?", odds: { common: 60, uncommon: 25, rare: 10, super: 4, secret: 0.8, golden: 0.2 } },
-  sweet:   { name: "Sweet Steamer", ico: "🍡", price: 40, shop: "cafe", desc: "Fancier dumplings — better odds for Rare and up!", odds: { common: 28, uncommon: 38, rare: 22, super: 9, secret: 2.4, golden: 0.6 } },
-  lucky:   { name: "Lucky Lantern Steamer", ico: "🏮", price: 90, shop: "lucky", desc: "Always Rare or better — the best shot at Secret and Golden!", odds: { rare: 60, super: 28, secret: 9, golden: 3 } },
+  classic: { name: "Bamboo Steamer", ico: "🧺", price: 20, shop: "house", desc: "One mystery squishy dumpling. Which one will it be?", odds: { common: 55, uncommon: 26, rare: 11, super: 4.5, epic: 2, mythic: 0.8, secret: 0.5, golden: 0.15, diamond: 0.05 } },
+  sweet:   { name: "Sweet Steamer", ico: "🍡", price: 40, shop: "cafe", desc: "Fancier dumplings — better odds for Rare and up!", odds: { common: 24, uncommon: 34, rare: 22, super: 10, epic: 5.5, mythic: 2.2, secret: 1.6, golden: 0.5, diamond: 0.2 } },
+  lucky:   { name: "Lucky Lantern Steamer", ico: "🏮", price: 90, shop: "lucky", desc: "Always Rare or better — a real shot at Epic, Mythic and Secret!", odds: { rare: 48, super: 25, epic: 14, mythic: 7, secret: 4, golden: 1.5, diamond: 0.5 } },
+  diamond: { name: "Diamond Steamer", ico: "💎", price: 250, shop: "lucky", desc: "Always Epic or better — the best chance anywhere at Golden and Diamond!", odds: { epic: 52, mythic: 26, secret: 13, golden: 6, diamond: 3 } },
 };
 const PITY = 8; // every 8th steamer without a Rare-or-better is guaranteed Rare+
 function rollRarity(odds) { const entries = Object.entries(odds); let r = Math.random() * entries.reduce((s, [, w]) => s + w, 0); for (const [k, w] of entries) { if ((r -= w) <= 0) return k; } return entries[0][0]; }
 function rollKind(type) {
   const S = STEAMERS[type]; let rar = rollRarity(S.odds);
-  if (state.pity >= PITY - 1 && RARITY[rar].order < 2) rar = rollRarity({ rare: 70, super: 24, secret: 5, golden: 1 });
+  if ((state.pity >= PITY - 1 || state.luckyNext) && RARITY[rar].order < 2) rar = rollRarity({ rare: 62, super: 22, epic: 9, mythic: 4, secret: 2, golden: 0.7, diamond: 0.3 });
   const pool = CATALOG.filter((k) => k.rarity === rar); let k = pool[Math.floor(Math.random() * pool.length)];
   // a gentle nudge toward ones you don't have yet
   if (state.owned[k.id] && Math.random() < 0.5) { const fresh = pool.filter((p) => !state.owned[p.id]); if (fresh.length) k = fresh[Math.floor(Math.random() * fresh.length)]; }
-  state.pity = RARITY[rar].order >= 2 ? 0 : state.pity + 1;
+  state.pity = RARITY[rar].order >= 2 ? 0 : state.pity + 1; state.luckyNext = false;
   return k;
 }
 
@@ -98,7 +102,8 @@ function confetti(n = 120, colors = ["#ff8ac8", "#ffc93c", "#3d8bfd", "#2e9d6a",
 }
 function renderPills() {
   $("coinsPill").textContent = `🪙 ${state.coins}`; $("bookPill").textContent = `📖 ${ownedKinds()}/${CATALOG.length}`;
-  $("hensPill").style.display = state.hens.length ? "" : "none"; $("hensPill").textContent = `🐔 ${state.hens.length}`;
+  $("hensPill").style.display = state.hens.length ? "" : "none"; $("hensPill").textContent = `🐔 ${state.follow}/${state.hens.length}`; $("hensPill").title = `${state.follow} following you, ${state.hens.length - state.follow} at home in your yard`;
+  const eggs = state.eggs.plain + state.eggs.golden; $("eggsPill").style.display = eggs ? "" : "none"; $("eggsPill").textContent = `🧺 ${state.eggs.plain}🥚${state.eggs.golden ? ` ${state.eggs.golden}🌟` : ""}`;
 }
 function addCoins(n, why) { state.coins += n; save(); renderPills(); bump($("coinsPill")); if (why) toast(why); }
 
@@ -118,15 +123,49 @@ function steamerItem(type) {
   return `<div class="item"><div class="ico">${S.ico}</div><h3>${S.name}</h3><div style="font-size:13px;color:var(--muted)">${S.desc}</div><div class="odds">${oddsHtml(S.odds)}</div>
     <button class="act ${free ? "btn-green" : "btn-red"}" data-buy="${type}" ${!free && state.coins < S.price ? "disabled" : ""}>${free ? "🎁 FREE first one!" : `Buy 🪙 ${S.price}`}</button></div>`;
 }
+// ---- café treats ----
+const TREATS = [
+  { id: "boba", ico: "🧋", name: "Bubble Tea", price: 12, desc: "Slurp! Super-speedy legs for 60 seconds." },
+  { id: "cookie", ico: "🥠", name: "Fortune Cookie", price: 15, desc: "“Luck is coming!” Your next steamer is Rare or better." },
+  { id: "bun", ico: "🍡", name: "Mochi Skewer", price: 5, desc: "A yummy snack… and your chickens get a treat too (BAWK!)." },
+];
+const treatItem = (T) => `<div class="item"><div class="ico">${T.ico}</div><h3>${T.name}</h3><div style="font-size:13px;color:var(--muted)">${T.desc}</div>${T.id === "cookie" && state.luckyNext ? `<div style="font-weight:900;color:#2e9d6a">✓ Your luck is ready!</div>` : ""}<button class="act btn-pink" data-treat="${T.id}" ${state.coins < T.price || (T.id === "cookie" && state.luckyNext) ? "disabled" : ""}>Buy 🪙 ${T.price}</button></div>`;
+function buyTreat(id) {
+  const T = TREATS.find((t) => t.id === id); if (!T || state.coins < T.price) { SFX.error(); return; } state.coins -= T.price; save(); renderPills(); SFX.buy();
+  if (id === "boba") { state.speedUntil = Date.now() + 60000; save(); town.setSpeedBoost(1.55); closeModal(); toast("🧋 Slurrrp! You're SUPER speedy for 60 seconds — zoom zoom!", 3000); }
+  if (id === "cookie") { state.luckyNext = true; save(); toast("🥠 Your fortune: “A Rare dumpling is in your future!” Your next steamer is Rare or better.", 3800); openShop("cafe"); }
+  if (id === "bun") { closeModal(); SFX.bawk(); town.chickens.forEach((c) => c.ch.flapNow()); toast(state.hens.length ? "🍡 Yum! Your chickens are flapping with joy! BAWK BAWK!" : "🍡 Yum! Chewy and sweet!", 2600); }
+}
+setInterval(() => { if (state.speedUntil && Date.now() > state.speedUntil) { state.speedUntil = 0; save(); town && town.setSpeedBoost(1); toast("🧋 Your speedy legs wore off. More bubble tea at the 🍡 café!"); } }, 1000);
+// ---- the boutique: hats to buy ----
+const HATS = [
+  { e: "🥟", name: "Dumpling Hat", price: 25 }, { e: "🍓", name: "Strawberry Hat", price: 20 }, { e: "🐼", name: "Panda Hat", price: 30 }, { e: "🐸", name: "Froggy Hat", price: 30 },
+  { e: "🦄", name: "Unicorn Hat", price: 40 }, { e: "🌈", name: "Rainbow Hat", price: 35 }, { e: "🧁", name: "Cupcake Hat", price: 25 }, { e: "🎧", name: "Headphones", price: 30 },
+];
+function renderBoutique() {
+  const body = $("shopBody");
+  body.innerHTML = `<h2>👕 Dress-Up Boutique</h2><div class="keeper">💃 <b>Jojo:</b> “Hats, hats, HATS! Buy one and wear it any time from 👕 My look. Or try on your whole outfit at the mirror!”</div>
+    <div style="margin-bottom:12px"><button class="act btn-purple" id="tryOn">🪞 Change my look</button></div>
+    <div class="items">${HATS.map((h) => { const own = state.hats.includes(h.e), on = look.hat === h.e; return `<div class="item" style="width:150px"><div class="ico">${h.e}</div><h3>${h.name}</h3><button class="act ${own ? (on ? "btn-white" : "btn-green") : "btn-red"}" data-hat="${h.e}" ${!own && state.coins < h.price ? "disabled" : ""}>${own ? (on ? "✓ Wearing it" : "Wear it") : `Buy 🪙 ${h.price}`}</button></div>`; }).join("")}</div>`;
+  $("tryOn").onclick = () => { closeModal(); openLook(); };
+  body.querySelectorAll("[data-hat]").forEach((b) => (b.onclick = () => { const h = HATS.find((x) => x.e === b.dataset.hat); if (!state.hats.includes(h.e)) { if (state.coins < h.price) return; state.coins -= h.price; state.hats.push(h.e); save(); renderPills(); SFX.buy(); toast(`${h.e} You bought the ${h.name}! Looking great!`); } look.hat = h.e; saveLook(); town.setAvatar(look); SFX.tap(); renderBoutique(); }));
+  openModal("shopModal");
+}
+// ---- the swap shop also sells dumplings you haven't found yet ----
+let swapOffers = null;
+function swapOffer() { if (!swapOffers || swapOffers.some((id) => state.owned[id])) { const missing = CATALOG.filter((k) => !state.owned[k.id] && RARITY[k.rarity].order <= 3); swapOffers = missing.sort(() => Math.random() - 0.5).slice(0, 4).map((k) => k.id); } return swapOffers.map(byId); }
+const swapPrice = (k) => RARITY[k.rarity].value * 4;
 const pityNote = () => `<p class="sub">🍀 Lucky meter: ${state.pity}/${PITY - 1} — every ${PITY}th steamer without a Rare is guaranteed Rare or better!</p>`;
 function openShop(id) {
   const body = $("shopBody");
   if (id === "house") body.innerHTML = `<h2>🥟 Steamy Dumpling House</h2><div class="keeper">👨‍🍳 <b>Chef Bo:</b> “Fresh from the steamer! Every basket has one squishy dumpling inside — lift the lid to see who you got!”</div><div class="items">${steamerItem("classic")}${steamerItem("sweet")}</div>${pityNote()}`;
-  else if (id === "cafe") body.innerHTML = `<h2>🍡 Sweet Mochi Café</h2><div class="keeper">🧁 <b>Mimi:</b> “Our Sweet Steamers have the fanciest dumplings in town. Sprinkles not included… okay, sometimes included.”</div><div class="items">${steamerItem("sweet")}</div>${pityNote()}`;
-  else if (id === "lucky") body.innerHTML = `<h2>🏮 Lucky Lantern Shop</h2><div class="keeper">✨ <b>Lin:</b> “These steamers are blessed with extra luck. Always Rare or better — and the Golden ones love to hide in here!”</div><div class="items">${steamerItem("lucky")}${steamerItem("sweet")}</div>${pityNote()}`;
+  else if (id === "cafe") body.innerHTML = `<h2>🍡 Sweet Mochi Café</h2><div class="keeper">🧁 <b>Mimi:</b> “Treats, snacks and our fancy Sweet Steamers! Sprinkles not included… okay, sometimes included.”</div><div class="items">${steamerItem("sweet")}${TREATS.map(treatItem).join("")}</div>${pityNote()}`;
+  else if (id === "dress") renderBoutique();
+  else if (id === "lucky") body.innerHTML = `<h2>🏮 Lucky Lantern Shop</h2><div class="keeper">✨ <b>Lin:</b> “These steamers are blessed with extra luck. And the 💎 Diamond Steamer? Only the rarest dumplings in town live in there!”</div><div class="items">${steamerItem("lucky")}${steamerItem("diamond")}</div>${pityNote()}`;
   else if (id === "coop") renderCoop();
   else if (id === "swap") renderSwap();
   if (["house", "cafe", "lucky"].includes(id)) body.querySelectorAll("[data-buy]").forEach((b) => (b.onclick = () => buySteamer(b.dataset.buy)));
+  body.querySelectorAll("[data-treat]").forEach((b) => (b.onclick = () => buyTreat(b.dataset.treat)));
   openModal("shopModal");
 }
 function buySteamer(type) {
@@ -136,26 +175,78 @@ function buySteamer(type) {
   save(); renderPills(); SFX.buy(); closeModal(); openSteamer(type);
 }
 let henPick = 0;
+// ---- the flock: choose how many chickens walk with you (the rest stay in your yard) ----
+// followers are always state.hens[0 .. follow); toggling a chicken just moves it across that line
+function flockHtml() {
+  const n = state.hens.length, f = state.follow;
+  const chip = (i) => { const c = CHICKEN_COLORS[state.hens[i] % CHICKEN_COLORS.length], on = i < f; return `<button class="hen ${on ? "on" : ""}" data-hen-toggle="${i}"><span class="hdot" style="background:#${c.body.toString(16).padStart(6, "0")}"></span><b>${state.henNames[i]}</b><small>${on ? "🚶 Following" : "🏡 Home"}</small></button>`; };
+  return `<div class="keeper" style="text-align:center"><b>Tap a chicken to bring it along or send it home.</b><div style="margin-top:4px;color:var(--muted);font-size:13px">🚶 Following you: ${f} · 🏡 In your yard: ${n - f}</div>
+    <div class="flock">${state.hens.map((_, i) => chip(i)).join("")}</div>
+    ${f ? `<button class="act btn-white" data-flock-home style="margin-top:8px;font-size:14px;padding:9px 14px">🏡 Send everyone home</button>` : ""}</div>`;
+}
+function wireFlock(root, rerender) {
+  root.querySelectorAll("[data-hen-toggle]").forEach((b) => (b.onclick = () => {
+    const i = +b.dataset.henToggle, on = i < state.follow; const [c] = state.hens.splice(i, 1), [nm] = state.henNames.splice(i, 1);
+    if (on) state.follow--; const at = state.follow; state.hens.splice(at, 0, c); state.henNames.splice(at, 0, nm); if (!on) state.follow++;
+    save(); renderPills(); town.setFlock(state.hens, state.follow); SFX.bawk(); toast(on ? `🏡 ${nm} went home to your chicken yard.` : `🚶 ${nm} is following you now!`, 1800); rerender();
+  }));
+  const home = root.querySelector("[data-flock-home]"); if (home) home.onclick = () => { state.follow = 0; save(); renderPills(); town.setFlock(state.hens, 0); SFX.bawk(); toast("🏡 All your chickens went home to the yard."); rerender(); };
+}
+// chickens at home lay eggs in the yard over time — collect them at the yard gate
+const YARD_EGG_EVERY = 45; // seconds per egg, per chicken
+setInterval(() => { const home = state.hens.length - state.follow; if (!home || state.yardEggs >= 60) return; state.yardProgress += (5 * home) / YARD_EGG_EVERY; while (state.yardProgress >= 1 && state.yardEggs < 60) { state.yardProgress -= 1; state.yardEggs++; } save(); }, 5000);
+function openYard() {
+  const body = $("shopBody"), n = state.hens.length, home = n - state.follow;
+  body.innerHTML = `<h2>🐔 My Chicken Yard</h2>${n ? flockHtml() : ""}
+    <div class="keeper">${!n ? "Your yard is empty! Buy chickens at 🐔 Farmer Fran's Barn." : home ? `${home} chicken${home > 1 ? "s are" : " is"} pecking around here. They lay eggs while they're home!` : "Everyone is out walking with you! Send some home and they'll lay eggs here."}</div>
+    <div class="items"><div class="item"><div class="ico">🥚</div><h3>Eggs in the yard</h3><div style="font-size:26px;font-weight:900">${state.yardEggs}</div><button class="act btn-gold" id="yardCollect" ${state.yardEggs ? "" : "disabled"}>${state.yardEggs ? "🧺 Collect them all" : "None yet — check back soon!"}</button></div></div>`;
+  wireFlock(body, openYard);
+  $("yardCollect").onclick = () => { let gold = 0; for (let i = 0; i < state.yardEggs; i++) { if (Math.random() < 0.08) { state.eggs.golden++; gold++; } else state.eggs.plain++; } const got = state.yardEggs; state.yardEggs = 0; save(); renderPills(); bump($("eggsPill")); SFX.egg(); toast(`🧺 You collected ${got} egg${got > 1 ? "s" : ""}${gold ? ` (${gold} golden!)` : ""}! Sell them at 🐔 Farmer Fran's Barn.`, 3200); openYard(); };
+  if (!modalOpen) openModal("shopModal");
+}
+const eggValue = () => state.eggs.plain * EGG_PRICE.plain + state.eggs.golden * EGG_PRICE.golden;
+function gotEgg(golden, from = "") { state.eggs[golden ? "golden" : "plain"]++; save(); renderPills(); bump($("eggsPill")); SFX.egg(); const n = state.eggs.plain + state.eggs.golden;
+  toast(`${golden ? "🌟 A GOLDEN egg!" : "🥚 Got an egg!"}${from} ${n} in your basket — sell them at 🐔 Farmer Fran's Barn.`, 2600); }
+function collectNests() {
+  const wait = state.nestAt - Date.now(); if (wait > 0) { SFX.error(); toast(`🐔 The hens are still laying… check back in ${Math.ceil(wait / 1000)} seconds!`); return; }
+  const n = 2 + Math.floor(Math.random() * 3); let golden = 0; for (let i = 0; i < n; i++) { if (Math.random() < 0.12) { state.eggs.golden++; golden++; } else state.eggs.plain++; }
+  state.nestAt = Date.now() + NEST_WAIT; save(); renderPills(); bump($("eggsPill")); SFX.egg(); SFX.bawk(); town.setNests(false);
+  toast(`🧺 You collected ${n} eggs from the nests${golden ? ` (${golden} golden!)` : ""}! Sell them at Fran's counter.`, 3200);
+  setTimeout(() => town.setNests(true), NEST_WAIT);
+}
 function renderCoop() {
   const body = $("shopBody"), full = state.hens.length >= MAX_HENS;
-  body.innerHTML = `<h2>🐔 Farmer Fran's Chickens</h2><div class="keeper">🧑‍🌾 <b>Farmer Fran:</b> “${state.hens.length ? `You've got ${state.hens.length} chicken${state.hens.length > 1 ? "s" : ""} following you around! ` : ""}A chicken will follow you <i>everywhere</i>. And sometimes it lays eggs you can collect for coins. Tap one to say hi!”</div>
+  body.innerHTML = `<h2>🐔 Farmer Fran's Chickens</h2><div class="keeper">🧑‍🌾 <b>Farmer Fran:</b> “${state.hens.length ? `You've got ${state.hens.length} chicken${state.hens.length > 1 ? "s" : ""}! ` : ""}Chickens can follow you around, or live in your 🐔 chicken yard next to your house (they lay eggs there too). Bring me your eggs and I'll buy them!”</div>
+    ${state.hens.length ? flockHtml() : ""}
     <div class="items">
       <div class="item"><div class="ico">🐔</div><h3>A Chicken</h3><div style="font-size:13px;color:var(--muted)">Pick a colour:</div><div class="hencolors">${CHICKEN_COLORS.map((c, i) => `<button data-hen="${i}" class="${i === henPick ? "sel" : ""}" title="${c.name}" style="background:#${c.body.toString(16).padStart(6, "0")}"></button>`).join("")}</div>
-        <button class="act btn-red" id="buyHen" ${full || state.coins < 30 ? "disabled" : ""}>${full ? "Conga line is full! 🐔×10" : "Buy 🪙 30"}</button></div>
+        <button class="act btn-red" id="buyHen" ${full || state.coins < 30 ? "disabled" : ""}>${full ? `Conga line is full! 🐔×${MAX_HENS}` : "Buy 🪙 30"}</button></div>
+      <div class="item"><div class="ico">🧺</div><h3>Sell your eggs</h3><div style="font-size:13px;color:var(--muted)">Fran buys every egg!<br>🥚 = 🪙 ${EGG_PRICE.plain} · 🌟 golden = 🪙 ${EGG_PRICE.golden}</div><div style="font-size:15px;font-weight:900">Your basket: 🥚 ${state.eggs.plain} · 🌟 ${state.eggs.golden}</div>
+        <button class="act btn-gold" id="sellEggs" ${state.eggs.plain + state.eggs.golden ? "" : "disabled"}>${state.eggs.plain + state.eggs.golden ? `Sell all for 🪙 ${eggValue()}` : "No eggs yet"}</button></div>
       <div class="item"><div class="ico">🎩</div><h3>Chicken Hat</h3><div style="font-size:13px;color:var(--muted)">A fancy hat… that is also a chicken. Wear it from 👕 My look.</div>
         <button class="act ${state.hat ? "btn-white" : "btn-red"}" id="buyHat" ${state.hat || state.coins < 15 ? "disabled" : ""}>${state.hat ? "✓ You own it!" : "Buy 🪙 15"}</button></div>
     </div>`;
+  $("sellEggs").onclick = () => { const v = eggValue(), n = state.eggs.plain + state.eggs.golden; if (!n) return; state.eggsSold += n; state.eggs = { plain: 0, golden: 0 }; addCoins(v, `🧺 Sold ${n} egg${n > 1 ? "s" : ""} for 🪙 ${v}!`); flyTo($("coinsPill"), "🪙", Math.min(12, n * 2)); SFX.cash(); if (v >= 30) confetti(70); renderCoop(); };
   body.querySelectorAll("[data-hen]").forEach((b) => (b.onclick = () => { henPick = +b.dataset.hen; SFX.bawk(); renderCoop(); }));
-  $("buyHen").onclick = () => { if (state.coins < 30 || state.hens.length >= MAX_HENS) return; state.coins -= 30; state.hens.push(henPick); save(); renderPills(); town.addChicken(henPick); SFX.bawk(); bump($("hensPill")); closeModal(); toast(state.hens.length === 1 ? "🐔 BAWK! Your chicken is following you. Look behind you!" : `🐔 BAWK! That's ${state.hens.length} chickens in your conga line!`, 3500); };
+  $("buyHen").onclick = () => { if (state.coins < 30 || state.hens.length >= MAX_HENS) return; state.coins -= 30; const follows = state.follow < START_FOLLOW;
+    // keep the followers at the front of the list, so the line is always hens[0..follow)
+    const name = henName(state.hens.length);
+    if (follows) { state.hens.splice(state.follow, 0, henPick); state.henNames.splice(state.follow, 0, name); state.follow++; } else { state.hens.push(henPick); state.henNames.push(name); }
+    save(); renderPills(); town.setFlock(state.hens, state.follow); SFX.bawk(); bump($("hensPill")); renderCoop();
+    toast(follows ? `🐔 BAWK! Meet ${name} — look behind you, ${name} is following you!` : `🐔 BAWK! Meet ${name}! ${name} went home to your 🐔 chicken yard. Tap ${name} below to bring them along.`, 4000); };
+  wireFlock(body, renderCoop);
   $("buyHat").onclick = () => { if (state.hat || state.coins < 15) return; state.coins -= 15; state.hat = true; look.hat = "🐔"; saveLook(); town.setAvatar(look); save(); renderPills(); SFX.bawk(); closeModal(); toast("🐔 You're wearing your Chicken Hat! (Swap it any time in 👕 My look.)", 3500); };
   openModal("shopModal");
 }
 function renderSwap() {
   const body = $("shopBody"); const extras = CATALOG.filter((k) => (state.owned[k.id] || 0) > 1);
   const total = extras.reduce((s, k) => s + RARITY[k.rarity].value * (state.owned[k.id] - 1), 0);
-  body.innerHTML = `<h2>🔄 Swap Stand</h2><div class="keeper">🎩 <b>Mr. Swap:</b> “Got doubles? I'll swap your extra dumplings for coins. Don't worry — you always keep at least one of each!”</div>
+  const offers = swapOffer();
+  body.innerHTML = `<h2>🔄 Swap Shop</h2><div class="keeper">🎩 <b>Mr. Swap:</b> “Got doubles? I'll swap your extra dumplings for coins — you always keep at least one of each. And I've got a few dumplings for sale that you haven't found yet!”</div>
+    ${offers.length ? `<h3 style="margin:6px 0">🛒 For sale (ones you haven't found!)</h3>` + offers.map((k) => `<div class="swaprow"><img data-thumb="${k.id}" alt=""><div class="n">${k.name}<small style="color:${RARITY[k.rarity].color}">${RARITY[k.rarity].name} · not on your shelf yet</small></div><button class="act btn-red" data-buydump="${k.id}" ${state.coins < swapPrice(k) ? "disabled" : ""}>Buy 🪙 ${swapPrice(k)}</button></div>`).join("") + `<h3 style="margin:14px 0 6px">🔄 Your extras</h3>` : ""}
     ${extras.length ? `<div style="margin-bottom:10px"><button class="act btn-green" id="swapAll">Swap all extras for 🪙 ${total}</button></div>` + extras.map((k) => `<div class="swaprow"><img data-thumb="${k.id}" alt=""><div class="n">${k.name}<small style="color:${RARITY[k.rarity].color}">${RARITY[k.rarity].name} · you have ×${state.owned[k.id]}</small></div><button class="act btn-gold" data-swap="${k.id}">🪙 ${RARITY[k.rarity].value}</button></div>`).join("") : `<p class="sub">No extras yet! When you get the same dumpling twice, bring the spare here.</p>`}`;
   body.querySelectorAll("[data-swap]").forEach((b) => (b.onclick = () => { const k = byId(b.dataset.swap); state.owned[k.id]--; addCoins(RARITY[k.rarity].value); SFX.coin(); renderSwap(); }));
+  body.querySelectorAll("[data-buydump]").forEach((b) => (b.onclick = () => { const k = byId(b.dataset.buydump); if (state.coins < swapPrice(k)) return; state.coins -= swapPrice(k); state.owned[k.id] = (state.owned[k.id] || 0) + 1; save(); renderPills(); SFX.buy(); closeModal(); openTable(k.id, { fromSteamer: false, isNew: true }); toast(`🛒 You bought ${k.name}! It's on your shelf now.`, 3000); }));
   if ($("swapAll")) $("swapAll").onclick = () => { for (const k of extras) state.owned[k.id] = 1; addCoins(total, `🔄 Swapped for 🪙 ${total}!`); SFX.coin(); flyTo($("coinsPill"), "🪙", 8); renderSwap(); };
   fillThumbs(body); openModal("shopModal");
 }
@@ -164,7 +255,7 @@ function renderSwap() {
 function renderBook() {
   const have = ownedKinds(); $("bookCount").textContent = `${have} / ${CATALOG.length} found`; $("bookBar").style.width = `${(have / CATALOG.length) * 100}%`;
   $("rarityKey").innerHTML = Object.values(RARITY).map((r) => `<span style="background:${r.color}">${r.name}</span>`).join("");
-  const groups = [...Object.entries(FLAVOURS).map(([f, F]) => [F.name, CATALOG.filter((k) => k.flavour === f)]), ["✨ Secret & Golden", CATALOG.filter((k) => !k.flavour)]];
+  const groups = [...Object.entries(FLAVOURS).map(([f, F]) => [F.name, CATALOG.filter((k) => k.flavour === f)]), ["✨ Specials", CATALOG.filter((k) => !k.flavour).sort((a, b) => RARITY[a.rarity].order - RARITY[b.rarity].order)]];
   $("bookBody").innerHTML = groups.map(([title, list]) => `<div class="section">${title} <span style="color:var(--muted);font-size:12px">${list.filter((k) => state.owned[k.id]).length}/${list.length}</span></div><div class="shelf">${list.map((k) => { const n = state.owned[k.id] || 0; return n
     ? `<div class="slot" style="--rc:${RARITY[k.rarity].color}" data-play="${k.id}"><img data-thumb="${k.id}" alt=""><div class="nm">${k.name}</div>${n > 1 ? `<div class="ct">×${n}</div>` : ""}</div>`
     : `<div class="slot locked" style="--rc:${RARITY[k.rarity].color}55"><div class="q">?</div><div class="nm">${RARITY[k.rarity].name}</div></div>`; }).join("")}</div>`).join("");
@@ -216,7 +307,7 @@ function reveal(quiet = false) {
   card.innerHTML = `${isNew ? `<div class="newb">NEW!</div>` : ""}<span class="rar">${R.name}</span><h2>${k.name}</h2><div class="meta">${quiet ? `On your shelf ×${state.owned[k.id] || 1}` : isNew ? `#${ownedKinds()} of ${CATALOG.length} found!` : `You have ×${state.owned[k.id]} — swap extras at the 🔄 Swap Stand`}</div>${k.blurb ? `<div class="blurb">${k.blurb}</div>` : ""}<div class="blurb">🤏 Press & hold to squish • drag to spin</div>`;
   requestAnimationFrame(() => card.classList.add("show"));
   renderTableButtons();
-  if (!quiet) { if (R.order >= 4) { SFX.wow(); confetti(220, k.rarity === "golden" ? ["#ffc93c", "#fff3b0", "#f5a300", "#fff"] : undefined); } else if (R.order >= 2 || isNew) { SFX.win(); if (R.order >= 2) confetti(110); } else SFX.ding(); }
+  if (!quiet) { if (R.order >= 4) { SFX.wow(); confetti(k.rarity === "diamond" ? 360 : 220, k.rarity === "golden" ? ["#ffc93c", "#fff3b0", "#f5a300", "#fff"] : k.rarity === "diamond" ? ["#38c7ff", "#bff4ff", "#ffffff", "#ffd6ff"] : undefined); } else if (R.order >= 2 || isNew) { SFX.win(); if (R.order >= 2) confetti(110); } else SFX.ding(); }
 }
 function renderTableButtons() {
   const { type } = table, peek = table.ctrl.peeking, S = type && STEAMERS[type];
@@ -248,7 +339,7 @@ function renderLook() {
   const chip = (t) => { const b = document.createElement("button"); b.className = "chip"; b.textContent = t; return b; };
   row("Skin", "skin", LOOK.skin, sw); row("Hair colour", "hair", LOOK.hair, sw); row("Hair style", "hairStyle", LOOK.hairStyle, (v) => chip(STYLE_LABEL[v])); row("Eyes", "eyes", LOOK.eyes, sw);
   row("Expression", "mood", LOOK.mood, (v) => chip(MOOD_LABEL[v])); row("Shirt", "shirt", LOOK.shirt, sw); row("Pants", "pants", LOOK.pants, sw); row("Shoes", "shoes", LOOK.shoes, sw);
-  row("Hat", "hat", state.hat ? [...LOOK.hat, "🐔"] : LOOK.hat, (v) => chip(v === "🐔" ? "🐔 Chicken Hat" : v || "None"));
+  row("Hat", "hat", [...LOOK.hat, ...state.hats, ...(state.hat ? ["🐔"] : [])], (v) => chip(v === "🐔" ? "🐔 Chicken Hat" : v || "None"));
 }
 let lookPrev = null;
 function startLookPreview() {
@@ -384,10 +475,12 @@ function interact(it) {
   if (!it || table || modalOpen || game || fading) return;
   if (it.kind === "door") { useDoor(it.door, "in"); return; }
   SFX.tap();
-  if (it.id === "dress" || it.id === "mirror") openLook();
+  if (it.id === "mirror") openLook();
   else if (it.id === "book") openBook();
   else if (it.id === "delivery") { if (job) toast("You're already on a delivery! 🛵"); else openJobInfo(); }
   else if (it.id === "catch") startCatch();
+  else if (it.id === "nests") collectNests();
+  else if (it.id === "yard") openYard();
   else openShop(it.id);
 }
 function openJobInfo() {
@@ -402,15 +495,15 @@ try {
     onPrompt: (it) => { $("prompt").classList.toggle("show", !!it); if (it) $("interact").textContent = `▶ ${it.label}`; },
     onInteract: interact,
     onDoor: (id, dir) => useDoor(id, dir),
-    onArea: (id) => { $("hint").textContent = id === "out" ? "🥟 Walk through a shop door to go inside • drag to look • tap the ground to walk" : "🚪 Walk back out through the door to leave"; },
+    onArea: (id) => { if (id === "coop") town.setNests(Date.now() >= state.nestAt); $("hint").textContent = id === "out" ? "🥟 Walk through a shop door to go inside • drag to look • tap the ground to walk" : "🚪 Walk back out through the door to leave"; },
     onPickup: (what, n, golden) => {
       if (what === "coin") { state.coins += n; save(); renderPills(); bump($("coinsPill")); SFX.coin(); }
       else if (what === "laid") { SFX.bawk(); if (n || !state.seenEgg) { state.seenEgg = true; save(); toast(n ? "✨ A chicken laid a GOLDEN egg! Go grab it!" : "🥚 Your chicken laid an egg! Walk over it to collect it.", 3500); } }
-      else if (what === "egg") { addCoins(n, golden ? `🌟 Golden egg! +${n} coins` : `🥚 Eggcellent! +${n} coins`); SFX.egg(); }
+      else if (what === "egg") gotEgg(golden);
     },
     onChickenTap: () => { SFX.bawk(); toast(pick(["🐔 BAWK!", "🐔 Bawk bawk!", "🐔 *happy chicken noises*", "🐔 BAWK?!", "🐔 Cluck cluck!"]), 1200); },
   });
-  for (const ci of state.hens) town.addChicken(ci, true);
+  town.setFlock(state.hens, state.follow); if (state.speedUntil > Date.now()) town.setSpeedBoost(1.55);
   town.start();
   town.onPadBack(() => { if (modalOpen) closeModal(); else if (table) closeTable(); else if (game) endCatch(); });
   town.onPadButton((b) => {

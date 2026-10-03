@@ -4,7 +4,7 @@ Three cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built
 
 - **🦊 Emmy's Fidget Trading** — trade fidget toys with a friendly buddy, haggle for coins, collect all the rarities, open mystery boxes, and play with each toy in its own satisfying way.
 - **🕹️ Emmy's Arcade** — a *Sneaky Sasquatch*-style arcade simulator: load an arcade card with (unlimited!) money, win tickets in 10 mini-games, and trade them for prizes you can actually play with.
-- **🥟 Emmy's Dumpling Town** — walk around a 3D market square, buy mystery bamboo steamers, lift the lid to see which of **97 squishy dumplings** you got, squish them (slow rise!), pull them apart to see the filling… and buy a chicken.
+- **🥟 Emmy's Dumpling Town** — walk around a 3D market square, buy mystery bamboo steamers, lift the lid to see which of **221 squishy dumplings** you got, squish them (slow rise!), pull them apart to see the filling… and buy a chicken.
 
 **▶ Play it live: https://tunurgitr.github.io/emmy-game/**
 
@@ -124,17 +124,17 @@ Inspired by the viral **squishy dumpling** blind-box toys: each one comes in a l
   | Shop | What it does |
   |---|---|
   | 🥟 Steamy Dumpling House | Bamboo Steamer (20🪙); your first one is free. Also the delivery job board |
-  | 🍡 Sweet Mochi Café | Sweet Steamer (40🪙), better odds |
-  | 🏮 Lucky Lantern | Lucky Lantern Steamer (90🪙), always Rare or better |
-  | 🐔 Farmer Fran's Barn | Buy a chicken (30🪙) or the Chicken Hat |
-  | 👕 Dress-Up Boutique | Change your look at the mirror |
-  | 🔄 Swap Shop | Trade duplicate dumplings for coins |
+  | 🍡 Sweet Mochi Café | Sweet Steamer (40🪙), better odds. Treats: 🧋 Bubble Tea (super speed for 60s), 🥠 Fortune Cookie (next steamer Rare+), 🍡 Mochi Skewer |
+  | 🏮 Lucky Lantern | Lucky Lantern Steamer (90🪙), always Rare or better; 💎 Diamond Steamer (250🪙), always Epic or better |
+  | 🐔 Farmer Fran's Barn | Buy a chicken (30🪙) or the Chicken Hat, sell your eggs, collect eggs from the nests |
+  | 👕 Dress-Up Boutique | Buy hats (Dumpling, Panda, Unicorn, Headphones…) and change your look at the mirror |
+  | 🔄 Swap Shop | Trade duplicate dumplings for coins, or buy ones you haven't found yet |
   | 🏠 My House | Your collection on 3D shelves |
   | 🧺 Dumpling Catch booth | The catch mini-game |
 
   Odds are printed in each shop, and a 🍀 lucky meter guarantees a Rare or better every 8th steamer.
-- **97 dumplings, all real 3D and procedural (no model files):**
-  - **10 shapes:**
+- **221 dumplings across 9 rarities (Common → Uncommon → Rare → Super Rare → Epic → Mythic → Secret → Golden → 💎 Diamond), all real 3D and procedural (no model files):**
+  - **12 shapes:**
     - Swirly Soup Bao (xiaolongbao)
     - Puffy Bao Bun (split top)
     - Topknot Momo
@@ -145,7 +145,9 @@ Inspired by the viral **squishy dumpling** blind-box toys: each one comes in a l
     - Crescent Gyoza
     - Crispy Potsticker (browned bottom)
     - Crystal Har Gow (see-through skin)
-  - **× 9 flavours:**
+    - Peach Bun (with leaves and a pink blush)
+    - Gold Ingot Dumpling (curled-up ends)
+  - **× 17 flavours:**
     - Classic
     - Strawberry Sparkle
     - Lemon Sunshine
@@ -155,7 +157,15 @@ Inspired by the viral **squishy dumpling** blind-box toys: each one comes in a l
     - Ocean Wave
     - Rainbow Swirl
     - Grape Galaxy
-  - **Plus 7 Secret & Golden specials:**
+    - Mango Tango
+    - Mint Chip
+    - Bubble Tea (boba inside!)
+    - Watermelon Splash
+    - Frosty Snowflake
+    - Sunset Dream (Epic)
+    - Neon Glow (Epic)
+    - Opal Shimmer (Mythic)
+  - **Plus 17 specials:**
     - Golden Lucky Bao
     - Starlight Dumpling (holographic)
     - Glow-Night Wonton
@@ -163,15 +173,20 @@ Inspired by the viral **squishy dumpling** blind-box toys: each one comes in a l
     - Seashell Shades Bao (sunglasses!)
     - Rainbow Unicorn Dumpling
     - Chicky Bao
+    - Panda Bao, Bunny Mochi, Kitty Bao (with a fish inside), Froggy Momo, Piggy Bao
+    - Pearl Princess Mochi and Cosmic Dragon Bao (Mythic)
+    - Royal Gold Ingot (Golden)
+    - Diamond Dumpling and Rainbow Wish Peach (💎 Diamond, the rarest)
   - Surfaces include soft dough with sheen and pores, flour dusting, glossy steamed skin, translucent jelly and crystal, glitter, galaxy, glow, gold and holographic finishes. Most have a kawaii face.
 - **Lift the lid:** tap the steamer, steam puffs out, and the dumpling hops onto the table with a rarity glow and a **NEW!** badge.
 - **Squish it:** press and hold to squish. The dough flattens, bulges and dents where you press, then **slowly rises back** with a little jiggle. Drag to spin it.
 - **Pull it apart:** it splits in half to show a real cross-section of the filling. Fillings include soup filling, glitter gel, blue beads, melty chocolate, cotton candy, an ocean gel with a tiny fish, rainbow layers, space gel with stars, and a lucky coin. Mochi stretches as it pulls apart, and Chicky Bao has a baby chick inside.
 - **🛵 Dumpling Delivery (job):** take a 90-second shift from the Delivery Board in the Dumpling House kitchen. Carry a steamer to the townsperson with the 🥟 bubble, following the arrow over your head. Every delivery pays 🪙6, plus a tip of up to 🪙8 for speed.
 - **🧺 Dumpling Catch (booth game):** slide a steamer to catch falling dumplings for 45 seconds. Golden dumplings are worth 5 and falling chickens 3, catching 5 in a row builds a combo, and 🌶️ hot peppers break it. Points turn into coins.
-- **Other ways to earn coins:** grab spinning coins around town, collect chicken eggs, squish and peek inside new dumplings, and swap extras.
+- **🥚 Eggs:** your chickens lay eggs as they follow you around, and the nests in Farmer Fran's Barn refill every minute. Eggs go in your basket (🧺 in the top bar), and Fran buys them at the barn counter: 🪙5 each, 🪙30 for a golden one.
+- **Other ways to earn coins:** grab spinning coins around town, squish and peek inside new dumplings, and swap extras.
 - **🎵 Music:** a gentle generated background tune with an on/off toggle.
-- **🐔 Chickens:** they follow you around in a conga line (up to 10), lay eggs you can collect for coins (sometimes a golden egg), and say BAWK when you tap them. There's also a Chicken Hat.
+- **🐔 Chickens:** own up to 50 in 10 colours, each with its own name. Tap a chicken (at Farmer Fran's or at your yard gate) to choose exactly which ones follow you in your conga line. The rest live in 🐔 **My Chicken Yard** beside your house, laying eggs you collect at the gate. Followers lay eggs you can pick up, and Farmer Fran buys them all (sometimes a golden one), and say BAWK when you tap them. There's also a Chicken Hat.
 
 ---
 
@@ -208,7 +223,7 @@ npm run preview  # preview the production build
 | `src/arcade3d/lib.js` | Shared Three.js helpers — textures, materials, particles, the human-faced kid character, shaped plushies |
 | `src/arcade-prizes.js` + `src/canvas2d.js` | Prize catalog, snack menu, the two card sets with SVG art generator, and the interactive prize views |
 | `dumplings.html` + `src/dumplings.js` | Emmy's Dumpling Town hub — shops, coins, steamer odds, collection shelf, chickens, look |
-| `src/dumpling3d/models.js` | Procedural dumplings (lathe/crescent dough surfaces, faces, toppings), the 97-kind catalog, squish deformer, pull-apart halves, steamer, chickens |
+| `src/dumpling3d/models.js` | Procedural dumplings (lathe/crescent dough surfaces, faces, toppings), the 221-kind catalog, squish deformer, pull-apart halves, steamer, chickens |
 | `src/dumpling3d/town.js` | The walkable town, enterable shop interiors, your house's display shelves, townsfolk, deliveries, coins, chickens and eggs |
 | `src/dumpling3d/catch.js` | The Dumpling Catch booth game |
 | `src/dumpling3d/table.js` | The play table — steamer reveal, squish, pull apart |
