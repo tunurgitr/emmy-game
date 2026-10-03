@@ -199,6 +199,7 @@ export function makeKid({ shirt = 0xff3dd6, pants = 0x3d8bfd, skin = 0xffd6b8, h
   if (hairStyle === "bun") { g.add(sphere(0.12, hairM, 0, 1.9, -0.1, 14)); }
   if (hat) { const h = emojiSprite(hat, 0.6); h.position.set(0, 1.98, 0.05); g.add(h); }
   g.add(blobShadow(0.55, 0.4));
+  for (const p of [legL, legR, armL, armR, body, ...eyeParts]) p.userData.dyn = true; // animated: never merged
   let blinkT = rnd(1, 4);
   return { group: g, parts: { legL, legR, armL, armR, head, body }, walk(t, speed, dt = 0.016) {
     const s = Math.sin(t * 10) * Math.min(1, speed) * 0.6; legL.rotation.x = s; legR.rotation.x = -s; armL.rotation.x = -s; armR.rotation.x = s; body.position.y = 0.85 + Math.abs(Math.sin(t * 10)) * 0.04 * Math.min(1, speed);

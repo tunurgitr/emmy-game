@@ -16,7 +16,7 @@
     @keyframes bob { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-10px);} }
     h1 { font-size: clamp(34px, 8vw, 64px); text-shadow: 0 3px 0 #fff; }
     p.sub { color: #6b5a86; font-size: 18px; max-width: 520px; }
-    .games { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 820px; }
+    .games { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1220px; }
     a.card {
       flex: 1 1 300px; max-width: 380px; text-decoration: none; color: #fff; border-radius: 28px; padding: 26px 22px 24px;
       display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; overflow: hidden;
@@ -34,6 +34,10 @@
     a.arcade .play { color: #6b2fd6; }
     a.arcade::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 15%, rgba(255,0,200,.45), transparent 40%), radial-gradient(circle at 85% 80%, rgba(0,229,255,.4), transparent 40%); pointer-events: none; }
     a.arcade > * { position: relative; }
+    a.dumpling { background: linear-gradient(160deg, #ff7a8a 0%, #c62828 100%); }
+    a.dumpling .play { color: #c62828; }
+    a.dumpling::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 80% 15%, rgba(255,214,90,.5), transparent 40%), radial-gradient(circle at 15% 85%, rgba(255,255,255,.3), transparent 45%); pointer-events: none; }
+    a.dumpling > * { position: relative; }
     .new { position: absolute; top: 14px; right: -34px; background: #ffd000; color: #6a4a00; font-weight: 900; font-size: 12px; padding: 4px 40px; transform: rotate(35deg); letter-spacing: 1px; }
     a.mock { color: #8a79a6; text-decoration: none; font-size: 13px; font-weight: 600; }
     .reset-link { background: none; border: none; font-family: inherit; color: #8a79a6; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: underline; }
@@ -48,7 +52,7 @@
   </style>
 </head>
 <body>
-  <div class="toys-float">🫧 🌀 🕹️ 🎟️ 💎 🦄 🧸</div>
+  <div class="toys-float">🫧 🌀 🕹️ 🎟️ 🥟 🦄 🐔</div>
   <h1>Emmy's Games</h1>
   <p class="sub">Pick a game to play! 🎮</p>
   <div class="games">
@@ -59,10 +63,16 @@
       <div class="play">▶ Play</div>
     </a>
     <a class="card arcade" href="arcade.html" id="playArcade">
-      <div class="new">NEW!</div>
       <div class="icon">🕹️</div>
       <div class="title">Emmy's Arcade</div>
       <div class="desc">Load up your arcade card, win tickets in 10 games, and trade them for prizes you can actually play with!</div>
+      <div class="play">▶ Play</div>
+    </a>
+    <a class="card dumpling" href="dumplings.html" id="playDumplings">
+      <div class="new">NEW!</div>
+      <div class="icon">🥟</div>
+      <div class="title">Dumpling Town</div>
+      <div class="desc">Explore a big town, go inside the shops, deliver dumplings, open mystery steamers and squish all 97 squishy dumplings. You can even buy a chicken! 🐔</div>
       <div class="play">▶ Play</div>
     </a>
   </div>
@@ -74,7 +84,7 @@
   <div class="sheet" id="resetSheet">
     <div class="sheet-box">
       <h2>↻ Start over?</h2>
-      <p>This erases everything in <b>both</b> games — toys, coins, arcade tickets, prizes, high scores and your look. You can’t undo it!</p>
+      <p>This erases everything in <b>all</b> the games — toys, coins, arcade tickets, prizes, dumplings, chickens, high scores and your look. You can’t undo it!</p>
       <button class="keep" id="resetNo">⬅ No, keep my games</button>
       <button class="wipe" id="resetYes">↻ Yes, erase everything</button>
     </div>
@@ -90,7 +100,7 @@
       Object.keys(localStorage).filter((k) => k.startsWith("emmy.")).forEach((k) => localStorage.removeItem(k));
       sheet.classList.remove("show");
       const p = document.querySelector("p.sub");
-      p.textContent = "✨ All cleared! Both games are brand new.";
+      p.textContent = "✨ All cleared! Every game is brand new.";
     };
   </script>
 </body>

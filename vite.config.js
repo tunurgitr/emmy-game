@@ -16,6 +16,7 @@ export default defineConfig({
         index: resolve(__dirname, "index.html"),
         game: resolve(__dirname, "game.html"),
         arcade: resolve(__dirname, "arcade.html"),
+        dumplings: resolve(__dirname, "dumplings.html"),
         mockups: resolve(__dirname, "mockups.html"),
         mockupA: resolve(__dirname, "mockup-a.html"),
         mockupB: resolve(__dirname, "mockup-b.html"),

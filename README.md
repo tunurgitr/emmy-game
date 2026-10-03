@@ -1,9 +1,10 @@
 # 🎉 Emmy's Games
 
-Two cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built for a 10-year-old named Emmy), picked from one landing page:
+Three cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built for a 10-year-old named Emmy), picked from one landing page:
 
 - **🦊 Emmy's Fidget Trading** — trade fidget toys with a friendly buddy, haggle for coins, collect all the rarities, open mystery boxes, and play with each toy in its own satisfying way.
 - **🕹️ Emmy's Arcade** — a *Sneaky Sasquatch*-style arcade simulator: load an arcade card with (unlimited!) money, win tickets in 10 mini-games, and trade them for prizes you can actually play with.
+- **🥟 Emmy's Dumpling Town** — walk around a 3D market square, buy mystery bamboo steamers, lift the lid to see which of **97 squishy dumplings** you got, squish them (slow rise!), pull them apart to see the filling… and buy a chicken.
 
 **▶ Play it live: https://tunurgitr.github.io/emmy-game/**
 
@@ -111,6 +112,69 @@ All characters, creatures and card sets are original — nothing licensed.
 
 ---
 
+## 🥟 Emmy's Dumpling Town
+
+Inspired by the viral **squishy dumpling** blind-box toys: each one comes in a little bamboo steamer, you lift the lid to see which one you got, then squeeze it and watch it slowly rise back.
+
+- **Walk around a big 3D town.** It has cobbled streets, a central plaza with red paper lanterns and a fountain with a giant breathing soup dumpling, a duck pond, cherry-blossom trees, lamp posts, and ten townsfolk strolling about.
+- **Go inside every shop.** Walk through a door and you're in a real 3D room with a shopkeeper behind the counter, shelves of dumplings and steamers, a steaming kitchen, lanterns, a barn full of chickens, a boutique with mannequins and a mirror, and more.
+- **🏠 My House:** your own home, where every dumpling you've collected sits on 3D shelves round the walls (❔ marks the ones still to find), plus a desk with your Dumpling Book. Your character is customizable (**👕 My look**, same options as the arcade). It uses the same joystick, drag-to-look, tap-to-walk, keyboard and controller support as the arcade.
+- **Shops:**
+
+  | Shop | What it does |
+  |---|---|
+  | 🥟 Steamy Dumpling House | Bamboo Steamer (20🪙); your first one is free. Also the delivery job board |
+  | 🍡 Sweet Mochi Café | Sweet Steamer (40🪙), better odds |
+  | 🏮 Lucky Lantern | Lucky Lantern Steamer (90🪙), always Rare or better |
+  | 🐔 Farmer Fran's Barn | Buy a chicken (30🪙) or the Chicken Hat |
+  | 👕 Dress-Up Boutique | Change your look at the mirror |
+  | 🔄 Swap Shop | Trade duplicate dumplings for coins |
+  | 🏠 My House | Your collection on 3D shelves |
+  | 🧺 Dumpling Catch booth | The catch mini-game |
+
+  Odds are printed in each shop, and a 🍀 lucky meter guarantees a Rare or better every 8th steamer.
+- **97 dumplings, all real 3D and procedural (no model files):**
+  - **10 shapes:**
+    - Swirly Soup Bao (xiaolongbao)
+    - Puffy Bao Bun (split top)
+    - Topknot Momo
+    - Bouncy Tangyuan
+    - Snowy Mochi
+    - Flower Shumai
+    - Frilly Wonton
+    - Crescent Gyoza
+    - Crispy Potsticker (browned bottom)
+    - Crystal Har Gow (see-through skin)
+  - **× 9 flavours:**
+    - Classic
+    - Strawberry Sparkle
+    - Lemon Sunshine
+    - Blueberry Bubble
+    - Choco Chip
+    - Cotton Candy Cloud
+    - Ocean Wave
+    - Rainbow Swirl
+    - Grape Galaxy
+  - **Plus 7 Secret & Golden specials:**
+    - Golden Lucky Bao
+    - Starlight Dumpling (holographic)
+    - Glow-Night Wonton
+    - Mood Mochi (changes colour when you squeeze it)
+    - Seashell Shades Bao (sunglasses!)
+    - Rainbow Unicorn Dumpling
+    - Chicky Bao
+  - Surfaces include soft dough with sheen and pores, flour dusting, glossy steamed skin, translucent jelly and crystal, glitter, galaxy, glow, gold and holographic finishes. Most have a kawaii face.
+- **Lift the lid:** tap the steamer, steam puffs out, and the dumpling hops onto the table with a rarity glow and a **NEW!** badge.
+- **Squish it:** press and hold to squish. The dough flattens, bulges and dents where you press, then **slowly rises back** with a little jiggle. Drag to spin it.
+- **Pull it apart:** it splits in half to show a real cross-section of the filling. Fillings include soup filling, glitter gel, blue beads, melty chocolate, cotton candy, an ocean gel with a tiny fish, rainbow layers, space gel with stars, and a lucky coin. Mochi stretches as it pulls apart, and Chicky Bao has a baby chick inside.
+- **🛵 Dumpling Delivery (job):** take a 90-second shift from the Delivery Board in the Dumpling House kitchen. Carry a steamer to the townsperson with the 🥟 bubble, following the arrow over your head. Every delivery pays 🪙6, plus a tip of up to 🪙8 for speed.
+- **🧺 Dumpling Catch (booth game):** slide a steamer to catch falling dumplings for 45 seconds. Golden dumplings are worth 5 and falling chickens 3, catching 5 in a row builds a combo, and 🌶️ hot peppers break it. Points turn into coins.
+- **Other ways to earn coins:** grab spinning coins around town, collect chicken eggs, squish and peek inside new dumplings, and swap extras.
+- **🎵 Music:** a gentle generated background tune with an on/off toggle.
+- **🐔 Chickens:** they follow you around in a conga line (up to 10), lay eggs you can collect for coins (sometimes a golden egg), and say BAWK when you tap them. There's also a Chicken Hat.
+
+---
+
 ## 🎨 Design decisions
 
 - **3D toys, emoji everywhere else.** The Fidget Zone renders toys as procedural 3D models (real lighting/reflections, no asset files, generated at runtime so it works offline); the backpack, trade mat, and boxes stay emoji + CSS for speed. Three.js loads only when you open a toy.
@@ -136,13 +200,18 @@ npm run preview  # preview the production build
 ### Project layout
 | Path | What |
 |---|---|
-| `index.html` | Landing page — pick Fidget Trading or the Arcade |
+| `index.html` | Landing page — pick Fidget Trading, the Arcade or Dumpling Town |
 | `game.html` + `src/game.js` | Fidget Trading (UI, state, turns, boxes, fidget zone, chat) |
 | `arcade.html` + `src/arcade.js` | Emmy's Arcade hub — HUD, arcade card, prize counter, first-person game harness |
 | `src/arcade3d/world.js` | The walkable 3D hall: room, trusses, lights, cabinets, kiosk, prize counter, character, controls, camera fly-in |
 | `src/arcade3d/games1.js` … `games4.js` | The 20 first-person 3D games + the 2 jobs (each is a `{create(api) → {scene, camera, update…}}` controller) |
 | `src/arcade3d/lib.js` | Shared Three.js helpers — textures, materials, particles, the human-faced kid character, shaped plushies |
 | `src/arcade-prizes.js` + `src/canvas2d.js` | Prize catalog, snack menu, the two card sets with SVG art generator, and the interactive prize views |
+| `dumplings.html` + `src/dumplings.js` | Emmy's Dumpling Town hub — shops, coins, steamer odds, collection shelf, chickens, look |
+| `src/dumpling3d/models.js` | Procedural dumplings (lathe/crescent dough surfaces, faces, toppings), the 97-kind catalog, squish deformer, pull-apart halves, steamer, chickens |
+| `src/dumpling3d/town.js` | The walkable town, enterable shop interiors, your house's display shelves, townsfolk, deliveries, coins, chickens and eggs |
+| `src/dumpling3d/catch.js` | The Dumpling Catch booth game |
+| `src/dumpling3d/table.js` | The play table — steamer reveal, squish, pull apart |
 | `src/toys.js` | Toy catalog, rarity tiers, and trade/offer/box logic |
 | `src/fidget3d.js` | Lazy-loaded Three.js scene — procedural 3D toy archetypes |
 | `mockups.html`, `mockup-a.html`, `mockup-b.html` | Early design mockups (kept for reference) |
