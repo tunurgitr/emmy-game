@@ -33,11 +33,16 @@ Notes that save time:
   `startDelivery`/`endDelivery`, `startCatch`/`runCatch`/`endCatch`, `job`, `game`, `CATALOG`). `town.enter(id)` /
   `town.exit()` / `town.teleport(x, z)` jump straight into a shop or around the map.
   Wait for `window.__dumplings && window.__dumplings.town`.
+- `blindbags.html` exposes `window.__blindbags` (`town`, `state`, `opener`, `glow`, `startBags(bagId, price)`,
+  `viewItem(id)`, `closeOpen`, `startGlow(item)`, `endGlow`, `finishGlow`, `openShop(id)`, `openBook`, `useDoor(id, 'in'|'out')`,
+  `CATALOG`, `BAGS`, `openYard`, `startStock`/`endStock`, `job`). `opener.ctrl.tear()` opens the bag, `opener.ctrl.mode` is the
+  series' play mode (`act(id)` presses its buttons); `glow.ctrl.cleanAll()` finishes the scrubbing; `job.ctrl.finish()` ends the shift. Seed
+  `emmy.blindbag.save.v1` with a `name` or the name prompt covers everything on a fresh profile.
 - `game.html` opens the character picker over everything on a fresh profile; click
   `.avatar-opt` first or later clicks get intercepted.
 - Seed or inspect progress through `localStorage` — every key is namespaced `emmy.*`
   (`emmy.fidget.save.v2`, `emmy.arcade.save.v2.<mode>`, `emmy.arcade.mode`,
-  `emmy.arcade.avatar`, `emmy.dumpling.save.v1`, `emmy.dumpling.avatar`, `emmy.dumpling.music`, plus `emmy.muted` / `emmy.music` / `emmy.meterHidden` / `emmy.no3d`).
+  `emmy.arcade.avatar`, `emmy.dumpling.save.v1`, `emmy.dumpling.avatar`, `emmy.dumpling.music`, `emmy.blindbag.save.v1`, `emmy.blindbag.avatar`, `emmy.blindbag.voices`, `emmy.blindbag.voicepref`, `emmy.blindbag.music`, plus `emmy.muted` / `emmy.music` / `emmy.meterHidden` / `emmy.no3d`).
 - Kill the preview server when finished (`netstat -ano | grep :4173`, then `taskkill //F //PID <pid>`).
 
 ## Conventions

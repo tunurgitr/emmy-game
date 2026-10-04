@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Emmy's Blind Bag Town</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --ink: #43264f; --muted: #866a90; --pink: #ff5da2; --purple: #7a3cff; --gold: #ffc93c; --cream: #fff8fd; }
+    html, body { height: 100%; overflow: hidden; background: #bfe3ff; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); -webkit-user-select: none; user-select: none; }
+    #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+    #hud > * { pointer-events: auto; }
+    .topbar { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .topbar .left, .topbar .right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .ghost { text-decoration: none; color: var(--ink); font-weight: 800; font-size: 13px; background: rgba(255,255,255,.85); border: 2px solid rgba(255,255,255,.9); cursor: pointer; padding: 7px 13px; border-radius: 999px; font-family: inherit; box-shadow: 0 3px 10px rgba(80,40,90,.18); }
+    .ghost:hover { background: #fff; }
+    .pill { font-weight: 900; padding: 8px 14px; border-radius: 999px; font-size: 15px; box-shadow: 0 4px 14px rgba(80,40,90,.25); border: none; font-family: inherit; }
+    .coins { color: #5a3a00; background: var(--gold); } .book { color: #fff; background: var(--purple); cursor: pointer; } .hens { color: #3a2a10; background: #fff3c4; } .carts { color: #fff; background: #e53935; }
+    .namepill { color: #fff; background: var(--pink); cursor: pointer; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pill.bump { animation: bump .4s ease; } @keyframes bump { 30% { transform: scale(1.25); } }
+    #hud.attable .topbar .left .ghost.walkonly, #hud.attable #prompt, #hud.attable #hint { display: none !important; }
+    .joy { position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.25); border: 2px solid rgba(255,255,255,.6); display: none; pointer-events: none; z-index: 6; }
+    .joy.rest { opacity: .6; }
+    .joy .knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.75); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+    .padcursor { position: fixed; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 3px rgba(122,60,255,.7), 0 0 14px #ff8ac8; pointer-events: none; z-index: 30; }
+    .padcursor.down { background: rgba(255,255,255,.6); transform: scale(.8); }
+
+    #prompt { position: absolute; left: 50%; bottom: max(30px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: none; }
+    #prompt.show { display: block; }
+    #hint { position: absolute; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); color: #fff; font-size: 12px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; pointer-events: none; }
+    button.act { font-family: inherit; font-weight: 900; font-size: 17px; cursor: pointer; border: none; border-radius: 18px; padding: 13px 20px; color: #fff; transition: transform .1s, filter .1s; box-shadow: 0 6px 0 rgba(0,0,0,.25), 0 10px 26px rgba(80,40,90,.3); }
+    button.act:hover { filter: brightness(1.08); } button.act:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+    button.act:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.4); transform: none; }
+    .btn-red { background: #e53935; } .btn-green { background: #2e9d6a; } .btn-blue { background: #3d8bfd; } .btn-pink { background: #ff5da2; } .btn-gold { background: #f5a300; } .btn-purple { background: #7a3cff; } button.act.btn-white { background: #fff; color: var(--ink); }
+
+    /* opening a bag */
+    #tableHud { position: absolute; inset: 0; display: none; pointer-events: none; }
+    #tableHud.show { display: block; }
+    #tableHud > * { pointer-events: auto; }
+    #tTip { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 56px); transform: translateX(-50%); background: rgba(255,255,255,.9); padding: 9px 16px; border-radius: 999px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(80,40,90,.2); white-space: nowrap; max-width: 94vw; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+    #tCard { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 54px); transform: translateX(-50%) scale(.6); opacity: 0; transition: transform .45s cubic-bezier(.2,1.6,.4,1), opacity .3s; background: #fff; border-radius: 22px; padding: 12px 20px 12px; text-align: center; min-width: 260px; max-width: 92vw; box-shadow: 0 10px 30px rgba(80,40,90,.3); border: 4px solid var(--rc, #ccc); pointer-events: none; }
+    #tCard.show { transform: translateX(-50%) scale(1); opacity: 1; }
+    #tCard .rar { display: inline-block; font-size: 12px; font-weight: 900; color: #fff; background: var(--rc); padding: 3px 12px; border-radius: 999px; letter-spacing: .5px; text-transform: uppercase; }
+    #tCard .rar.rainbow { background: linear-gradient(90deg, #ff5d8f, #ffb347, #ffe066, #7cffb0, #6ec6ff, #b18cff); }
+    #tCard h2 { font-size: clamp(18px, 4.6vw, 26px); margin: 6px 0 2px; }
+    #tCard .meta { font-size: 13px; color: var(--muted); font-weight: 700; }
+    #tCard .blurb { font-size: 13px; color: var(--muted); margin-top: 4px; max-width: 420px; }
+    #tCard .newb { position: absolute; top: -14px; right: -12px; background: #ffd000; color: #6a4a00; font-weight: 900; font-size: 13px; padding: 5px 10px; border-radius: 999px; transform: rotate(12deg); box-shadow: 0 3px 8px rgba(0,0,0,.2); }
+    #tButtons { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 0 10px; }
+    #tButtons button.act { font-size: 15px; padding: 12px 16px; }
+    #tButtons button.playbtn { font-size: 16px; padding: 12px 14px; border: 3px solid #ffd6ef; }
+    #tStatus { position: absolute; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px); transform: translateX(-50%); background: rgba(255,255,255,.94); padding: 9px 18px; border-radius: 999px; font-weight: 900; font-size: 16px; box-shadow: 0 6px 18px rgba(80,40,90,.25); display: none; pointer-events: none; white-space: nowrap; max-width: 94vw; overflow: hidden; text-overflow: ellipsis; }
+    #tStatus.show { display: block; } #tStatus.pop { animation: bump .35s ease; }
+
+    /* the stocking job */
+    #jobHud { position: absolute; inset: 0; display: none; pointer-events: none; }
+    #jobHud.show { display: block; }
+    #jTop { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 54px); transform: translateX(-50%); display: flex; gap: 8px; font-weight: 900; font-size: 18px; white-space: nowrap; }
+    #jTop span { background: rgba(255,255,255,.92); padding: 6px 14px; border-radius: 999px; box-shadow: 0 4px 12px rgba(80,40,90,.2); }
+    #jMsg { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-weight: 900; font-size: 24px; color: #fff; text-shadow: 0 3px 0 #7a3cff, 0 6px 14px rgba(0,0,0,.3); opacity: 0; white-space: nowrap; }
+    #jMsg.pop { animation: jmsg 1.1s ease-out; } @keyframes jmsg { 0% { opacity: 0; transform: translateX(-50%) scale(.6); } 15% { opacity: 1; transform: translateX(-50%) scale(1.15); } 70% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-30px); } }
+    #jBanner { position: absolute; inset: 0; pointer-events: auto; }
+    #jBanner:empty { display: none; }
+    .banner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(245,236,255,.86); text-align: center; padding: 20px; backdrop-filter: blur(3px); }
+    .banner h2 { font-size: clamp(26px, 6vw, 40px); color: #7a3cff; }
+    .banner .big { font-size: 64px; }
+    .banner p { color: var(--muted); font-size: 15px; max-width: 460px; line-height: 1.5; font-weight: 700; }
+    .banner .won { font-size: 26px; font-weight: 900; color: #b07800; }
+    .banner .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+    /* the glow-up station */
+    #glowHud { position: absolute; inset: 0; display: none; pointer-events: none; }
+    #glowHud.show { display: block; }
+    #glowHud > * { pointer-events: auto; }
+    #gTip { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 56px); transform: translateX(-50%); background: rgba(255,255,255,.92); padding: 9px 16px; border-radius: 20px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(80,40,90,.2); text-align: center; max-width: 94vw; pointer-events: none; }
+    #gTip small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    #gTools { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 0 10px; }
+    .tool { font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 74px; padding: 8px 10px; border-radius: 18px; border: 3px solid #fff; background: rgba(255,255,255,.88); color: var(--ink); font-weight: 900; font-size: 12px; cursor: pointer; box-shadow: 0 5px 0 rgba(0,0,0,.15), 0 8px 18px rgba(80,40,90,.2); }
+    .tool span { font-size: 28px; line-height: 1; }
+    .tool.sel { border-color: var(--pink); background: #fff0f7; transform: translateY(-3px); }
+    .tool.done { background: #2e9d6a; color: #fff; border-color: #2e9d6a; }
+
+    #fade { position: fixed; inset: 0; background: #fff8ff; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 15; }
+    #fade.show { opacity: 1; }
+    /* modals */
+    .modal { position: fixed; inset: 0; background: rgba(60,30,70,.55); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 20; padding: 12px; }
+    .modal.show { display: flex; }
+    .mbox { position: relative; background: var(--cream); border-radius: 26px; padding: 22px; width: 100%; max-width: 760px; max-height: 94vh; overflow: auto; text-align: center; box-shadow: 0 20px 60px rgba(60,30,70,.45); border: 4px solid #fff; }
+    .mbox.wide { max-width: 1000px; }
+    .mclose { position: absolute; top: 12px; right: 14px; border: none; background: rgba(0,0,0,.07); color: var(--ink); font-weight: 900; font-size: 16px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 3; }
+    .mbox h2 { font-size: 24px; margin-bottom: 4px; }
+    .mbox p.sub { color: var(--muted); font-size: 14px; margin-bottom: 14px; line-height: 1.4; }
+    .keeper { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; background: #fff; border-radius: 16px; padding: 10px 14px; margin: 6px auto 14px; max-width: 560px; box-shadow: 0 3px 10px rgba(80,40,90,.1); text-align: left; line-height: 1.4; }
+    .keeper .face { font-size: 30px; line-height: 1; }
+    .items { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .item { background: #fff; border-radius: 20px; padding: 14px; width: 210px; display: flex; flex-direction: column; gap: 8px; align-items: center; box-shadow: 0 4px 14px rgba(80,40,90,.12); border: 3px solid transparent; }
+    .item .ico { font-size: 52px; line-height: 1; }
+    .item h3 { font-size: 17px; }
+    .item .desc { font-size: 13px; color: var(--muted); }
+    .item .odds { font-size: 11px; color: var(--muted); line-height: 1.5; text-align: left; width: 100%; columns: 2; }
+    .item .odds b { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+    .item button.act { width: 100%; font-size: 15px; padding: 11px; }
+    .flock { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+    .hen { font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 88px; padding: 8px 4px; border-radius: 16px; border: 3px solid #eadbe2; background: #fff; color: var(--ink); cursor: pointer; }
+    .hen b { font-size: 12px; } .hen small { font-size: 11px; color: var(--muted); font-weight: 800; }
+    .hen.on { border-color: #2e9d6a; background: #eafaf1; } .hen.on small { color: #2e9d6a; }
+    .eggs { color: #5a3a00; background: #fff; }
+    .hdot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); }
+    .hencolors { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .hencolors button { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #ddd; cursor: pointer; }
+    .hencolors button.sel { box-shadow: 0 0 0 3px var(--pink); }
+
+    /* collection book */
+    .bookbar { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 10px; font-weight: 800; font-size: 14px; }
+    .progress { width: 220px; height: 14px; background: #eedcf2; border-radius: 7px; overflow: hidden; } .progress i { display: block; height: 100%; background: linear-gradient(90deg, #ff8ac8, #b18cff, #6ec6ff); }
+    .tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 8px 0; }
+    .tabs button { font-family: inherit; font-weight: 800; font-size: 13px; padding: 7px 12px; border-radius: 999px; border: 2px solid #e6d6ee; background: #fff; color: var(--ink); cursor: pointer; }
+    .tabs button.sel { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+    .slot { background: #fff; border-radius: 16px; padding: 6px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; border: 3px solid var(--rc, #eee); cursor: pointer; position: relative; min-height: 128px; }
+    .slot img, .slot .q { width: 80px; height: 80px; object-fit: contain; }
+    .slot .q { display: flex; align-items: center; justify-content: center; font-size: 34px; color: #d8c8e0; background: #f6eef8; border-radius: 50%; }
+    .slot .nm { font-size: 10.5px; font-weight: 800; line-height: 1.15; text-align: center; }
+    .slot .rr { font-size: 9px; font-weight: 900; color: var(--rc); text-transform: uppercase; }
+    .slot .ct { position: absolute; top: 4px; right: 6px; font-size: 11px; font-weight: 900; color: var(--muted); }
+    .slot.locked { cursor: default; opacity: .75; }
+    .rarityKey { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; font-size: 11px; font-weight: 800; }
+    .rarityKey span { padding: 3px 9px; border-radius: 999px; color: #fff; }
+
+    .vrow { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 8px auto; max-width: 560px; background: #fff; border-radius: 16px; padding: 10px; }
+    .vrow b { min-width: 120px; text-align: left; } .vrow select { flex: 1; min-width: 180px; font-family: inherit; font-size: 15px; font-weight: 700; padding: 8px; border-radius: 12px; border: 2px solid #e6d6ee; color: var(--ink); }
+    .vrow button.act { font-size: 14px; padding: 9px 14px; }
+    .swaprow { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 14px; padding: 6px 10px; margin: 6px auto; max-width: 560px; text-align: left; }
+    .swaprow img { width: 48px; height: 48px; } .swaprow .n { flex: 1; font-weight: 800; font-size: 14px; } .swaprow .n small { display: block; color: var(--muted); font-weight: 700; }
+    .swaprow button.act { font-size: 13px; padding: 8px 12px; }
+
+    .lookrow { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin: 6px 0; align-items: center; }
+    .lookrow .lbl { width: 100%; text-align: left; font-size: 13px; color: var(--muted); font-weight: 800; margin-top: 4px; }
+    .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #ddd; cursor: pointer; }
+    .swatch.sel { box-shadow: 0 0 0 3px var(--pink); }
+    .chip { font-family: inherit; font-weight: 800; font-size: 13px; padding: 8px 14px; border-radius: 999px; border: 2px solid #eadbe2; background: #fff; color: var(--ink); cursor: pointer; }
+    .chip.sel { background: var(--pink); border-color: var(--pink); color: #fff; }
+    .lookpreview { height: 250px; border-radius: 18px; overflow: hidden; background: radial-gradient(circle at 50% 30%, #fff, #ffe0f4); margin-bottom: 8px; }
+
+    /* name */
+    .namebox { max-width: 460px; }
+    .namebox .big { font-size: 64px; line-height: 1; margin-bottom: 6px; animation: wave 1.6s ease-in-out infinite; display: inline-block; transform-origin: 70% 80%; }
+    @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(16deg); } 20%, 40% { transform: rotate(-8deg); } }
+    #nameInput { width: 100%; font-family: inherit; font-size: 26px; font-weight: 900; text-align: center; padding: 12px; border-radius: 18px; border: 4px solid #e6d6ee; outline: none; color: var(--ink); margin: 6px 0 12px; -webkit-user-select: text; user-select: text; }
+    #nameInput:focus { border-color: var(--pink); }
+    .namerow { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+    #toast { position: fixed; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 60px); transform: translateX(-50%) translateY(-20px); background: #fff; color: var(--ink); font-weight: 800; padding: 11px 18px; border-radius: 999px; box-shadow: 0 8px 24px rgba(80,40,90,.3); opacity: 0; transition: .25s; z-index: 40; pointer-events: none; max-width: 92vw; text-align: center; font-size: 15px; }
+    #hud.attable ~ #toast { top: auto; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 120px); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 35; }
+    .fly { position: fixed; font-size: 26px; z-index: 36; pointer-events: none; animation: fly 1s ease-in forwards; }
+    @keyframes fly { to { transform: translate(var(--dx), var(--dy)) scale(.5); opacity: .4; } }
+    #loading { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; background: linear-gradient(160deg, #ffe0f6, #dcd6ff); z-index: 50; font-weight: 900; font-size: 22px; }
+    #loading .d { font-size: 70px; animation: squish 1s ease-in-out infinite; }
+    @keyframes squish { 50% { transform: scale(1.25, .75); } }
+    @media (max-width: 560px) { #tStatus { font-size: 13px; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 130px); } #gTip, #tTip, #tCard, #jTop { top: calc(max(10px, env(safe-area-inset-top)) + 100px); } .pill { font-size: 13px; padding: 6px 10px; } .ghost { font-size: 12px; padding: 6px 10px; } .tool { min-width: 60px; padding: 6px 6px; } .tool span { font-size: 24px; } }
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="loading"><div class="d">🛍️</div>Filling the shelves with blind bags…</div>
+  <div id="hud">
+    <div class="topbar">
+      <div class="left">
+        <a class="ghost" href="index.html" id="backBtn">← Games</a>
+        <button class="ghost walkonly" id="lookBtn">👕 My look</button>
+        <button class="ghost walkonly" id="resetBtn">↻ Start over</button>
+      </div>
+      <div class="right">
+        <button class="pill namepill" id="namePill" title="Change my name">✏️ You</button>
+        <span class="pill carts" id="cartsPill" style="display:none">🛒 0</span>
+        <span class="pill hens" id="hensPill" style="display:none">🐔 0</span>
+        <span class="pill eggs" id="eggsPill" style="display:none">🧺 0🥚</span>
+        <button class="pill book" id="bookPill">📖 0/0</button>
+        <span class="pill coins" id="coinsPill">🪙 0</span>
+        <button class="ghost" id="voiceBtn" title="Shopkeepers talk out loud">🗣️</button>
+        <button class="ghost" id="musicBtn" title="Music">🎵</button>
+        <button class="ghost" id="mute" title="Sound">🔊</button>
+      </div>
+    </div>
+    <div id="prompt"><button class="act btn-pink" id="interact">▶ Shop</button></div>
+    <div id="hint">🛍️ Walk through a shop door to go inside • drag to look • tap the ground to walk</div>
+    <div id="tableHud">
+      <div id="tTip"></div>
+      <div id="tCard"></div>
+      <div id="tStatus"></div>
+      <div id="tButtons"></div>
+    </div>
+    <div id="jobHud"><div id="jTop"></div><div id="jMsg"></div><div id="jBanner"></div></div>
+    <div id="glowHud">
+      <div id="gTip"></div>
+      <div id="gTools"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="shopModal"><div class="mbox"><button class="mclose" data-close>✕</button><div id="shopBody"></div></div></div>
+  <div class="modal" id="bookModal"><div class="mbox wide"><button class="mclose" data-close>✕</button>
+    <h2>📖 My Collection Book</h2>
+    <div class="bookbar"><span id="bookCount"></span><div class="progress"><i id="bookBar"></i></div></div>
+    <div class="rarityKey" id="rarityKey"></div>
+    <div class="tabs" id="bookTabs"></div>
+    <div id="bookBody"></div>
+  </div></div>
+  <div class="modal" id="lookModal"><div class="mbox"><button class="mclose" data-close>✕</button>
+    <h2>👕 My look</h2><p class="sub">Make your character look like you! Changes show up right away.</p>
+    <div class="lookpreview" id="lookPreview"></div><div id="lookOpts"></div>
+  </div></div>
+  <div class="modal" id="nameModal"><div class="mbox namebox"><button class="mclose" id="nameClose" data-close>✕</button>
+    <div class="big">👋</div>
+    <h2 id="nameTitle">Hi there! What's your name?</h2>
+    <p class="sub">The shopkeepers in Blind Bag Town will say hi to you by name!</p>
+    <input id="nameInput" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Type your name" />
+    <div class="namerow"><button class="act btn-white" id="nameRandom">🎲 Silly name</button><button class="act btn-pink" id="nameSave" disabled>✓ That's me!</button></div>
+  </div></div>
+  <div class="modal" id="resetModal"><div class="mbox" style="max-width:460px"><button class="mclose" data-close>✕</button>
+    <h2>↻ Start over?</h2>
+    <p class="sub">This erases your Blind Bag Town progress — every toy in your collection, your coins and your chickens. You can’t undo it!</p>
+    <div style="display:flex;flex-direction:column;gap:10px"><button class="act btn-green" data-close>⬅ No, keep my toys</button><button class="act btn-red" id="resetYes">↻ Yes, start over</button></div>
+  </div></div>
+  <div id="fade"></div>
+  <div id="toast"></div>
+  <canvas id="confetti"></canvas>
+  <script type="module" src="/src/blindbags.js"></script>
+</body>
+</html>

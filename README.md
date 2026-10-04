@@ -1,10 +1,11 @@
 # 🎉 Emmy's Games
 
-Three cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built for a 10-year-old named Emmy), picked from one landing page:
+Four cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built for a 10-year-old named Emmy), picked from one landing page:
 
 - **🦊 Emmy's Fidget Trading** — trade fidget toys with a friendly buddy, haggle for coins, collect all the rarities, open mystery boxes, and play with each toy in its own satisfying way.
 - **🕹️ Emmy's Arcade** — a *Sneaky Sasquatch*-style arcade simulator: load an arcade card with (unlimited!) money, win tickets in 10 mini-games, and trade them for prizes you can actually play with.
 - **🥟 Emmy's Dumpling Town** — walk around a 3D market square, buy mystery bamboo steamers, lift the lid to see which of **221 squishy dumplings** you got, squish them (slow rise!), pull them apart to see the filling… and buy a chicken.
+- **🛍️ Emmy's Blind Bag Town** — walk to silly stores, buy blind bags, tear them open and collect **269 toys** across nine series and nine rarities (with a secret chicken in every series) — and every series plays its own way. Hatch dino eggs, stretch slime, feed fish, give Glow-Up Faces a makeover, stock shelves for coins, keep chickens in your own yard, and hear every shopkeeper say hi to you by name.
 
 **▶ Play it live: https://tunurgitr.github.io/emmy-game/**
 
@@ -190,6 +191,43 @@ Inspired by the viral **squishy dumpling** blind-box toys: each one comes in a l
 
 ---
 
+## 🛍️ Emmy's Blind Bag Town
+
+- **Your name, everywhere.** On first visit you type your name (or roll a silly one). Shopkeepers greet you by name in speech bubbles *and out loud*, townsfolk wave and say hi, and your house sign reads "ALICE'S HOUSE". Change it any time from the ✏️ pill or the name board at home.
+- **Voices that sound like people.** The game ranks every voice the browser has (Microsoft Edge's "Natural" voices, Chrome's Google voices and Apple's "Premium" voices first), gives each shopkeeper their own, and keeps pitch close to normal. The 🗣️ menu turns talking on/off and lets you try and pick the higher and deeper voices yourself.
+- **Silly stores (no real brands!):**
+
+  | Store | What's there |
+  |---|---|
+  | 🛒 Bulk-O-Rama Club | Ocean Buddies, Mega Mystery 5-Pack, Jumbo Gold Bag (Epic+), hot dog combo (super speed), Sample Sally's very tiny free samples, a giant inflatable chicken on the roof, a parking lot full of stray carts |
+  | 🥕 Win-Win Grocery | The cheapest bags in town (incl. Slime Pots), bulk bins (scoop a mystery bag for 🪙 8), a mountain of potatoes. Your first bag is free here |
+  | 🏬 Ted's Everything Mart | Snacks, Pocket Pets, Spirit Hunters, Glow-Up Faces, Slime Pots, a hat aisle, the trade-in desk for doubles, the 📦 Stock the Shelves job… and one canoe |
+  | 🐔 Cluck & Co. Feed | Cluck Club and Dino Egg bags, chickens (up to 30), the Chicken Hat, and Hank buys your eggs |
+  | 💖 Glow-Up Salon | Glow-Up Face bags (and a Deluxe one), the Glow-Up Station |
+  | 🏠 Your house | Every toy you own on 3D shelves, your Collection Book, a mirror and your name board |
+  | 🐔 Your chicken yard | Next to your house: a coop and nests. Chickens that stay home lay eggs; tap a chicken to bring it along or send it home |
+
+- **Nine series × 12 characters, plus special editions** (Glitter, Glow-in-the-Dark, Chrome, Galaxy, Crystal, Golden, Ultra Rainbow) and a secret chicken in every series. Each series plays its own way:
+
+  | Series | How you play with it |
+  |---|---|
+  | 🍩 Squishy Snacks | Slow-rise squish — press hard, watch it slooowly rise back |
+  | 🎤 Pop Star Spirit Hunters (an original pop-idol trio) | A little concert: four note buttons, a light show, the crowd cheers every 8 notes |
+  | 🐔 Cluck Club (pirate, disco, astronaut, ninja, nugget costume…) | Tap to lay eggs (golden ones are worth a coin), feed corn for extra eggs; the Rubber Chicken just SQUAWKS |
+  | 🥔 Silly Spuds | Keepy-uppy — tap the spud to keep it in the air |
+  | 🐾 Pocket Pets | Drag across to pet (happiness hearts) and give treats |
+  | 💖 Glow-Up Faces | Scrub, brush and decorate at the Glow-Up station |
+  | 🦖 Dino Eggs | The bag holds an egg — tap until it cracks and the dino hatches, then ROAR |
+  | 🫧 Slime Pots | Grab and stretch the slime, poke it, squish it, add mix-ins |
+  | 🐠 Ocean Buddies | They swim around a water bubble — tap to make them zoom or flip, feed them flakes |
+- **9 rarities:** Common, Uncommon, Rare, Epic, Legendary, Mythic, Secret, Golden, Ultra Rainbow. Odds are printed in every shop, plus a lucky meter (Rare+ guaranteed every 8th bag).
+- **Tear it open:** swipe across the top of the foil bag (or tap it a few times), the top flies off and the toy pops out.
+- **💖 Glow-Up Faces:** they come out muddy from playing outside. Scrub the mud, paint, crumbs and leaves with the 🧽 sponge, comb the messy fluff with the 🪮 brush, then add blush, stickers and a bow, crown or flower crown. The look is saved and shows on your shelf.
+- **Earning coins:** grab spinning coins, push stray carts to the 🛒 Cart Corral (🪙 3 each, bonus for 5+), work the **📦 Stock the Shelves** job at Ted's (drag blind bags off the conveyor into the matching bins, shoo away chickens riding the belt — 45 seconds, a coin per bag), sell eggs from your chicken yard to Farmer Hank, trade doubles at Ted's, free samples, and chickens who sometimes find a coin.
+- **Funny bits:** the road chicken who crosses the road forever, Ted's 🪙 9,999 canoe, "MEMBERS ONLY* (*everyone is a member)".
+
+---
+
 ## 🎨 Design decisions
 
 - **3D toys, emoji everywhere else.** The Fidget Zone renders toys as procedural 3D models (real lighting/reflections, no asset files, generated at runtime so it works offline); the backpack, trade mat, and boxes stay emoji + CSS for speed. Three.js loads only when you open a toy.
@@ -215,7 +253,7 @@ npm run preview  # preview the production build
 ### Project layout
 | Path | What |
 |---|---|
-| `index.html` | Landing page — pick Fidget Trading, the Arcade or Dumpling Town |
+| `index.html` | Landing page — pick Fidget Trading, the Arcade, Dumpling Town or Blind Bag Town |
 | `game.html` + `src/game.js` | Fidget Trading (UI, state, turns, boxes, fidget zone, chat) |
 | `arcade.html` + `src/arcade.js` | Emmy's Arcade hub — HUD, arcade card, prize counter, first-person game harness |
 | `src/arcade3d/world.js` | The walkable 3D hall: room, trusses, lights, cabinets, kiosk, prize counter, character, controls, camera fly-in |
@@ -227,6 +265,13 @@ npm run preview  # preview the production build
 | `src/dumpling3d/town.js` | The walkable town, enterable shop interiors, your house's display shelves, townsfolk, deliveries, coins, chickens and eggs |
 | `src/dumpling3d/catch.js` | The Dumpling Catch booth game |
 | `src/dumpling3d/table.js` | The play table — steamer reveal, squish, pull apart |
+| `blindbags.html` + `src/blindbags.js` | Emmy's Blind Bag Town hub — your name, talking shopkeepers, shops, odds, collection book, chickens, carts, look |
+| `src/blindbag3d/models.js` | The 269-toy catalog, rarities, finishes, procedural toys with kawaii faces, the foil blind bag, the dino egg |
+| `src/blindbag3d/play.js` | The way each series plays (concert, eggs, keepy-uppy, petting, hatching, slime, swimming…) |
+| `src/blindbag3d/stock.js` | The Stock the Shelves job |
+| `src/blindbag3d/town.js` | The walkable town, the stores and their interiors, your house shelves, the chicken yard, townsfolk, speech bubbles, carts |
+| `src/blindbag3d/open.js` | Tearing open a bag and playing with the toy |
+| `src/blindbag3d/glow.js` | The Glow-Up station — scrub, brush and decorate a face |
 | `src/toys.js` | Toy catalog, rarity tiers, and trade/offer/box logic |
 | `src/fidget3d.js` | Lazy-loaded Three.js scene — procedural 3D toy archetypes |
 | `mockups.html`, `mockup-a.html`, `mockup-b.html` | Early design mockups (kept for reference) |

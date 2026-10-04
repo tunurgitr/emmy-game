@@ -38,6 +38,10 @@
     a.dumpling .play { color: #c62828; }
     a.dumpling::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 80% 15%, rgba(255,214,90,.5), transparent 40%), radial-gradient(circle at 15% 85%, rgba(255,255,255,.3), transparent 45%); pointer-events: none; }
     a.dumpling > * { position: relative; }
+    a.blindbag { background: linear-gradient(160deg, #ff8ac8 0%, #7a3cff 100%); }
+    a.blindbag .play { color: #7a3cff; }
+    a.blindbag::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 15% 15%, rgba(255,230,120,.5), transparent 40%), radial-gradient(circle at 85% 85%, rgba(110,198,255,.45), transparent 45%); pointer-events: none; }
+    a.blindbag > * { position: relative; }
     .new { position: absolute; top: 14px; right: -34px; background: #ffd000; color: #6a4a00; font-weight: 900; font-size: 12px; padding: 4px 40px; transform: rotate(35deg); letter-spacing: 1px; }
     a.mock { color: #8a79a6; text-decoration: none; font-size: 13px; font-weight: 600; }
     .reset-link { background: none; border: none; font-family: inherit; color: #8a79a6; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: underline; }
@@ -52,7 +56,7 @@
   </style>
 </head>
 <body>
-  <div class="toys-float">🫧 🌀 🕹️ 🎟️ 🥟 🦄 🐔</div>
+  <div class="toys-float">🫧 🌀 🕹️ 🎟️ 🥟 🛍️ 🦄 🐔</div>
   <h1>Emmy's Games</h1>
   <p class="sub">Pick a game to play! 🎮</p>
   <div class="games">
@@ -69,10 +73,16 @@
       <div class="play">▶ Play</div>
     </a>
     <a class="card dumpling" href="dumplings.html" id="playDumplings">
-      <div class="new">NEW!</div>
       <div class="icon">🥟</div>
       <div class="title">Dumpling Town</div>
       <div class="desc">Explore a big town, go inside the shops, deliver dumplings, open mystery steamers and squish all 221 squishy dumplings. You can even buy a chicken! 🐔</div>
+      <div class="play">▶ Play</div>
+    </a>
+    <a class="card blindbag" href="blindbags.html" id="playBlindBags">
+      <div class="new">NEW!</div>
+      <div class="icon">🛍️</div>
+      <div class="title">Blind Bag Town</div>
+      <div class="desc">Walk to silly stores and tear open 9 kinds of blind bags: squishies, pop stars, dino eggs, slime, sea buddies, chickens in costumes and more. Everyone says hi to you by name!</div>
       <div class="play">▶ Play</div>
     </a>
   </div>
@@ -84,7 +94,7 @@
   <div class="sheet" id="resetSheet">
     <div class="sheet-box">
       <h2>↻ Start over?</h2>
-      <p>This erases everything in <b>all</b> the games — toys, coins, arcade tickets, prizes, dumplings, chickens, high scores and your look. You can’t undo it!</p>
+      <p>This erases everything in <b>all</b> the games — toys, coins, arcade tickets, prizes, dumplings, blind bag toys, chickens, high scores and your look. You can’t undo it!</p>
       <button class="keep" id="resetNo">⬅ No, keep my games</button>
       <button class="wipe" id="resetYes">↻ Yes, erase everything</button>
     </div>
