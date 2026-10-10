@@ -1,7 +1,7 @@
 // ==========================================================================
 //  Emmy's Pizza Plus — hub. A teeny toon pizza plaza: buy mystery bags and
 //  pizza boxes at Box-O-Rama, open them, and every one holds a CLICKER GAME
-//  (33 of them, from Common to Cheesy Secret). Clickers earn coins for more
+//  (39 of them, from Common all the way to Golden Crust). Clickers earn coins for more
 //  boxes; every game you own lives in your Game Book and the Game Oven.
 // ==========================================================================
 import { createTown, SHOPS } from "./pizza3d/town.js";
@@ -33,7 +33,8 @@ window.addEventListener("pointerdown", startMusic, { once: true }); window.addEv
 function fresh() { return { coins: 30, name: "", owned: {}, games: {}, opened: 0, freeBox: true, pity: 0, met: {}, hats: ["none", "chef"], boost: {}, fizzAt: 0, luck: false, rainbow: 0, last: null }; }
 function load() { try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const s = { ...fresh(), ...JSON.parse(raw) }; s.owned = s.owned || {}; s.games = s.games || {}; s.boost = s.boost || {}; s.met = s.met || {}; if (!s.hats.includes("chef")) s.hats.push("chef"); return s; } } catch {} return fresh(); }
 let state = load();
-function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {} }
+let wiping = false; // once "start over" is pressed, nothing may save again (pagehide would put it all back)
+function save() { if (wiping) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {} }
 const ownedCount = () => CATALOG.filter((g) => state.owned[g.id]).length;
 const myName = () => state.name || "friend";
 const starsOf = (id) => Math.min(5, Math.max(0, (state.owned[id] || 1) - 1));
@@ -53,7 +54,8 @@ function confetti(n = 120, colors = ["#f2483a", "#ffd23f", "#4dbb5a", "#e8b26a",
   for (let i = 0; i < n; i++) confs.push({ x: Math.random() * cf.width, y: -20 - Math.random() * 200, vx: (Math.random() - 0.5) * 120, vy: 150 + Math.random() * 200, r: 4 + Math.random() * 6, c: colors[i % colors.length], a: Math.random() * 6, s: (Math.random() - 0.5) * 8, round: Math.random() < 0.4 });
   if (!cfRaf) { let last = performance.now(); const f = (now) => { const dt = Math.min(0.05, (now - last) / 1000); last = now; cg.clearRect(0, 0, cf.width, cf.height); confs = confs.filter((p) => p.y < cf.height + 30); for (const p of confs) { p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.s * dt; cg.save(); cg.translate(p.x, p.y); cg.rotate(p.a); cg.fillStyle = p.c; if (p.round) { cg.beginPath(); cg.arc(0, 0, p.r * 0.7, 0, 7); cg.fill(); } else cg.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); cg.restore(); } if (confs.length) cfRaf = requestAnimationFrame(f); else { cfRaf = 0; cg.clearRect(0, 0, cf.width, cf.height); } }; cfRaf = requestAnimationFrame(f); }
 }
-const rarChip = (r) => `<span class="rarchip ${RARITIES[r].rainbow ? "rainbow" : ""}" style="--rc:${RARITIES[r].color}">${RARITIES[r].name}</span>`;
+const rarCls = (R) => (R.rainbow ? "rainbow" : R.shine ? "goldshine" : "");
+const rarChip = (r) => `<span class="rarchip ${rarCls(RARITIES[r])}" style="--rc:${RARITIES[r].color}">${RARITIES[r].name}</span>`;
 function renderPills() {
   $("coinsPill").textContent = `🪙 ${fmt(state.coins)}`; $("gCoins").textContent = `🪙 ${fmt(state.coins)}`; $("bookPill").textContent = `📖 ${ownedCount()}/${CATALOG.length}`;
   $("namePill").textContent = state.name ? `✏️ ${state.name}` : "✏️ My name";
@@ -110,7 +112,7 @@ const PITY = 8, RAINBOW_PITY = 15;
 function rollRarity(odds) { const e = Object.entries(odds); let r = Math.random() * e.reduce((s, [, w]) => s + w, 0); for (const [k, w] of e) if ((r -= w) <= 0) return k; return e[0][0]; }
 function rollGame(bagId) {
   let rar = rollRarity(BAGS[bagId].odds);
-  if ((state.pity >= PITY - 1 || state.luck) && RARITIES[rar].order < 2) rar = rollRarity({ rare: 60, epic: 25, legendary: 10, mythic: 4, secret: 1 });
+  if ((state.pity >= PITY - 1 || state.luck) && RARITIES[rar].order < 2) rar = rollRarity({ rare: 55, superrare: 15, epic: 18, legendary: 8, mythic: 3, secret: 1 });
   if (state.rainbow >= RAINBOW_PITY - 1) rar = "secret";
   const pool = CATALOG.filter((g) => g.rar === rar); let g = pick(pool);
   if (state.owned[g.id] && Math.random() < 0.6) { const fresh = pool.filter((p) => !state.owned[p.id]); if (fresh.length) g = pick(fresh); } // a gentle nudge toward new ones
@@ -176,15 +178,15 @@ function reveal() {
   const { game: g, isNew, bagId, dupeCoins } = opener, R = RARITIES[g.rar];
   $("oTip").style.display = "none"; renderPills();
   const card = $("oCard"); card.style.setProperty("--rc", R.color);
-  card.innerHTML = `${isNew ? `<div class="newb">NEW!</div>` : ""}<span class="rar ${R.rainbow ? "rainbow" : ""}">${R.name}</span><h2>${g.ico} ${g.name}</h2><div class="meta">${isNew ? `Game #${ownedCount()} of ${CATALOG.length} found!` : `You already had it — it got a ⭐ star! (+🪙 ${dupeCoins} from Papa)`}</div><div class="blurb">${g.blurb}</div>`;
+  card.innerHTML = `${isNew ? `<div class="newb">NEW!</div>` : ""}<span class="rar ${rarCls(R)}">${R.name}</span><h2>${g.ico} ${g.name}</h2><div class="meta">${isNew ? `Game #${ownedCount()} of ${CATALOG.length} found!` : `You already had it — it got a ⭐ star! (+🪙 ${dupeCoins} from Papa)`}</div><div class="blurb">${g.blurb}</div>`;
   requestAnimationFrame(() => card.classList.add("show"));
   const B = BAGS[bagId];
   $("oButtons").innerHTML = `<button class="act b-green" id="oPlay">▶ Play it now!</button><button class="act b-red" id="oAgain" ${state.coins < B.price ? "disabled" : ""}>${B.ico} Another! 🪙 ${B.price}</button><button class="act b-white" id="oDone">✓ Back to town</button>`;
   $("oPlay").onclick = () => { const id = g.id; closeOpen(true); playGame(id); };
   $("oAgain").onclick = () => { if (state.coins < B.price) { SFX.error(); return; } state.coins -= B.price; save(); renderPills(); SFX.buy(); closeOpen(true); startOpen(bagId); };
   $("oDone").onclick = () => closeOpen();
-  if (R.order >= 5) { SFX.wow(); confetti(R.rainbow ? 380 : 260, R.rainbow ? RAINBOW : undefined); toast(`🤩 WOW! ${R.name}! ${g.name}!`, 3500); }
-  else if (R.order >= 3) { SFX.wow(); confetti(170); } else if (R.order >= 2 || isNew) { SFX.win(); if (R.order >= 2) confetti(100); } else SFX.ding();
+  if (R.order >= RARITIES.mythic.order) { SFX.wow(); confetti(R.rainbow || R.shine ? 380 : 260, R.rainbow ? RAINBOW : R.shine ? ["#ffd23f", "#ffe98a", "#e0a800", "#fff"] : undefined); toast(`🤩 WOW! ${R.name}! ${g.name}!`, 3500); }
+  else if (R.order >= RARITIES.superrare.order) { SFX.wow(); confetti(170); } else if (R.order >= 2 || isNew) { SFX.win(); if (R.order >= 2) confetti(100); } else SFX.ding();
   if (!isNew) flyTo($("coinsPill"), "🪙", 4);
 }
 function closeOpen(quick = false) {
@@ -247,7 +249,7 @@ window.addEventListener("pagehide", save);
 // --------------------------------------------------------------------------
 function renderBook() {
   const have = ownedCount(); $("bookCount").textContent = `${have} / ${CATALOG.length} games found`; $("bookBar").style.width = `${(have / CATALOG.length) * 100}%`;
-  $("rarityKey").innerHTML = RARITY_IDS.map((r) => `<span class="${RARITIES[r].rainbow ? "rainbow" : ""}" style="background:${RARITIES[r].color}">${RARITIES[r].name}</span>`).join("");
+  $("rarityKey").innerHTML = RARITY_IDS.map((r) => `<span class="${rarCls(RARITIES[r])}" style="background:${RARITIES[r].color}">${RARITIES[r].name}</span>`).join("");
   $("bookBody").innerHTML = (have ? "" : `<p class="sub">No games yet! Get your FREE first box at 📦 Box-O-Rama.</p>`) + RARITY_IDS.map((r) => { const list = CATALOG.filter((g) => g.rar === r), R = RARITIES[r];
     return `<div class="rgroup">${rarChip(r)} <span>${list.filter((g) => state.owned[g.id]).length}/${list.length}</span></div><div class="shelf">${list.map((g) => { const n = state.owned[g.id] || 0, st = starsOf(g.id);
       return n ? `<div class="slot" data-play="${g.id}" style="--rc:${R.rainbow ? "#ffc400" : R.color}"><div class="disc">${g.ico}</div><div class="nm">${g.name}</div><div class="st">${"⭐".repeat(st)}</div><span class="pl">▶ Play</span></div>`
@@ -304,7 +306,7 @@ $("lookBtn").onclick = openLook;
 
 // ---- start over (asks first, in-page) ----
 $("resetBtn").onclick = () => { if (busyNow()) return; SFX.tap(); openModal("resetModal"); };
-$("resetYes").onclick = () => { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(LOOK_KEY); location.reload(); };
+$("resetYes").onclick = () => { wiping = true; localStorage.removeItem(SAVE_KEY); localStorage.removeItem(LOOK_KEY); location.reload(); };
 
 // --------------------------------------------------------------------------
 //  The town

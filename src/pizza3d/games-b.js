@@ -101,7 +101,7 @@ export const GAMES_B = [
     slotPos(G, i) { return { x: G.cx + (i - 2.5) * Math.min(G.W * 0.14, G.u * 15), y: G.H * 0.8 }; },
     spawnGull(G, near = false) { const s = G.s, have = s.slots.map((x, i) => i).filter((i) => s.slots[i].has && !s.gulls.some((g) => g.slot === i)); if (!have.length) return; const left = Math.random() < 0.5; s.gulls.push({ x: near ? G.W * 0.3 : left ? -G.u * 10 : G.W + G.u * 10, y: near ? G.H * 0.35 : rnd(G.H * 0.1, G.H * 0.3), slot: pick(have), mode: "in", flap: rnd(0, 6), sp: rnd(0.35, 0.55), carry: false }); },
     down(G, x, y) { const s = G.s; const gl = s.gulls.find((g) => g.mode !== "flee" && dist(x, y, g.x, g.y) < G.u * 10);
-      if (gl) { if (gl.carry) { s.slots[gl.slot].has = true; s.saved++; G.add(5, gl.x, gl.y, { color: "#ffd23f" }); G.float("SAVED!", gl.x, gl.y - G.u * 8, "#4dbb5a", 1.1); } else G.add(2, gl.x, gl.y); gl.mode = "flee"; gl.carry = false; SFX.squawk(); G.burst(gl.x, gl.y, "🪶", 4, { size: 0.7 }); G.say(pick(["SQUAWK!", "My snack!", "I'll be back!", "Mine? No? OK."]), gl.x, gl.y - G.u * 8, 0.9); }
+      if (gl) { if (gl.carry) { s.slots[gl.slot].has = true; s.saved++; G.add(5, gl.x, gl.y, { color: "#ffd23f" }); G.float("SAVED!", gl.x, gl.y - G.u * 8, "#4dbb5a", 1.1); } else G.add(2, gl.x, gl.y); gl.mode = "flee"; gl.carry = false; SFX.squawk(); G.burst(gl.x, gl.y, "💨", 4, { size: 0.7 }); G.say(pick(["SQUAWK!", "My snack!", "I'll be back!", "Mine? No? OK."]), gl.x, gl.y - G.u * 8, 0.9); }
       else SFX.boop(); },
     update(G, dt) { const s = G.s; s.spawn -= dt; if (s.spawn <= 0) { s.spawn = rnd(0.8, 1.8); if (s.gulls.length < 4) this.spawnGull(G); }
       for (const sl of s.slots) if (!sl.has) { sl.t += dt; if (sl.t > 4) { sl.has = true; sl.t = 0; } }
