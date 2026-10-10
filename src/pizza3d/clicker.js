@@ -19,7 +19,7 @@ import { tone, noise, SFX } from "./audio.js";
 
 export const INK = "#4a2a1a";
 export const GOALS = [25, 100, 400, 1500, 6000, 25000, 100000, 400000, 1500000];
-export const GOAL_COINS = [3, 8, 15, 30, 60, 120, 250, 500, 900];
+export const GOAL_COINS = [2, 4, 7, 12, 20, 30, 45, 65, 90];
 const SLOT_COST = [12, 30, 90];
 const KIND_DESC = { tap: (d) => `+${d.base} every tap`, auto: (d) => `+${fmt(d.base * (d.autoRate || 1))} every second, by itself`, mult: () => "×1.5 on EVERYTHING", crit: () => "+6% chance of a CHEESY ×5 tap" };
 export const fmt = (n) => { n = Math.floor(n); if (n < 10000) return String(n); if (n < 1e6) return (n / 1000).toFixed(n < 1e5 ? 1 : 0).replace(/\.0$/, "") + "K"; if (n < 1e9) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M"; return (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B"; };

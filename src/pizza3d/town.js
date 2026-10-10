@@ -12,7 +12,7 @@
 //  five shops round the edge, a cheese fountain in the middle.
 // ==========================================================================
 import { THREE, rnd, clamp, pick, approach, LOW_TIER, part, group, rbox, ball, capsule, pill, torus, sliceGeo, makeFace, updateBlinks, toon, COL, INK, makePizza, makeCoin, signBoard, blobShadow, canvasTex, addLights, rrect, emojiSprite, dyn, mergeStatic } from "./toon.js";
-import { makeBuddy, makeKeeper, makeCritter, makeBox, makeHat } from "./models.js";
+import { makeBuddy, makeKeeper, makeCritter, makeBox, makeHat, CHICKEN_LOOKS } from "./models.js";
 
 const R_FRONT = 8.6, R_KEEP = 11.2, R_SHOP = 14.2, R_WALK = 10.4;
 export const SHOPS = [
@@ -44,10 +44,15 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
   let camYaw = 0, camPitch = 0.5, camDist = 10, autoTarget = null, autoInteract = null, stuckT = 0, stuckD = Infinity, speedBoost = 1;
 
   // ---- townsfolk ------------------------------------------------------------------
-  const folks = [["mushroom", "Mushy"], ["olive", "Olivia"], ["tomato", "Tomasz"], ["pigeon", "Gary the Pigeon"]].map(([kind, nm], i) => { const c = makeCritter(kind); const a = rnd(0, 6.28), r = rnd(4, 8); const f = { kind, name: nm, c, x: Math.cos(a) * r, z: Math.sin(a) * r, tx: 0, tz: 0, wait: rnd(0, 3), yaw: 0, greet: rnd(3, 9), talkT: 0, i, pace: kind === "pigeon" ? 1.6 : 1.3 }; f.tx = f.x; f.tz = f.z; c.group.position.set(f.x, 0, f.z); scene.add(c.group); return f; });
+  // ...and LOTS of chickens. Hens strut about; each chick follows its mama. Some hens are chefs.
+  const HENS = [["Nugget", 0, true], ["Pepper Hen", 1, false], ["Mozzarella", 2, false], ["Princess Cluck", 3, true], ["Blueberry", 4, false], ["Lady Lavender", 5, false], ["Minty", 6, true], ["Sunny Side", 7, false], ["Big Barbara", 1, true], ["Crumbs", 0, false]];
+  const CHICKS = [["Peep", 0], ["Pip", 0], ["Tiny Tony", 3], ["Squeaky", 3], ["Bean", 6], ["Dot", 7], ["Mini Barb", 8], ["Pebble", 8]];
+  const folkList = [["mushroom", "Mushy"], ["olive", "Olivia"], ["tomato", "Tomasz"], ["pigeon", "Gary the Pigeon"], ...HENS.map(([nm, l, hat]) => ["chicken", nm, { look: CHICKEN_LOOKS[l], hat }]), ...CHICKS.map(([nm, mom]) => ["chick", nm, {}, mom + 4])];
+  const folks = folkList.map(([kind, nm, opt, mom], i) => { const c = makeCritter(kind, opt); const a = rnd(0, 6.28), r = rnd(4, 9); const f = { kind, name: nm, c, x: Math.cos(a) * r, z: Math.sin(a) * r, tx: 0, tz: 0, wait: rnd(0, 3), yaw: 0, greet: kind === "chicken" || kind === "chick" ? rnd(10, 60) : rnd(3, 9), talkT: 0, i, pace: { pigeon: 1.6, chicken: 1.5, chick: 2.2 }[kind] || 1.3, mom }; f.tx = f.x; f.tz = f.z; c.group.position.set(f.x, 0, f.z); scene.add(c.group); return f; });
+  for (const f of folks) if (f.mom != null) { f.mom = folks[f.mom]; f.x = f.mom.x + rnd(-1, 1); f.z = f.mom.z + rnd(-1, 1); f.tx = f.x; f.tz = f.z; f.off = rnd(0, 6.28); }
 
   // ---- coins that pop up round the plaza ------------------------------------------
-  const coins = []; for (let i = 0; i < 7; i++) { const g = makeCoin(1.1); scene.add(g); const c = { g, t: 0 }; placeCoin(c); coins.push(c); }
+  const coins = []; for (let i = 0; i < 4; i++) { const g = makeCoin(1.1); scene.add(g); const c = { g, t: 0 }; placeCoin(c); coins.push(c); }
   function placeCoin(c) { for (let k = 0; k < 20; k++) { const a = rnd(0, 6.28), r = rnd(3.8, R_WALK - 0.8); c.x = Math.cos(a) * r; c.z = Math.sin(a) * r; if (Math.hypot(c.x - player.x, c.z - player.z) > 3) break; } c.g.position.set(c.x, 0.7, c.z); c.g.visible = true; }
 
   // ---- input: joystick on the left (touch), drag to look, tap to walk / tap a shop -----
@@ -108,7 +113,7 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
   const bubbles = [];
   function say(who, text, secs = 4.5) {
     let target = null, y = 2.3;
-    if (typeof who === "string") { const k = keepers[who]; if (k) { target = k.group; y = 3.2; k.wave(2); } } else if (who && who.c) { target = who.c.group; y = who.kind === "pigeon" ? 1.5 : 1.9; }
+    if (typeof who === "string") { const k = keepers[who]; if (k) { target = k.group; y = 3.2; k.wave(2); } } else if (who && who.c) { target = who.c.group; y = { pigeon: 1.5, chicken: 1.7, chick: 1.0 }[who.kind] || 1.9; }
     if (!target) return; for (let i = bubbles.length - 1; i >= 0; i--) if (bubbles[i].target === target) { bubbles[i].sp.parent?.remove(bubbles[i].sp); bubbles.splice(i, 1); }
     const sp = bubbleSprite(text); sp.position.set(0, y, 0); target.add(sp); bubbles.push({ target, sp, t: secs });
   }
@@ -122,18 +127,18 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
     for (const f of folks) {
       let sp = 0; const dP = Math.hypot(f.x - player.x, f.z - player.z);
       if (f.talkT > 0) { f.talkT -= dt; f.yaw = Math.atan2(player.x - f.x, player.z - f.z); }
-      else { const dx = f.tx - f.x, dz = f.tz - f.z, d = Math.hypot(dx, dz); if (d > 0.15) { sp = f.pace; f.x += (dx / d) * sp * dt; f.z += (dz / d) * sp * dt; f.yaw = Math.atan2(dx, dz); } else if ((f.wait -= dt) < 0) { f.wait = rnd(1, 4); const a = rnd(0, 6.28), r = rnd(3.6, R_WALK - 1); f.tx = Math.cos(a) * r; f.tz = Math.sin(a) * r; } }
+      else { if (f.mom) { const a = f.off + t * 0.3; f.tx = f.mom.x + Math.cos(a) * 0.9 - Math.sin(f.mom.yaw) * 0.5; f.tz = f.mom.z + Math.sin(a) * 0.9 - Math.cos(f.mom.yaw) * 0.5; } const dx = f.tx - f.x, dz = f.tz - f.z, d = Math.hypot(dx, dz); if (d > 0.15) { sp = f.pace; f.x += (dx / d) * sp * dt; f.z += (dz / d) * sp * dt; f.yaw = Math.atan2(dx, dz); } else if ((f.wait -= dt) < 0) { f.wait = rnd(1, 4); const a = rnd(0, 6.28), r = rnd(3.6, R_WALK - 1); f.tx = Math.cos(a) * r; f.tz = Math.sin(a) * r; } }
       if (dP < 1.1 && f.talkT <= 0) { f.x += ((f.x - player.x) / (dP || 1)) * dt * 2; f.z += ((f.z - player.z) / (dP || 1)) * dt * 2; }
       if (f.hop > 0) f.hop -= dt;
       f.c.group.position.set(f.x, f.hop > 0 ? Math.sin((0.5 - f.hop) * Math.PI * 2) * 0.4 : 0, f.z); let dy = f.yaw - f.c.group.rotation.y; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; f.c.group.rotation.y += dy * Math.min(1, dt * 6);
       f.c.update(dt, t + f.i, sp / 1.5);
-      f.greet -= dt; if (dP < 2.4 && f.greet <= 0 && !paused) { f.greet = rnd(25, 45); f.talkT = 3; onNear && onNear(f, false); }
+      f.greet -= dt; if (dP < 2.4 && f.greet <= 0 && !paused) { f.greet = f.kind === "chicken" || f.kind === "chick" ? rnd(40, 90) : rnd(25, 45); f.talkT = 3; onNear && onNear(f, false); }
     }
   }
   function update(dt) {
     t += dt; for (const f of animated) f(dt, t); updateBlinks(dt); updateBubbles(dt); updateFolks(dt);
     for (const k of Object.values(keepers)) k.update(dt, t);
-    for (const c of coins) { if (c.t > 0) { c.t -= dt; if (c.t <= 0) placeCoin(c); continue; } c.g.rotation.y += dt * 2.6; c.g.position.y = 0.7 + Math.sin(t * 3 + c.x) * 0.1; if (Math.hypot(player.x - c.x, player.z - c.z) < 1.1) { c.t = rnd(15, 25); c.g.visible = false; onPickup && onPickup("coin", 1); } }
+    for (const c of coins) { if (c.t > 0) { c.t -= dt; if (c.t <= 0) placeCoin(c); continue; } c.g.rotation.y += dt * 2.6; c.g.position.y = 0.7 + Math.sin(t * 3 + c.x) * 0.1; if (Math.hypot(player.x - c.x, player.z - c.z) < 1.1) { c.t = rnd(40, 70); c.g.visible = false; onPickup && onPickup("coin", 1); } }
     let mx = move.x, mz = move.y;
     if (!paused) { if (keys.has("w") || keys.has("ArrowUp")) mz -= 1; if (keys.has("s") || keys.has("ArrowDown")) mz += 1; if (keys.has("a") || keys.has("ArrowLeft")) mx -= 1; if (keys.has("d") || keys.has("ArrowRight")) mx += 1; if (keys.has("q")) camYaw += 1.8 * dt; if (keys.has("e") && false) camYaw -= 1.8 * dt; }
     let l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; l = 1; } if (l > 0.05) { autoTarget = null; autoInteract = null; }

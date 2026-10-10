@@ -52,6 +52,8 @@ export const SFX = {
   boxTap: (n) => { tone(300 + n * 120, 0.1, { type: "square", vol: 0.08 }); noise(0.12, { vol: 0.12, f0: 2000, f1: 600, type: "bandpass" }); },
   boxOpen: (order) => { noise(0.4, { vol: 0.2, f0: 3000, f1: 800, type: "bandpass" }); const n = 4 + order; for (let i = 0; i < n; i++) tone(523 * Math.pow(2, (i * 4) / 12), 0.2, { type: "triangle", vol: 0.14, when: 0.1 + i * 0.07 }); },
   fizz: () => { for (let i = 0; i < 6; i++) tone(r(1500, 3000), 0.04, { type: "sine", vol: 0.05, when: i * 0.04 }); noise(0.4, { vol: 0.06, f0: 6000, f1: 3000, type: "highpass" }); },
+  bawk: () => { tone(r(520, 620), 0.09, { type: "sawtooth", vol: 0.08, slideTo: 760 }); tone(r(700, 820), 0.22, { type: "square", vol: 0.06, when: 0.11, slideTo: 420 }); noise(0.15, { vol: 0.05, f0: 2200, f1: 1200, type: "bandpass", q: 3, when: 0.1 }); },
+  peep: () => { tone(r(2200, 2600), 0.06, { type: "sine", vol: 0.08, slideTo: 3000 }); tone(r(2300, 2700), 0.06, { type: "sine", vol: 0.07, when: 0.1, slideTo: 3100 }); },
   slurp: () => { tone(300, 0.4, { type: "sawtooth", vol: 0.05, slideTo: 900 }); noise(0.4, { vol: 0.08, f0: 1200, f1: 3000, type: "bandpass", q: 3 }); },
 };
 

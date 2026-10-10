@@ -7,7 +7,7 @@
 import { createTown, SHOPS } from "./pizza3d/town.js";
 import { createOpen } from "./pizza3d/open.js";
 import { createClicker, fmt, GOALS } from "./pizza3d/clicker.js";
-import { CATALOG, RARITIES, RARITY_IDS, BAGS, BAG_IDS, COIN_RATE, byId } from "./pizza3d/games.js";
+import { CATALOG, RARITIES, RARITY_IDS, BAGS, BAG_IDS, coinsFor, byId } from "./pizza3d/games.js";
 import { makeBuddy, HATS, LOOK, DEFAULT_LOOK } from "./pizza3d/models.js";
 import { THREE, addLights } from "./pizza3d/toon.js";
 import { SFX, audio, setMuted, startMusic, music, setMusic } from "./pizza3d/audio.js";
@@ -30,7 +30,7 @@ window.addEventListener("pointerdown", startMusic, { once: true }); window.addEv
 // --------------------------------------------------------------------------
 //  State
 // --------------------------------------------------------------------------
-function fresh() { return { coins: 30, name: "", owned: {}, games: {}, opened: 0, freeBox: true, pity: 0, met: {}, hats: ["none", "chef"], boost: {}, fizzAt: 0, luck: false, coinFrac: 0, last: null }; }
+function fresh() { return { coins: 30, name: "", owned: {}, games: {}, opened: 0, freeBox: true, pity: 0, met: {}, hats: ["none", "chef"], boost: {}, fizzAt: 0, luck: false, rainbow: 0, last: null }; }
 function load() { try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const s = { ...fresh(), ...JSON.parse(raw) }; s.owned = s.owned || {}; s.games = s.games || {}; s.boost = s.boost || {}; s.met = s.met || {}; if (!s.hats.includes("chef")) s.hats.push("chef"); return s; } } catch {} return fresh(); }
 let state = load();
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {} }
@@ -99,19 +99,22 @@ const KEEPERS = {
 function keeperSay(id, text) { const K = KEEPERS[id]; town && town.say(id, text); if (K) toast(`${K.face} ${K.who}: “${text}”`, 4200); }
 const keeperBox = (id, text) => { const K = KEEPERS[id]; return `<div class="keeper"><span class="face">${K.face}</span><div><b>${K.who}:</b> “${text}”</div></div>`; };
 const NPC_LINES = [(n) => `Hi ${n}!`, (n) => `Hey ${n}! Got any new games?`, (n) => `${n}! I heard there's a Cheesy Secret game!`, (n) => `Ooh hi ${n}! Love your hat!`, (n) => `${n}! Have you tried the Cheese Fountain? Don't drink it.`, (n) => `Ciao ${n}!`, (n) => `Hi ${n}! I just got the Angry Anchovy. It's SO grumpy!`];
+const CHICKEN_LINES = [(n) => `BAWK! Hi ${n}!`, (n) => `Bawk bawk! ${n}, is that PIZZA?`, () => `Cluck. Cluck cluck. BAWK!`, (n) => `${n}! I laid an egg-stra cheesy egg!`, () => `Bok bok... I'm a pizza chicken now.`, (n) => `BAWK! ${n}! Have you seen my chicks?`, () => `Cluck! I'm not scared of the Pizza Kraken. Bawk.`];
+const CHICK_LINES = [() => `Peep!`, () => `Peep peep!`, (n) => `Peep! Hi ${n}!`, () => `Peep? Pizza? Peep!`, () => `*tiny peep*`];
 const PIGEON_LINES = [(n) => `Coo! ${n}! Got any crust?`, (n) => `Coo coo. Hi ${n}. I'm Gary.`, (n) => `${n}! The seagulls are my cousins. Don't tell anyone.`];
 
 // --------------------------------------------------------------------------
 //  Mystery bags & boxes
 // --------------------------------------------------------------------------
-const PITY = 8;
+const PITY = 8, RAINBOW_PITY = 15;
 function rollRarity(odds) { const e = Object.entries(odds); let r = Math.random() * e.reduce((s, [, w]) => s + w, 0); for (const [k, w] of e) if ((r -= w) <= 0) return k; return e[0][0]; }
 function rollGame(bagId) {
   let rar = rollRarity(BAGS[bagId].odds);
   if ((state.pity >= PITY - 1 || state.luck) && RARITIES[rar].order < 2) rar = rollRarity({ rare: 60, epic: 25, legendary: 10, mythic: 4, secret: 1 });
+  if (state.rainbow >= RAINBOW_PITY - 1) rar = "secret";
   const pool = CATALOG.filter((g) => g.rar === rar); let g = pick(pool);
   if (state.owned[g.id] && Math.random() < 0.6) { const fresh = pool.filter((p) => !state.owned[p.id]); if (fresh.length) g = pick(fresh); } // a gentle nudge toward new ones
-  state.pity = RARITIES[g.rar].order >= 2 ? 0 : state.pity + 1; state.luck = false;
+  state.pity = RARITIES[g.rar].order >= 2 ? 0 : state.pity + 1; state.luck = false; state.rainbow = g.rar === "secret" ? 0 : (state.rainbow || 0) + 1;
   return g;
 }
 const oddsHtml = (odds) => Object.entries(odds).map(([r, w]) => `<div><b style="background:${RARITIES[r].rainbow ? "linear-gradient(90deg,#ff5d8f,#ffe066,#6ec6ff)" : RARITIES[r].color}"></b>${RARITIES[r].name}<span>${w}%</span></div>`).join("");
@@ -120,7 +123,7 @@ function openShop(id) {
   if (id === "boxes") {
     body.innerHTML = `<h2>📦 Box-O-Rama</h2>${keeperBox(id, greet)}<div class="items">${BAG_IDS.map((b) => { const B = BAGS[b], free = state.freeBox && b === "box";
       return `<div class="item"><div class="ico">${B.ico}</div><h3>${B.name}</h3><div class="desc">${B.desc}</div><div class="odds">${oddsHtml(B.odds)}</div><button class="act ${free ? "b-green" : "b-red"}" data-buy="${b}" ${!free && state.coins < B.price ? "disabled" : ""}>${free ? "🎁 FREE first box!" : `Buy 🪙 ${B.price}`}</button></div>`; }).join("")}</div>
-      <p class="sub" style="margin-top:12px">🍀 Lucky meter: ${state.pity}/${PITY - 1} — after ${PITY - 1} boxes with no Rare, the next one is Rare or better!${state.luck ? " · 🌿 Lucky Basil is ON: your next box is Rare or better!" : ""}<br>Got a game twice? It gets a ⭐ star (+25% points, up to 5) and Papa gives you coins!</p>`;
+      <p class="sub" style="margin-top:12px">🍀 Lucky meter: ${state.pity}/${PITY - 1} — after ${PITY - 1} boxes with no Rare, the next one is Rare or better!<br>🌈 Rainbow meter: ${state.rainbow || 0}/${RAINBOW_PITY - 1} — after ${RAINBOW_PITY - 1} boxes with no 🌈 Cheesy Secret, the next one IS a Cheesy Secret!${state.luck ? " · 🌿 Lucky Basil is ON: your next box is Rare or better!" : ""}<br>Got a game twice? It gets a ⭐ star (+25% points, up to 5) and Papa gives you coins!</p>`;
     body.querySelectorAll("[data-buy]").forEach((b) => (b.onclick = () => buyBag(b.dataset.buy)));
   } else if (id === "toppings") {
     const T = [["cheese", "🧀", "Double Cheese", "Every clicker game earns DOUBLE points for 3 minutes!", 25], ["hot", "🌶️", "Hot Sauce Helpers", "Your auto-helpers work 3× faster for 3 minutes!", 30], ["luck", "🌿", "Lucky Basil", "Your next box is guaranteed Rare or better!", 20]];
@@ -130,9 +133,9 @@ function openShop(id) {
   } else if (id === "soda") {
     const wait = Math.max(0, state.fizzAt - Date.now());
     body.innerHTML = `<h2>🥤 Fizzy Pop Soda</h2>${keeperBox(id, greet)}<div class="items">
-      <div class="item"><div class="ico">🫧</div><h3>Free Fizz</h3><div class="desc">A free mystery soda! Fizz pays YOU to drink it. (Every minute.)</div><button class="act b-blue" id="fizzFree" ${wait ? "disabled" : ""}>${wait ? `Back in ${Math.ceil(wait / 1000)}s` : "🥤 Free soda!"}</button></div>
+      <div class="item"><div class="ico">🫧</div><h3>Free Fizz</h3><div class="desc">A free mystery soda! Fizz pays YOU to drink it. (Every 3 minutes.)</div><button class="act b-blue" id="fizzFree" ${wait ? "disabled" : ""}>${wait ? `Back in ${Math.floor(wait / 60000)}:${String(Math.ceil(wait / 1000) % 60).padStart(2, "0")}` : "🥤 Free soda!"}</button></div>
       <div class="item ${boostLeft("zoom") ? "on" : ""}"><div class="ico">⚡</div><h3>Zoomy Soda</h3><div class="desc">Your legs go ZOOM for 2 minutes.</div><button class="act b-red" id="fizzZoom" ${state.coins < 5 ? "disabled" : ""}>Buy 🪙 5</button></div></div>`;
-    $("fizzFree").onclick = () => { if (state.fizzAt > Date.now()) return; state.fizzAt = Date.now() + 60000; const n = 2 + Math.floor(Math.random() * 4), fl = pick(["Pickle Fizz", "Bubblegum Thunder", "Pizza Pop (it's pizza flavour)", "Purple", "Cloud Juice", "Mystery Mango", "Rainbow Burp", "Extra Fizzy Fizz"]); addCoins(n); flyTo($("coinsPill"), "🪙", n); SFX.fizz(); setTimeout(() => SFX.burp(), 700); keeperSay("soda", `Here's a ${fl}, ${myName()}! And ${n} coins for being awesome!`); openShop("soda"); };
+    $("fizzFree").onclick = () => { if (state.fizzAt > Date.now()) return; state.fizzAt = Date.now() + 180000; const n = 1 + Math.floor(Math.random() * 3), fl = pick(["Pickle Fizz", "Bubblegum Thunder", "Pizza Pop (it's pizza flavour)", "Purple", "Cloud Juice", "Mystery Mango", "Rainbow Burp", "Extra Fizzy Fizz"]); addCoins(n); flyTo($("coinsPill"), "🪙", n); SFX.fizz(); setTimeout(() => SFX.burp(), 700); keeperSay("soda", `Here's a ${fl}, ${myName()}! And ${n} coins for being awesome!`); openShop("soda"); };
     $("fizzZoom").onclick = () => { if (state.coins < 5) return; state.coins -= 5; state.boost.zoom = Math.max(Date.now(), state.boost.zoom || 0) + 120000; save(); renderPills(); town.setSpeedBoost(1.6); SFX.slurp(); closeModal(); keeperSay("soda", `ZOOM ZOOM, ${myName()}!`); };
   } else if (id === "oven") { closeModal(true); renderBook(); openModal("bookModal"); return; }
   else if (id === "hats") {
@@ -203,10 +206,10 @@ function playGame(id) {
   $("game").classList.add("show"); document.body.classList.add("ingame"); $("hud").classList.add("busy"); town.pause(true); town.sleep(true); music.quiet = true;
   $("gTop").style.setProperty("--rcl", R.rainbow ? "linear-gradient(90deg,#ffd6e6,#fff2b0,#d6ffe8,#d6ecff)" : `color-mix(in srgb, ${R.color} 28%, #fff7ea)`); $("gTop").style.background = R.rainbow ? "linear-gradient(90deg,#ffd6e6,#fff2b0,#d6ffe8,#d6ecff)" : "";
   $("gIco").textContent = game.ico; $("gName").textContent = game.name; const st = starsOf(id); $("gSub").innerHTML = `${rarChip(game.rar)} ${st ? "⭐".repeat(st) + ` +${st * 25}%` : ""}`;
-  let coinAcc = 0;
+  let coinAcc = 0; if (sv.paid == null) sv.paid = coinsFor(game, sv.total); // older saves start counting from here
   const ctrl = createClicker($("gCanvas"), game, sv, { stars: st,
     boost: () => (boostLeft("cheese") ? 2 : 1), autoBoost: () => (boostLeft("hot") ? 3 : 1),
-    onEarn: (v) => { state.coinFrac = (state.coinFrac || 0) + v / COIN_RATE[game.rar]; if (state.coinFrac >= 1) { const n = Math.floor(state.coinFrac); state.coinFrac -= n; state.coins += n; coinAcc += n; } },
+    onEarn: () => { const n = coinsFor(game, sv.total) - sv.paid; if (n > 0) { sv.paid += n; state.coins += n; coinAcc += n; } },
     onGoal: (i, msg, coins) => goalReached(game, i, msg, coins),
     onChange: () => renderGameHud() });
   playing = { ctrl, game, coinAcc: () => coinAcc };
@@ -317,7 +320,7 @@ try {
   town = createTown($("view"), { ui: $("hud"), avatar: look, name: state.name,
     onPrompt: (it) => { $("prompt").classList.toggle("show", !!it); if (it) $("interact").textContent = `▶ ${it.ico} ${it.label}`; },
     onInteract: interact,
-    onNear: (f, tapped) => { const text = (f.kind === "pigeon" ? pick(PIGEON_LINES) : pick(NPC_LINES))(myName()); town.say(f, text); if (f.kind === "pigeon") SFX.squawk(); else SFX.squeak(); if (tapped) toast(`${{ pigeon: "🐦", mushroom: "🍄", olive: "🫒", tomato: "🍅" }[f.kind] || "🙂"} ${f.name}: “${text}”`, 2600); },
+    onNear: (f, tapped) => { const text = pick({ pigeon: PIGEON_LINES, chicken: CHICKEN_LINES, chick: CHICK_LINES }[f.kind] || NPC_LINES)(myName()); town.say(f, text); if (f.kind === "chicken") { SFX.bawk(); f.c.flap(); } else if (f.kind === "chick") { SFX.peep(); f.c.flap(); } else if (f.kind === "pigeon") SFX.squawk(); else SFX.squeak(); if (tapped) toast(`${{ pigeon: "🐦", mushroom: "🍄", olive: "🫒", tomato: "🍅", chicken: "🐔", chick: "🐤" }[f.kind] || "🙂"} ${f.name}: “${text}”`, 2600); },
     onPickup: (what, n) => { if (what === "coin") { state.coins += n; save(); renderPills(); bump($("coinsPill")); SFX.coin(); } },
   });
   town.setSpeedBoost(boostLeft("zoom") ? 1.6 : 1);

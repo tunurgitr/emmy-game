@@ -18,14 +18,16 @@ export const RARITIES = {
 export const RARITY_IDS = Object.keys(RARITIES);
 export const CATALOG = [...GAMES_A, ...GAMES_B, ...GAMES_C];
 export const byId = (id) => CATALOG.find((g) => g.id === id);
-// how many points it takes to make one coin, by rarity (rarer games pay better)
-export const COIN_RATE = { common: 6, uncommon: 6, rare: 6, epic: 6, legendary: 6, mythic: 5, secret: 4 };
+// coins a game has paid out = COIN_K × √(points ÷ base) — so the first taps pay
+// and huge helper-made piles don't rain coins (rarer games pay a bit better)
+export const COIN_K = { common: 0.7, uncommon: 0.75, rare: 0.8, epic: 0.9, legendary: 1, mythic: 1.15, secret: 1.3 };
+export const coinsFor = (game, total) => Math.floor(COIN_K[game.rar] * Math.sqrt(Math.max(0, total) / (game.base || 1)));
 
 // odds are in percent and printed in the shop
 export const BAGS = {
-  bag: { name: "Snack Bag", ico: "🛍️", look: "bag", price: 12, desc: "A greasy little paper bag. Smells amazing.", odds: { common: 55, uncommon: 26, rare: 12, epic: 4.5, legendary: 1.8, mythic: 0.5, secret: 0.2 } },
-  box: { name: "Mystery Pizza Box", ico: "📦", look: "box", price: 30, desc: "A real pizza box! Better odds inside.", odds: { common: 28, uncommon: 30, rare: 24, epic: 11, legendary: 5, mythic: 1.5, secret: 0.5 } },
-  party: { name: "Party Box", ico: "🎉", look: "party", price: 75, desc: "Always Rare or better! Balloons included.", odds: { rare: 45, epic: 30, legendary: 16, mythic: 7, secret: 2 } },
-  gold: { name: "Golden Oven Crate", ico: "👑", look: "gold", price: 180, desc: "Always Epic or better. Fit for a pizza queen!", odds: { epic: 42, legendary: 33, mythic: 18, secret: 7 } },
+  bag: { name: "Snack Bag", ico: "🛍️", look: "bag", price: 12, desc: "A greasy little paper bag. Smells amazing.", odds: { common: 54.5, uncommon: 26, rare: 12, epic: 4.5, legendary: 1.5, mythic: 0.5, secret: 1 } },
+  box: { name: "Mystery Pizza Box", ico: "📦", look: "box", price: 30, desc: "A real pizza box! Better odds inside.", odds: { common: 27, uncommon: 29, rare: 24, epic: 11, legendary: 5, mythic: 1.5, secret: 2.5 } },
+  party: { name: "Party Box", ico: "🎉", look: "party", price: 75, desc: "Always Rare or better! Balloons included.", odds: { rare: 42, epic: 28, legendary: 15, mythic: 7, secret: 8 } },
+  gold: { name: "Golden Oven Crate", ico: "👑", look: "gold", price: 180, desc: "Always Epic or better. Fit for a pizza queen!", odds: { epic: 38, legendary: 30, mythic: 17, secret: 15 } },
 };
 export const BAG_IDS = Object.keys(BAGS);

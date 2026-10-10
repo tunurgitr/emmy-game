@@ -3,7 +3,7 @@
 //
 //  makeBuddy(look)        → { group, walk(t, speed), parts }  — you! (big head, chunky body)
 //  makeKeeper(kind)       → { group, update(dt, t), face }     — the food shopkeepers
-//  makeCritter(kind)      → { group, update(dt, t, speed) }    — townsfolk (mushroom kids, a pigeon)
+//  makeCritter(kind, opt) → { group, update(dt, t, speed), flap() } — townsfolk (mushroom kids, a pigeon, chickens & chicks)
 //  makeBox(kind)          → { group, lid, body, shake(), open() } — the mystery bags & boxes
 //  makeHat(id)            → Group                               — hats from the Hat Hut
 // ==========================================================================
@@ -143,9 +143,21 @@ export function makeKeeper(kind) {
 // --------------------------------------------------------------------------
 //  Townsfolk — little mushroom kids, an olive and a pigeon who wants your crust
 // --------------------------------------------------------------------------
-export function makeCritter(kind) {
-  const g = new THREE.Group(); const body = new THREE.Group(); g.add(body); let legs = [];
-  if (kind === "pigeon") {
+export const CHICKEN_LOOKS = [[0xfff8ec, 0xf0e2c8], [0xc8743a, 0xa0552a], [0xf2c46a, 0xd9a23f], [0xffb3d1, 0xff86b3], [0xbfe0ff, 0x8ec5ff], [0xd8c2ff, 0xb39aff], [0xb8f0d4, 0x7fe3c4], [0xffe066, 0xffc21a]];
+export function makeCritter(kind, { look = CHICKEN_LOOKS[0], hat = false } = {}) {
+  const g = new THREE.Group(); const body = new THREE.Group(); g.add(body); let legs = [], wings = [], flap = 0;
+  if (kind === "chicken" || kind === "chick") {
+    const baby = kind === "chick", [bc, wc] = baby ? [0xffe066, 0xffc21a] : look, k = baby ? 0.55 : 1;
+    body.add(part(ball(0.3 * k, 18, 14), bc, { y: 0.42 * k, sz: baby ? 1 : 1.2 }));
+    body.add(part(ball(0.21 * k, 16, 12), bc, { y: 0.78 * k, z: 0.14 * k }));
+    body.add(part(new THREE.ConeGeometry(0.055 * k, 0.13 * k, 8), COL.gold, { rx: Math.PI / 2, y: 0.76 * k, z: 0.38 * k }));
+    for (const s of [-1, 1]) body.add(part(ball(0.035 * k, 8, 6), 0x2a1a12, { ol: 0, x: s * 0.1 * k, y: 0.84 * k, z: 0.31 * k }));
+    for (const s of [-1, 1]) body.add(part(ball(0.04 * k, 8, 6), 0xff8fb0, { ol: 0, x: s * 0.15 * k, y: 0.74 * k, z: 0.27 * k, sy: 0.6 }));
+    if (!baby) { for (let i = 0; i < 3; i++) body.add(part(ball(0.06, 8, 6), COL.tomato, { ol: 0.5, y: 1.0 + (i === 1 ? 0.03 : 0), z: 0.08 + (i - 1) * 0.07, sx: 0.6 })); body.add(part(ball(0.04, 8, 6), COL.tomato, { ol: 0.4, y: 0.66, z: 0.36, sy: 1.4 })); for (let i = 0; i < 3; i++) body.add(part(ball(0.1, 10, 8), i % 2 ? wc : bc, { x: (i - 1) * 0.07, y: 0.6, z: -0.36, rx: -1, sx: 0.5, sy: 1.3 })); }
+    if (hat) { const h = makeHat("chef"); h.scale.setScalar(0.42 * k); h.position.set(0, 0.95 * k, 0.12 * k); body.add(h); }
+    for (const s of [-1, 1]) { const w = new THREE.Group(); w.position.set(s * 0.27 * k, 0.48 * k, 0); w.add(part(ball(0.16 * k, 12, 8), wc, { y: -0.04 * k, sx: 0.35, sy: 0.75, sz: 1.1 })); wings.push(w); body.add(w); }
+    for (const s of [-1, 1]) { const l = part(capsule(0.025 * k, 0.16 * k), 0xff9a3c, { x: s * 0.09 * k, y: 0.11 * k }); legs.push(l); body.add(l); }
+  } else if (kind === "pigeon") {
     body.add(part(ball(0.32, 16, 12), 0x9aa6c2, { y: 0.42, sz: 1.3 })); body.add(part(ball(0.2, 14, 10), 0x8a96b8, { y: 0.72, z: 0.22 }));
     body.add(part(new THREE.ConeGeometry(0.06, 0.16, 8), COL.gold, { rx: Math.PI / 2, y: 0.7, z: 0.45 }));
     for (const s of [-1, 1]) body.add(part(ball(0.035, 8, 6), 0x222222, { ol: 0, x: s * 0.11, y: 0.77, z: 0.36 }));
@@ -159,11 +171,16 @@ export function makeCritter(kind) {
     const f = makeFace(0.4, "happy"); f.position.set(0, kind === "mushroom" ? 0.5 : 0.62, kind === "mushroom" ? 0.24 : 0.44); body.add(f);
     for (const s of [-1, 1]) { const l = part(capsule(0.06, 0.12), kind === "mushroom" ? COL.mushroom : 0x5a3a2a, { x: s * 0.13, y: 0.12 }); legs.push(l); body.add(l); }
   }
-  g.add(blobShadow(0.4, 0.25));
-  legs.forEach(dyn); mergeStatic(body);
-  let ph = 0;
-  function update(dt, t, speed) { ph += dt * (4 + speed * 6); const sw = Math.sin(ph) * 0.6 * Math.min(1, speed); if (legs[0]) { legs[0].rotation.x = sw; legs[1].rotation.x = -sw; } body.position.y = Math.abs(Math.sin(ph)) * 0.06 * Math.min(1, speed); if (kind === "pigeon") body.rotation.x = speed > 0.1 ? Math.sin(ph * 2) * 0.12 : Math.max(0, Math.sin(t * 1.4)) * 0.5; }
-  return { group: g, update };
+  g.add(blobShadow(kind === "chick" ? 0.22 : 0.4, 0.25));
+  legs.forEach(dyn); wings.forEach(dyn); mergeStatic(body);
+  let ph = 0; const pecky = kind === "pigeon" || kind === "chicken" || kind === "chick";
+  function update(dt, t, speed) {
+    ph += dt * (4 + speed * 6); const sw = Math.sin(ph) * 0.6 * Math.min(1, speed); if (legs[0]) { legs[0].rotation.x = sw; legs[1].rotation.x = -sw; }
+    flap = Math.max(0, flap - dt); body.position.y = Math.abs(Math.sin(ph)) * 0.06 * Math.min(1, speed) + (flap > 0 ? Math.sin((flap / 0.8) * Math.PI) * 0.35 : 0);
+    if (wings.length) { const w = flap > 0 ? Math.sin(t * 38) * 0.8 + 0.7 : Math.sin(t * 2 + ph) * 0.05; wings[0].rotation.z = w; wings[1].rotation.z = -w; }
+    if (pecky) body.rotation.x = flap > 0 ? 0 : speed > 0.1 ? Math.sin(ph * 2) * 0.12 : Math.max(0, Math.sin(t * (kind === "pigeon" ? 1.4 : 2.2) + ph)) * 0.5;
+  }
+  return { group: g, update, flap: () => (flap = 0.8) };
 }
 
 // --------------------------------------------------------------------------
