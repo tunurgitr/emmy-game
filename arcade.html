@@ -180,6 +180,22 @@
     .homescreen .app .ico { width: 62px; height: 62px; border-radius: 16px; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 34px; box-shadow: 0 6px 14px rgba(0,0,0,.3); }
     .homescreen .app .lbl { font-size: 11px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
     .homescreen .app.locked { opacity: .55; cursor: not-allowed; }
+    /* the big iPad (behind the start spot) — fills the screen on a real iPad, any orientation */
+    #ipadModal { padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); flex-direction: column; gap: 8px; align-items: stretch; background: radial-gradient(circle at 50% 40%, rgba(80,200,140,.35), rgba(10,4,30,.94) 70%); }
+    .ipadbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; max-width: 1240px; width: 100%; margin: 0 auto; }
+    .ipadbar .ttl { font-weight: 900; font-size: 16px; text-shadow: 0 0 10px #00c853, 0 2px 4px #000; }
+    .ipadbar .free { font-size: 12px; font-weight: 900; color: #0b3d1a; background: #a5f3a0; border-radius: 999px; padding: 3px 9px; margin-left: 6px; vertical-align: middle; text-shadow: none; }
+    .ipadbar .act { font-size: 15px; padding: 10px 16px; }
+    .bigpad { flex: 1; min-height: 0; width: 100%; max-width: 1240px; margin: 0 auto; background: #18181c; border-radius: clamp(22px, 4vmin, 44px); padding: clamp(10px, 2.2vmin, 22px); padding-bottom: clamp(22px, 4vmin, 34px); position: relative; display: flex; flex-direction: column; box-shadow: inset 0 0 0 3px #3a3a42, 0 0 0 2px #0a0a0c, 0 24px 60px rgba(0,0,0,.6), 0 0 60px rgba(0,229,255,.25); animation: padin .35s cubic-bezier(.2,.9,.3,1.2); }
+    @keyframes padin { from { transform: scale(.85) translateY(30px); opacity: 0; } }
+    .bigpad .cam { position: absolute; top: calc(clamp(10px, 2.2vmin, 22px) / 2 - 4px); left: 50%; transform: translateX(-50%); width: 8px; height: 8px; border-radius: 50%; background: #333; box-shadow: inset 0 0 0 2px #222; }
+    .bigpad .scr { flex: 1; min-height: 0; background: #000; border-radius: clamp(10px, 1.6vmin, 18px); overflow: hidden; position: relative; }
+    .bigpad .scr iframe { border: 0; width: 100%; height: 100%; display: block; background: #fff; }
+    .bigpad .home { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 200px; height: clamp(22px, 4vmin, 34px); border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .bigpad .home::after { content: ""; width: 120px; height: 6px; border-radius: 3px; background: #777; }
+    .bigpad .home:hover::after { background: #aaa; }
+    .bigpad .homescreen .clock { font-size: clamp(44px, 10vmin, 96px); }
+    .bigpad .homescreen .app { width: 110px; } .bigpad .homescreen .app .ico { width: 92px; height: 92px; border-radius: 22px; font-size: 54px; } .bigpad .homescreen .app .lbl { font-size: 14px; }
     .packwrap { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; height: 100%; justify-content: center; }
     .pack { width: 150px; height: 210px; border-radius: 14px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-weight: 900; color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.5), inset 0 0 0 3px rgba(255,255,255,.3); transition: transform .12s; position: relative; overflow: hidden; text-shadow: 0 2px 0 rgba(0,0,0,.3); border: none; font-family: inherit; }
     .pack:hover { transform: scale(1.04) rotate(-2deg); } .pack .big { font-size: 64px; }
@@ -328,6 +344,11 @@
     <p class="sub" id="rrSub"></p>
     <div class="rrstage"><div id="rrIcon">🚪</div><div class="progress"><div class="fill" id="rrFill"></div></div><div id="rrText" style="font-size:15px;font-weight:800"></div></div>
   </div></div>
+
+  <div class="modal" id="ipadModal">
+    <div class="ipadbar"><div class="ttl">📱 Emmy's iPad <span class="free">FREE to play!</span></div><button class="act btn-pink" id="ipadClose">✕ Put the iPad down</button></div>
+    <div class="bigpad"><div class="cam"></div><div class="scr" id="ipadScr"></div><button class="home" id="ipadHome" title="Home" aria-label="Home"></button></div>
+  </div>
 
   <div id="loading"><div class="spin">🕹️</div><div>Opening the arcade…</div></div>
   <div id="toast"></div>

@@ -2,12 +2,14 @@
 //  Emmy's Blind Bag Town — hub. Walk round town (third-person), visit the
 //  silly shops, buy blind bags, tear them open, collect every toy (and every
 //  secret chicken), give Glow-Up Faces a makeover, push stray carts back to
-//  the corral, and have every shopkeeper in town say hi to you BY NAME.
+//  the corral, play 🛒 Bag Catch, 🚀 zip anywhere in town, and have every
+//  shopkeeper in town say hi to you BY NAME.
 // ==========================================================================
 import { createTown } from "./blindbag3d/town.js";
 import { createOpen } from "./blindbag3d/open.js";
 import { createGlow, STICKERS } from "./blindbag3d/glow.js";
 import { createStock } from "./blindbag3d/stock.js";
+import { createCatch } from "./blindbag3d/catch.js";
 import { CATALOG, RARITY, RARITY_IDS, SERIES, SERIES_IDS, byId, buildItem, isFace, isChicken, CHICKEN_COLORS } from "./blindbag3d/models.js";
 import { THREE, makeKid } from "./arcade3d/lib.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -123,7 +125,7 @@ setVoiceLabel();
 // --------------------------------------------------------------------------
 //  State
 // --------------------------------------------------------------------------
-function fresh() { return { coins: 40, owned: {}, opened: 0, freeBag: true, pity: 0, name: "", hens: [], henNames: [], follow: 0, hats: [], hat: false, glam: {}, sampleAt: 0, cartsReturned: 0, met: {}, speedUntil: 0, glowed: {}, firstCart: false, eggs: { plain: 0, golden: 0 }, yardEggs: 0, yardProgress: 0, bestStock: 0 }; }
+function fresh() { return { coins: 40, owned: {}, opened: 0, freeBag: true, pity: 0, name: "", hens: [], henNames: [], follow: 0, hats: [], hat: false, glam: {}, sampleAt: 0, cartsReturned: 0, met: {}, speedUntil: 0, glowed: {}, firstCart: false, eggs: { plain: 0, golden: 0 }, yardEggs: 0, yardProgress: 0, bestStock: 0, bestCatch: 0 }; }
 function load() { try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const s = { ...fresh(), ...JSON.parse(raw) }; s.glam = s.glam || {}; s.met = s.met || {}; s.glowed = s.glowed || {}; s.eggs = { plain: 0, golden: 0, ...s.eggs }; if (s.follow == null || s.follow > s.hens.length) s.follow = s.hens.length; return s; } } catch {} return fresh(); }
 let state = load();
 function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
@@ -497,7 +499,7 @@ function openStockInfo() {
   $("stockGo").onclick = startStock; openModal("shopModal");
 }
 function startStock() {
-  if (job || opener || glow) return; closeModal(); town.pause(true); hush(); job = { ctrl: null }; $("hud").classList.add("attable"); $("jobHud").classList.add("show"); $("jTop").innerHTML = ""; runStock();
+  if (job || opener || glow || game) return; closeModal(); town.pause(true); hush(); job = { ctrl: null }; $("hud").classList.add("attable"); $("jobHud").classList.add("show"); $("jTop").innerHTML = ""; runStock();
 }
 function runStock() {
   $("jBanner").style.display = "none"; $("jBanner").innerHTML = ""; if (job.ctrl) { town.setOverride(null); job.ctrl.dispose(); }
@@ -515,6 +517,76 @@ function endStock() {
   if (!job) return; if (job.ctrl) { town.setOverride(null); try { job.ctrl.dispose(); } catch {} } job = null;
   $("jobHud").classList.remove("show"); $("hud").classList.remove("attable"); $("jBanner").innerHTML = ""; $("jMsg").textContent = ""; town.pause(false);
 }
+
+// --------------------------------------------------------------------------
+//  🛒 Bag Catch — the booth game by the gate
+// --------------------------------------------------------------------------
+let game = null; // { ctrl, prize }
+const PRIZE_SERIES = ["snacks", "spuds", "cluck", "pets", "hunters", "faces", "dinos", "slime", "ocean"];
+const CATCH_PRIZE = 60, CATCH_JUMBO = 120; // a free bag for a great score — a Jumbo Gold Bag for an AMAZING one
+function startCatch() {
+  if (job || opener || glow || game) return; closeModal(); town.pause(true); hush(); game = { ctrl: null, prize: null };
+  $("hud").classList.add("attable"); $("jobHud").classList.add("show"); $("jTop").innerHTML = "";
+  showJobBanner(`<div class="big">🛒</div><h2>Bag Catch!</h2><p>Push the cart to catch the blind bags falling off the top shelf!<br>🛍️ bag = 1 · ⭐ shiny toy = 3 · 🐔 chicken = 3 · 🏆 Jumbo Gold Bag = 5<br>Catch 5 in a row for a combo — but dodge the 🧦 stinky socks!</p><p class="sub">Drag, or use ← → / A D / the left stick. 45 seconds!<br>🎁 Score ${CATCH_PRIZE}+ for a FREE blind bag · ${CATCH_JUMBO}+ for a free Jumbo Gold Bag!${state.bestCatch ? ` · High score: ${state.bestCatch}` : ""}</p><div class="row"><button class="act btn-green" id="jGo">▶ Start!</button><button class="act btn-white" id="jBack">🚶 Back to town</button></div>`);
+  $("jGo").onclick = runCatch; $("jBack").onclick = endCatch;
+}
+function runCatch() {
+  if (!game) return; $("jBanner").style.display = "none"; $("jBanner").innerHTML = ""; SFX.whoosh(); if (game.ctrl) { town.setOverride(null); game.ctrl.dispose(); }
+  const ctrl = createCatch({ sfx: SFX, pad: town.pad, keys: town.keys, envMap: town.envMap,
+    onScore: (score, combo, time, msg) => { $("jTop").innerHTML = `<span>⭐ ${score}</span>${combo >= 2 ? `<span>🔥 ${combo} in a row</span>` : ""}<span>⏱ ${Math.ceil(time)}s</span>`; if (msg) { const m = $("jMsg"); m.textContent = msg; m.classList.remove("pop"); void m.offsetWidth; m.classList.add("pop"); } },
+    onEnd: ({ score, best }) => {
+      const coins = Math.max(2, Math.round(score * 0.45)), record = score > state.bestCatch; state.bestCatch = Math.max(state.bestCatch, score); addCoins(coins); flyTo($("coinsPill"), "🪙", 8);
+      const prize = score >= CATCH_JUMBO ? "jumbo" : score >= CATCH_PRIZE ? pick(PRIZE_SERIES) : null; game.prize = prize;
+      if (prize) { state.savedPrize = prize; save(); } // saved now, so closing the tab never loses it
+      if (record || prize) confetti(prize === "jumbo" ? 260 : 140); if (prize) SFX.wow(); else SFX.win();
+      const l = prize === "jumbo" ? `WOW, ${myName()}! ${score} points! You win a JUMBO GOLD BAG!` : prize ? `Amazing catching, ${myName()}! Here's a free ${BAGS[prize].name} bag!` : score >= 30 ? `Great catching, ${myName()}!` : `Nice try, ${myName()}! Have another go!`; speak(l, { g: "f", n: 2, pitch: 1.1, rate: 1.05 });
+      const prizeBtn = prize ? `<button class="act btn-purple" id="jPrize">🎁 Open my free ${BAGS[prize].ico} ${BAGS[prize].name}!</button>` : "";
+      showJobBanner(`<div class="big">${prize === "jumbo" ? "🏆" : prize ? "🎁" : score >= 30 ? "🌟" : "🛒"}</div><h2>${prize === "jumbo" ? "Bag Catch Champion!" : prize ? "Super catcher!" : score >= 30 ? "Great catching!" : "Nice try!"}</h2><div class="won">⭐ ${score} points → 🪙 +${coins}</div><p>${l}<br>Longest combo: ${best}${record ? " · 🏅 NEW high score!" : ` · High score: ${state.bestCatch}`}${prize ? "" : `<br>🎁 Score ${CATCH_PRIZE}+ to win a free bag!`}</p><div class="row">${prizeBtn}${prize ? "" : `<button class="act btn-green" id="jAgain">🔁 Play again</button><button class="act btn-white" id="jBack">🚶 Back to town</button>`}</div>`);
+      if ($("jAgain")) { $("jAgain").onclick = runCatch; $("jBack").onclick = endCatch; }
+      if ($("jPrize")) $("jPrize").onclick = endCatch; // ending the game opens the prize bag
+    } });
+  game.ctrl = ctrl; town.setOverride(ctrl); $("jTop").innerHTML = `<span>⭐ 0</span><span>⏱ 45s</span>`;
+}
+function endCatch() {
+  if (!game) return; if (game.ctrl) { town.setOverride(null); try { game.ctrl.dispose(); } catch {} } game = null;
+  $("jobHud").classList.remove("show"); $("hud").classList.remove("attable"); $("jBanner").innerHTML = ""; $("jMsg").textContent = ""; town.pause(false);
+  openPrize();
+}
+// a prize bag you won (and maybe haven't opened yet, if the tab closed) — open it now
+function openPrize() { const b = state.savedPrize; if (!b || !BAGS[b] || opener || glow || job || game) return; state.savedPrize = null; save(); toast(`🎁 Your free ${BAGS[b].name}! Tear it open!`, 2500); startBags(b, null); }
+
+// --------------------------------------------------------------------------
+//  🚀 Quick travel — less walking, more blind bags
+// --------------------------------------------------------------------------
+const PLACES = [
+  { id: "teds", ico: "🏬", name: "Ted's Everything Mart", desc: "Bags, hats, trade-ins, the 📦 job" },
+  { id: "winwin", ico: "🥕", name: "Win-Win Grocery", desc: "The cheapest bags in town" },
+  { id: "bulk", ico: "🛒", name: "Bulk-O-Rama Club", desc: "Mega packs, hot dogs, samples" },
+  { id: "cluck", ico: "🐔", name: "Cluck & Co. Feed", desc: "Chickens, Dino Eggs, sell eggs" },
+  { id: "salon", ico: "💖", name: "Glow-Up Salon", desc: "Glow-Up Faces & the station" },
+  { id: "home", ico: "🏠", name: "My House", desc: "Your whole collection" },
+  { id: "catch", ico: "🎯", name: "Bag Catch booth", desc: "Catch bags, win coins & free bags" },
+  { id: "corral", ico: "🛻", name: "Cart Corral", desc: "Bring your carts — they come too!" },
+  { id: "yard", ico: "🐣", name: "My Chicken Yard", desc: "Your chickens and their eggs" },
+  { id: "fountain", ico: "⛲", name: "Town Square", desc: "The fountain in the middle of town" },
+];
+function openTravel() {
+  if (opener || glow || job || game || fading) return; SFX.tap();
+  const here = town.area, n = town.trainSize;
+  $("shopBody").innerHTML = `<h2>🚀 Go to…</h2><p class="sub">Where to? Tap it and ZOOM — you're there!${n ? ` Your ${n} cart${n > 1 ? "s" : ""} will zoom with you (if you stay outside).` : ""}</p>
+    <div class="travel">${PLACES.map((P) => `<button class="tplace${P.id === here ? " here" : ""}" data-go="${P.id}"><span>${P.ico}</span><b>${P.name}</b><small>${P.id === here ? "📍 You're here!" : P.desc}</small></button>`).join("")}</div>`;
+  $("shopBody").querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => travelTo(b.dataset.go)));
+  openModal("shopModal");
+}
+function travelTo(id) {
+  if (fading || opener || glow || job || game || !PLACES.some((p) => p.id === id)) return; if (id === town.area) { closeModal(); return; }
+  closeModal(); fading = true; town.pause(true); SFX.whoosh(); $("fade").classList.add("show");
+  setTimeout(() => {
+    town.travel(id); $("fade").classList.remove("show"); fading = false; if (!modalOpen && !opener && !glow) town.pause(false);
+    const P = PLACES.find((p) => p.id === id); if (!KEEPERS[id]) toast(id === "home" ? `🏠 Home sweet home, ${myName()}!` : `🚀 Zoom! ${P.ico} ${P.name}`, 2000);
+  }, 300);
+}
+$("travelBtn").onclick = openTravel;
 
 // --------------------------------------------------------------------------
 //  Character customization (same choices as the arcade, plus hats you buy)
@@ -548,7 +620,7 @@ function openLook() { if (opener || glow) return; SFX.tap(); renderLook(); openM
 $("lookBtn").onclick = openLook;
 
 // ---- start over (asks first, in-page) ----
-$("resetBtn").onclick = () => { if (opener || glow || job) return; SFX.tap(); openModal("resetModal"); };
+$("resetBtn").onclick = () => { if (opener || glow || job || game) return; SFX.tap(); openModal("resetModal"); };
 $("resetYes").onclick = () => { localStorage.removeItem(SAVE_KEY); location.reload(); };
 
 // --------------------------------------------------------------------------
@@ -598,7 +670,7 @@ setInterval(() => { if (state.speedUntil && Date.now() > state.speedUntil) { sta
 //  The town
 // --------------------------------------------------------------------------
 function interact(it) {
-  if (!it || opener || glow || job || modalOpen || fading) return;
+  if (!it || opener || glow || job || game || modalOpen || fading) return;
   if (it.kind === "door") { useDoor(it.door, "in"); return; }
   SFX.tap();
   if (it.id === "mirror") openLook();
@@ -610,6 +682,7 @@ function interact(it) {
   else if (it.id === "hats") openHats();
   else if (it.id === "spa") openSpa();
   else if (it.id === "stock") openStockInfo();
+  else if (it.id === "catch") startCatch();
   else if (it.id === "yard") openYard();
   else if (it.id === "bulk" && state.savedBags) openSaved();
   else openShop(it.id);
@@ -626,26 +699,30 @@ try {
     onPrompt: (it) => { $("prompt").classList.toggle("show", !!it); if (it) $("interact").textContent = `▶ ${it.label}`; },
     onInteract: interact,
     onDoor: (id, dir) => useDoor(id, dir),
-    onArea: (id) => { $("hint").textContent = id === "out" ? "🛍️ Walk through a shop door to go inside • drag to look • tap the ground to walk" : "🚪 Walk back out through the door to leave"; renderPills(); if (id !== "out") greetOnEnter(id); },
+    onArea: (id) => { $("hint").textContent = id === "out" ? "🛍️ Walk through a shop door to go inside • 🚀 Go to… zips you anywhere • tap the ground to walk" : "🚪 Walk back out through the door to leave"; renderPills(); if (id !== "out") greetOnEnter(id); },
     onNear: (n) => { const text = (n.chicken ? pick(ROAD_LINES) : pick(NPC_LINES))(myName()); town.say(n, text); speak(text, n.chicken ? { g: "f", n: 3, pitch: 1.3, rate: 1.1 } : { g: /^(Sam|Leo|Kai|Noah|Max)$/.test(n.name) ? "m" : "f", n: 3 + n.i, pitch: 1.12, rate: 1.05 }); if (n.chicken) SFX.bawk(); },
     onPickup: (what, n, i) => {
       if (what === "coin") { state.coins += n; save(); renderPills(); bump($("coinsPill")); SFX.coin(); }
       else if (what === "henCoin") { addCoins(1); SFX.bawk(); toast(`🐔 ${state.henNames[i] || "Your chicken"} found a coin! Good chicken! (+🪙 1)`, 2200); }
       else if (what === "cart") { renderPills(); bump($("cartsPill")); SFX.rattle(); if (!state.firstCart) { state.firstCart = true; save(); toast("🛒 A stray cart is following you! Push it to the 🛒 Cart Corral in the Bulk-O-Rama parking lot for coins.", 4500); } }
     },
-    onCarts: (n) => { const pay = n * 3 + (n >= 5 ? 5 : 0); state.cartsReturned += n; addCoins(pay); flyTo($("coinsPill"), "🪙", n * 2); SFX.cash(); renderPills(); const l = n >= 5 ? `WOW, ${myName()}! ${n} carts at once! Here's a bonus!` : `Thanks for the cart${n > 1 ? "s" : ""}, ${myName()}!`; toast(`🛒 Big Bob: “${l}” +🪙 ${pay}`, 3000); speak(l, KEEPERS.bulk.voice); if (n >= 5) confetti(80); },
+    onCarts: (n) => { const pay = n * 3 + (n >= 20 ? 30 : n >= 10 ? 15 : n >= 5 ? 5 : 0); state.cartsReturned += n; addCoins(pay); flyTo($("coinsPill"), "🪙", n * 2); SFX.cash(); renderPills(); const l = n >= 10 ? `HOLY GUACAMOLE, ${myName()}! ${n} CARTS! That's a cart TRAIN! Big bonus!` : n >= 5 ? `WOW, ${myName()}! ${n} carts at once! Here's a bonus!` : `Thanks for the cart${n > 1 ? "s" : ""}, ${myName()}!`; toast(`🛒 Big Bob: “${l}” +🪙 ${pay}`, 3000); speak(l, KEEPERS.bulk.voice); if (n >= 5) confetti(80); },
     onChickenTap: () => { SFX.bawk(); toast(pick(["🐔 BAWK!", "🐔 Bawk bawk!", "🐔 *happy chicken noises*", "🐔 BAWK?!", "🐔 Cluck cluck!"]), 1200); },
   });
   town.setFlock(state.hens, state.follow); town.setYardEggs(state.yardEggs); if (state.speedUntil > Date.now()) town.setSpeedBoost(1.55);
   town.start();
-  town.onPadBack(() => { if (modalOpen) closeModal(); else if (opener) closeOpen(); else if (glow) endGlow(); else if (job) endStock(); });
-  town.onPadButton((b) => { if (b === 0 && opener && opener.ctrl.phase === "bag") { opener.ctrl.tear(); return true; } if (b === 0 && job && $("jBanner").style.display !== "none" && $("jAgain")) { $("jAgain").click(); return true; } return false; });
+  town.onPadBack(() => { if (modalOpen) closeModal(); else if (opener) closeOpen(); else if (glow) endGlow(); else if (job) endStock(); else if (game) { if (game.prize && $("jPrize")) $("jPrize").click(); else endCatch(); } });
+  town.onPadButton((b) => { if (b === 0 && opener && opener.ctrl.phase === "bag") { opener.ctrl.tear(); return true; } if (b === 0 && job && $("jBanner").style.display !== "none" && $("jAgain")) { $("jAgain").click(); return true; } if (b === 0 && game && $("jBanner").style.display !== "none") { const btn = $("jPrize") || $("jGo") || $("jAgain"); if (btn) { btn.click(); return true; } } return false; });
 } catch (err) { console.error(err); $("loading").innerHTML = `<div class="d">😢</div>Blind Bag Town needs WebGL (3D) to run on this device.`; }
 $("interact").onclick = () => interact(town.nearest());
+// iPad Safari ignores user-scalable=no, so a pinch would zoom the whole page in (and it stays zoomed). Not here! (Double-tap zoom is off via touch-action in the CSS.)
+for (const ev of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
 window.addEventListener("gamepadconnected", () => toast("🎮 Controller connected! Left stick walks, right stick looks, A = shop / tear, B = back.", 4000));
 
 renderPills();
-if (town) { $("loading").remove(); if (!state.name) setTimeout(() => openName(true), 400); else setTimeout(() => toast(`👋 Welcome back, ${state.name}!`, 3000), 600); }
+if (town) { $("loading").remove(); if (!state.name) setTimeout(() => openName(true), 400); else setTimeout(() => toast(`👋 Welcome back, ${state.name}!`, 3000), 600); if (state.savedPrize && state.name) setTimeout(openPrize, 1500); }
 
 // debug/automation hook (used by the Playwright checks)
-window.__blindbags = { get town() { return town; }, get state() { return state; }, get opener() { return opener; }, get glow() { return glow; }, CATALOG, BAGS, interact, openShop, buyBag, startBags, viewItem, closeOpen, startGlow, endGlow, finishGlow, openBook, openSpa, useDoor, freeSample, openTradeIn, openYard, startStock, endStock, get job() { return job; } };
+window.__blindbags = { get town() { return town; }, get state() { return state; }, get opener() { return opener; }, get glow() { return glow; }, CATALOG, BAGS, interact, openShop, buyBag, startBags, viewItem, closeOpen, startGlow, endGlow, finishGlow, openBook, openSpa, useDoor, freeSample, openTradeIn, openYard, startStock, endStock, get job() { return job; }, startCatch, runCatch, endCatch, openPrize, get game() { return game; }, openTravel, travelTo, PLACES };

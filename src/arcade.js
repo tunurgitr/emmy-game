@@ -112,7 +112,7 @@ $("resetAll").onclick = () => {
 //  UI helpers
 // --------------------------------------------------------------------------
 let toastT = 0;
-function toast(msg, ms = 2600) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), ms); }
+function toast(msg, ms = 2600) { if (modalOpen === "ipadModal") return; const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), ms); }
 function bump(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
 function spark(stage, nx, ny, marks, n = 6) {
   const r = stage.getBoundingClientRect();
@@ -159,9 +159,9 @@ function renderPills() {
 // --------------------------------------------------------------------------
 let modalOpen = null;
 function openModal(id) { closeModal(); modalOpen = id; $(id).classList.add("show"); world && world.pause(true); }
-function closeModal() { if (!modalOpen) return; if (modalOpen === "playModal") closePrizePlay(); if (modalOpen === "lookModal" && lookPrev) { lookPrev.stop(); lookPrev = null; } $(modalOpen).classList.remove("show"); modalOpen = null; world && world.pause(false); }
+function closeModal() { if (!modalOpen) return; if (modalOpen === "playModal") closePrizePlay(); if (modalOpen === "ipadModal") ipadOff(); if (modalOpen === "lookModal" && lookPrev) { lookPrev.stop(); lookPrev = null; } $(modalOpen).classList.remove("show"); modalOpen = null; world && world.pause(false); }
 document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => { closeModal(); SFX.tap(); }));
-document.querySelectorAll(".modal:not(#modeModal)").forEach((m) => m.addEventListener("pointerdown", (e) => { if (e.target === m) closeModal(); }));
+document.querySelectorAll(".modal:not(#modeModal):not(#ipadModal)").forEach((m) => m.addEventListener("pointerdown", (e) => { if (e.target === m) closeModal(); }));
 window.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (modalOpen) closeModal(); else if (active) closeGame(); } });
 
 // card kiosk — money → credits
@@ -238,7 +238,7 @@ try {
   world = createWorld($("view"), {
     games: GAMES, ui: $("hud"),
     avatar: loadLook(),
-    onPrompt(it) { nearest = it; const p = $("prompt"); if (it && !active) { p.classList.add("show"); $("interact").textContent = it.label; $("interact").className = `act ${it.kind === "game" ? "btn-green" : it.kind === "kiosk" ? "btn-blue" : it.kind === "snack" ? "btn-gold" : "btn-pink"}`; } else p.classList.remove("show"); },
+    onPrompt(it) { nearest = it; const p = $("prompt"); if (it && !active) { p.classList.add("show"); $("interact").textContent = it.label; $("interact").className = `act ${it.kind === "game" ? "btn-green" : it.kind === "kiosk" ? "btn-blue" : it.kind === "snack" ? "btn-gold" : it.kind === "ipad" ? "btn-purple" : "btn-pink"}`; } else p.classList.remove("show"); },
     onInteract(it) { interact(it); },
   });
   world.start();
@@ -252,6 +252,7 @@ function interact(it) {
   if (it.kind === "kiosk") { renderPills(); openModal("kioskModal"); }
   else if (it.kind === "prizes") { tab = "counter"; renderPrizes(); openModal("prizeModal"); }
   else if (it.kind === "snack") { renderSnacks(); openModal("snackModal"); }
+  else if (it.kind === "ipad") openIpad();
   else if (it.kind === "restroom") useFacility("potty");
   else if (it.kind === "fountain") useFacility("water");
   else if (it.kind === "trash") { if (!state.trash) { toast("You're not holding any trash right now. Nice and tidy! 👍"); return; } const t = state.trash; state.trash = null; state.tickets += 5; save(); renderPills(); SFX.ding(); flyTo($("ticketsPill"), "🎟️", 5); toast(`${t} → 🗑️ Thanks for keeping the arcade clean! +5 tickets`); }
@@ -263,6 +264,18 @@ function useFacility(kind) {
   $("rrTitle").textContent = kind === "potty" ? "🚻 Restroom" : "🚰 Water Fountain"; $("rrSub").textContent = kind === "potty" ? "Everybody needs a break sometimes." : "Stay hydrated, champ!";
   let i = 0; const go = () => { const [ic, tx] = steps[i]; $("rrIcon").textContent = ic; $("rrText").textContent = tx; $("rrFill").style.width = `${((i + 1) / steps.length) * 100}%`; SFX.tick(); i++; if (i < steps.length) setTimeout(go, 650); else setTimeout(() => { state.needs[kind] = 100; if (kind === "water") state.needs.potty = Math.max(0, state.needs.potty - 8); save(); renderNeeds(); closeModal(); SFX.ding(); toast(kind === "potty" ? "🚻 All set! Hands washed. Back to the games!" : "💧 Refreshed! Back to the games!"); }, 700); }; go();
 }
+// ---- the iPad behind the start spot: Emmy's Fidget Trading in an iframe (same localStorage save).
+//      The arcade is paused (no rendering, no needs draining, keys go to the iPad) until you put it down.
+const ipadHome = () => { $("ipadScr").innerHTML = `<div class="homescreen"><div class="clock">${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</div><div style="font-size:15px;opacity:.9">Emmy's iPad</div>
+    <div class="apps"><button class="app" id="ipadApp"><div class="ico" style="background:linear-gradient(160deg,#3ea16a,#24734a)">🦊</div><div class="lbl">Fidget Trading</div></button><button class="app locked" disabled><div class="ico" style="background:#666">🔒</div><div class="lbl">Nothing else!</div></button></div></div>`; $("ipadApp").onclick = () => { SFX.tap(); ipadApp(); }; };
+function ipadApp() {
+  const f = document.createElement("iframe"); f.src = "game.html"; f.title = "Emmy's Fidget Trading"; f.allow = "autoplay; fullscreen"; $("ipadScr").innerHTML = ""; $("ipadScr").appendChild(f);
+  f.onload = () => { try { if (!/game(\.html)?$/.test(f.contentWindow.location.pathname)) ipadHome(); else f.contentWindow.focus(); } catch {} }; // the game's "back" link → iPad home screen
+}
+function openIpad() { openModal("ipadModal"); $("toast").classList.remove("show"); try { audioCtx && audioCtx.suspend(); } catch {} world && world.keys.clear(); ipadApp(); }
+function ipadOff() { $("ipadScr").innerHTML = ""; muted = localStorage.getItem("emmy.muted") === "1"; setMuteLabel(); try { audioCtx && audioCtx.resume(); } catch {} world && world.keys.clear(); renderPills(); }
+$("ipadClose").onclick = () => { closeModal(); SFX.tap(); };
+$("ipadHome").onclick = () => { SFX.tap(); ipadHome(); };
 // ---- character customization ----
 
 const LOOK = { skin: [0xffd6b8, 0xf1c9a5, 0xe0ac8a, 0xc68642, 0x8d5a3c, 0x5c3a21], hair: [0x6b3e1e, 0x222222, 0xe8c36a, 0xa33a1e, 0x8a5a2b, 0xd7ccc8, 0xff3dd6, 0x3d8bfd], hairStyle: ["long", "short", "ponytail", "curly", "bun"], eyes: [0x3b6ea5, 0x4a8f3f, 0x6b3e1e, 0x8e44ad, 0x222222], shirt: [0xff3dd6, 0x3d8bfd, 0x00c853, 0xffd54a, 0x7a3cff, 0xff7043, 0xffffff, 0x222244], pants: [0x3d8bfd, 0x222244, 0xff3dd6, 0x8d5a2b, 0x00c853, 0xeeeeee], shoes: [0xffffff, 0x222222, 0xff3dd6, 0x00e5ff, 0xffd54a], mood: ["happy", "excited", "neutral"], hat: [null, "🎩", "🧢", "👑", "🎀", "🌸", "⭐"] };
@@ -368,4 +381,4 @@ if (mode === "sandbox" || mode === "regular") { setMode(mode); if (state.plays =
 else { setMode("sandbox"); localStorage.removeItem(MODE_KEY); chooseMode(); }
 
 // debug/automation hook (used by the Playwright checks)
-window.__arcade = { get world() { return world; }, interact, startGame, closeGame, get state() { return state; }, GAMES, setMode, get mode() { return mode; } };
+window.__arcade = { get world() { return world; }, interact, startGame, closeGame, openIpad, closeIpad: () => modalOpen === "ipadModal" && closeModal(), get ipad() { return modalOpen === "ipadModal" ? $("ipadScr").querySelector("iframe") : null; }, get state() { return state; }, GAMES, setMode, get mode() { return mode; } };

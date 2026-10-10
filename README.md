@@ -1,11 +1,12 @@
 # 🎉 Emmy's Games
 
-Four cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built for a 10-year-old named Emmy), picked from one landing page:
+Five cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built for a 10-year-old named Emmy), picked from one landing page:
 
 - **🦊 Emmy's Fidget Trading** — trade fidget toys with a friendly buddy, haggle for coins, collect all the rarities, open mystery boxes, and play with each toy in its own satisfying way.
 - **🕹️ Emmy's Arcade** — a *Sneaky Sasquatch*-style arcade simulator: load an arcade card with (unlimited!) money, win tickets in 10 mini-games, and trade them for prizes you can actually play with.
 - **🥟 Emmy's Dumpling Town** — walk around a 3D market square, buy mystery bamboo steamers, lift the lid to see which of **221 squishy dumplings** you got, squish them (slow rise!), pull them apart to see the filling… and buy a chicken.
 - **🛍️ Emmy's Blind Bag Town** — walk to silly stores, buy blind bags, tear them open and collect **269 toys** across nine series and nine rarities (with a secret chicken in every series) — and every series plays its own way. Hatch dino eggs, stretch slime, feed fish, give Glow-Up Faces a makeover, stock shelves for coins, keep chickens in your own yard, and hear every shopkeeper say hi to you by name.
+- **🍕 Emmy's Pizza Plus** — a tiny cartoon pizza plaza (cel-shaded, chunky outlines, everything has a face) where mystery pizza boxes hold **33 silly clicker games** across seven rarities — from Pepperoni Popper to Pizza Cat Supreme.
 
 **▶ Play it live: https://tunurgitr.github.io/emmy-game/**
 
@@ -34,7 +35,7 @@ No downloads, no accounts, no ads — it runs entirely in the browser and saves 
 - Full **drop → shake → glow → burst → reveal** animation with a **NEW!** badge for first-time pulls.
 
 ### The Fidget Zone 🎮 — real 3D, one play style per toy
-Tap any toy to *play* with it — most toys open as a **real, lit 3D object** you can spin around with your finger, with silicone, glossy plastic, chrome, glass, goo, plush, metal, and holographic finishes plus soft contact shadows. Every toy's model is built to look like the real thing (from ~20 procedural archetypes) and each maps to the interaction that actually fits it. The 3D engine ([Three.js](https://threejs.org), procedural geometry only — no model files) is **lazy-loaded**, and it falls back to a 2D version automatically if a device can't do WebGL.
+Tap any toy to *play* with it — **every toy** opens as a **real, lit 3D object** you can spin around with your finger, with silicone, glossy plastic, chrome, glass, goo, plush, metal, and holographic finishes plus soft contact shadows. Every toy's model is built to look like the real thing (from ~20 procedural archetypes) and each maps to the interaction that actually fits it. The 3D engine ([Three.js](https://threejs.org), procedural geometry only — no model files) is **lazy-loaded**, and it falls back to a 2D version automatically if a device can't do WebGL.
 
 Interactions include:
 
@@ -43,7 +44,8 @@ Interactions include:
 | **Pop-it grid** (drag to pop a streak) | **Flick to spin** (spinners, rings, gears, yo-yos) | **Squish** (hold — always springs back, never pops) |
 | **Stretch & snap** (noodles, bracelets) | **Coil stretch** (slinky boing) | **Twist** (tangles & chains) |
 | **Tap-to-flip cube** (mash for a combo) | **Piano** (tap zones for notes) | **Petting** (stroke to purr — cute critters) |
-| **Bubble shower** (pop falling minis) | **Snow-globe shake** (scrub & settle) | **Peel** (drag to reveal a surprise) |
+| **3D shower** (tap for falling sparkles, stars & feathers) | **Snow globe / sand timer** (shake to swirl, flip to pour) | **Treasure chest** (lift the lid for a coin fountain) |
+| **Magnet stack** (stack 9 balls till they topple) | **Kaleidoscope twist** | **Marble maze tilt** & **click-clack pen** |
 
 Squishy and plushie toys get **cute kawaii faces** (like the beloved Mochi Squish) — mochi, unicorn, rainbow dragon, mermaid, axolotl, jellyfish, and more.
 
@@ -82,6 +84,7 @@ Plug in any standard gamepad: left stick walks, right stick looks, **A** interac
 ### Walking around
 - Third-person camera. On iPad: an always-visible **virtual joystick** (bottom-left) plus drag-to-look on the right, or just **tap the floor / a machine** and Emmy walks there. Desktop: WASD/arrows + mouse drag, `E`/Enter to interact.
 - Walk up to anything glowing and a "▶ Play" prompt appears; the camera **flies in** and the game plays in **first-person**.
+- **📱 Emmy's iPad:** turn around from the start — on a little table by the door sits an iPad. Tap it to play **Emmy's Fidget Trading** right inside the arcade (free, same save as the real game). The arcade pauses while you play.
 - **💳 Card kiosk** (entrance) turns money into credits. **🍕 Snack Shack** sells snacks for money — every snack gives a boost (double tickets, a free game, +50% tickets, or instant tickets). **🏪 Prize Counter** trades tickets for prizes and is where you sign up for a Prize Booth shift.
 
 ### Games — 20 machines, each a real 3D scene (payouts are generous: every win ×1.5)
@@ -223,14 +226,25 @@ Inspired by the viral **squishy dumpling** blind-box toys: each one comes in a l
 - **9 rarities:** Common, Uncommon, Rare, Epic, Legendary, Mythic, Secret, Golden, Ultra Rainbow. Odds are printed in every shop, plus a lucky meter (Rare+ guaranteed every 8th bag).
 - **Tear it open:** swipe across the top of the foil bag (or tap it a few times), the top flies off and the toy pops out.
 - **💖 Glow-Up Faces:** they come out muddy from playing outside. Scrub the mud, paint, crumbs and leaves with the 🧽 sponge, comb the messy fluff with the 🪮 brush, then add blush, stickers and a bow, crown or flower crown. The look is saved and shows on your shelf.
-- **Earning coins:** grab spinning coins, push stray carts to the 🛒 Cart Corral (🪙 3 each, bonus for 5+), work the **📦 Stock the Shelves** job at Ted's (drag blind bags off the conveyor into the matching bins, shoo away chickens riding the belt — 45 seconds, a coin per bag), sell eggs from your chicken yard to Farmer Hank, trade doubles at Ted's, free samples, and chickens who sometimes find a coin.
+- **Earning coins:** grab spinning coins, push stray carts to the 🛒 Cart Corral (🪙 3 each; carts come back in seconds, push up to 24 in a train, bonus for 5+/10+/20+), play **🛒 Bag Catch** at the booth by the gate (push a cart to catch falling bags, shiny toys and chickens, dodge stinky socks — 60+ wins a free bag, 120+ a Jumbo Gold Bag), work the **📦 Stock the Shelves** job at Ted's (drag blind bags off the conveyor into the matching bins, shoo away chickens riding the belt — 45 seconds, a coin per bag), sell eggs from your chicken yard to Farmer Hank, trade doubles at Ted's, free samples, and chickens who sometimes find a coin.
+- **Less walking:** the **🚀 Go to…** button jumps you straight into any shop or to the booth, corral, yard or square, and you walk faster.
 - **Funny bits:** the road chicken who crosses the road forever, Ted's 🪙 9,999 canoe, "MEMBERS ONLY* (*everyone is a member)".
+
+---
+
+## 🍕 Emmy's Pizza Plus
+
+A tiny, cute 3D pizza plaza with a different look from the other towns: **cel shading with chunky outlines**, a checkered picnic-blanket floor, rounded toy-like shops and blinking faces on everything, all around a **Cheese Fountain**. Shops sit close together and the **🛵 Zoom to…** button pops you to any of them.
+
+- **📦 Box-O-Rama** (Papa Pepperoni): Snack Bag 🪙12, Mystery Pizza Box 🪙30 (first one free), Party Box 🪙75 (Rare+), Golden Oven Crate 🪙180 (Epic+). Odds printed; every 8th box without a Rare is Rare or better. Tap the box 3 times to open it.
+- **🧀 Topping Tower** (Mozzy): Double Cheese, Hot Sauce Helpers and Lucky Basil power-ups. **🥤 Fizzy Pop Soda**: a free soda with coins every minute, plus Zoomy Soda. **🔥 The Game Oven** (Granny Garlic): your Game Book. **🎩 Hat Hut** (Sir Meatball): hats and the My look mirror.
+- **33 clicker games across 7 rarities** (Common · Uncommon · Rare · Epic · Legendary · Mythic · Cheesy Secret) — Pepperoni Popper, Toss the Dough (too high!), Pineapple Argument, Oven Goblin, Seagull Heist, Disco Pepperoni, Robo-Chef 3000, The Pizza Kraken, The Cheese Wizard, Infinity Pizza Portal, Pizza Cat Supreme and more. Each has its own tap target, 3 upgrades (more per tap, helpers, a multiplier or "CHEESY" ×5 taps), 9 funny goals with bonus coins, and its own sounds. Duplicates give a game a ⭐ (+25% points, up to 5).
 
 ---
 
 ## 🎨 Design decisions
 
-- **3D toys, emoji everywhere else.** The Fidget Zone renders toys as procedural 3D models (real lighting/reflections, no asset files, generated at runtime so it works offline); the backpack, trade mat, and boxes stay emoji + CSS for speed. Three.js loads only when you open a toy.
+- **3D toys everywhere.** Every toy is a procedural 3D model (real lighting/reflections, no asset files, generated at runtime so it works offline), in the Fidget Zone and as thumbnails on cards, trays, the shop, box reveals and the Rarity Guide. Emoji is only the fallback when WebGL isn't available.
 - **Nothing that squishes ever pops.** Squishy toys deform and spring back with a happy sparkle at max squish — no sad bursting.
 - **Kid-friendly, never predatory.** Mystery boxes use coins only (no real money), print their odds, always let you keep what you pull, use a *visible* pity meter, and have no dark patterns or FOMO timers.
 - **Trading is the heart.** The shop (buy at ~0.85× value, with rarer toys showing up often) and boxes are coin *sinks*; trading and haggling are the best ways to grow your collection.
@@ -253,7 +267,7 @@ npm run preview  # preview the production build
 ### Project layout
 | Path | What |
 |---|---|
-| `index.html` | Landing page — pick Fidget Trading, the Arcade, Dumpling Town or Blind Bag Town |
+| `index.html` | Landing page — pick Fidget Trading, the Arcade, Dumpling Town, Blind Bag Town or Pizza Plus |
 | `game.html` + `src/game.js` | Fidget Trading (UI, state, turns, boxes, fidget zone, chat) |
 | `arcade.html` + `src/arcade.js` | Emmy's Arcade hub — HUD, arcade card, prize counter, first-person game harness |
 | `src/arcade3d/world.js` | The walkable 3D hall: room, trusses, lights, cabinets, kiosk, prize counter, character, controls, camera fly-in |
@@ -272,6 +286,10 @@ npm run preview  # preview the production build
 | `src/blindbag3d/town.js` | The walkable town, the stores and their interiors, your house shelves, the chicken yard, townsfolk, speech bubbles, carts |
 | `src/blindbag3d/open.js` | Tearing open a bag and playing with the toy |
 | `src/blindbag3d/glow.js` | The Glow-Up station — scrub, brush and decorate a face |
+| `src/blindbag3d/catch.js` | Bag Catch — the booth catching game |
+| `pizza.html` + `src/pizza.js` | Pizza Plus — HUD, shops, boxes, Game Book, save |
+| `src/pizza3d/toon.js`, `models.js`, `town.js` | The cel-shaded look (toon materials + outlines), models, and the plaza |
+| `src/pizza3d/open.js`, `clicker.js`, `games*.js`, `audio.js` | Box opening, the shared clicker engine, the 33 clicker games, sounds & music |
 | `src/toys.js` | Toy catalog, rarity tiers, and trade/offer/box logic |
 | `src/fidget3d.js` | Lazy-loaded Three.js scene — procedural 3D toy archetypes |
 | `mockups.html`, `mockup-a.html`, `mockup-b.html` | Early design mockups (kept for reference) |

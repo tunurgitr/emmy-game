@@ -42,6 +42,10 @@
     a.blindbag .play { color: #7a3cff; }
     a.blindbag::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 15% 15%, rgba(255,230,120,.5), transparent 40%), radial-gradient(circle at 85% 85%, rgba(110,198,255,.45), transparent 45%); pointer-events: none; }
     a.blindbag > * { position: relative; }
+    a.pizza { background: linear-gradient(160deg, #ffc93c 0%, #f2483a 100%); }
+    a.pizza .play { color: #d0352a; }
+    a.pizza::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 20%, rgba(255,255,255,.45), transparent 35%), radial-gradient(circle at 80% 75%, rgba(77,187,90,.45), transparent 40%); pointer-events: none; }
+    a.pizza > * { position: relative; }
     .new { position: absolute; top: 14px; right: -34px; background: #ffd000; color: #6a4a00; font-weight: 900; font-size: 12px; padding: 4px 40px; transform: rotate(35deg); letter-spacing: 1px; }
     a.mock { color: #8a79a6; text-decoration: none; font-size: 13px; font-weight: 600; }
     .reset-link { background: none; border: none; font-family: inherit; color: #8a79a6; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: underline; }
@@ -83,6 +87,13 @@
       <div class="icon">🛍️</div>
       <div class="title">Blind Bag Town</div>
       <div class="desc">Walk to silly stores and tear open 9 kinds of blind bags: squishies, pop stars, dino eggs, slime, sea buddies, chickens in costumes and more. Everyone says hi to you by name!</div>
+      <div class="play">▶ Play</div>
+    </a>
+    <a class="card pizza" href="pizza.html" id="playPizza">
+      <div class="new">NEW!</div>
+      <div class="icon">🍕</div>
+      <div class="title">Pizza Plus</div>
+      <div class="desc">A teeny cute pizza town! Open mystery pizza boxes to find 33 funny clicker games — from Common all the way to Cheesy Secret. Bonk meatballs, pull stretchy cheese, tickle a kraken!</div>
       <div class="play">▶ Play</div>
     </a>
   </div>

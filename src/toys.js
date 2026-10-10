@@ -13,17 +13,20 @@ export const TIERS = {
   divine:    { label: "Divine",    color: "#ffd000", glow: "rgba(255,208,0,1)" },
 };
 
-// `play` = a Fidget-Zone interaction. 3D toys use:
+// `play` = a Fidget-Zone interaction. EVERY toy is a real 3D model (fidget3d.js):
 //   grid | flick | squish | cube | coil | tangle | stretch | pet | piano
-// particle-themed 2D interactions: shower | snow | stack | peel
-// `model3d` = {shape, finish, colors[], cute?} — how the toy looks as a real 3D object.
+//   shower (tap → 3D sparkles/stars/feathers rain down) | snow (shake the globe /
+//   flip the sand timer) | stack (stack the magnet balls) | peel (open the chest lid)
+// Some shapes bring their own mechanism (maze tilts, kaleido twists, pen clicks).
+// The 2D emoji versions of every play type are only a fallback when WebGL fails.
+// `model3d` = {shape, finish, colors[], cute?, params?} — how the toy looks as a real 3D object.
 // `parts` = optional themed particle emoji. `cute` faces live in model3d.cute.
 export const TOYS = [
   // ---- Common ----
   { id: "popit",     name: "Pop It",          emoji: "🫧",  value: 8,   tier: "common",    play: "grid",    model3d: { shape: "popit", finish: "silicone", colors: ["#ff5da2","#ffd166","#6ee7f0","#7c5cff"] } },
   { id: "simple",    name: "Simple Dimple",   emoji: "🟣",  value: 10,  tier: "common",    play: "grid",    model3d: { shape: "popit", finish: "silicone", colors: ["#ffb020","#3d8bfd"] } },
   { id: "marble",    name: "Squishy Ball",    emoji: "🔵",  value: 12,  tier: "common",    play: "squish",  parts: ["💧","🔵"], model3d: { shape: "ball", finish: "goo", colors: ["#3d8bfd","#88ccff","#ff5da2"] } },
-  { id: "bubble",    name: "Bubble Wrap",     emoji: "🧇",  value: 14,  tier: "common",    play: "shower",  model3d: { shape: "popit", finish: "glass", colors: ["#dff3ff","#ffffff","#bfeaff"] } },
+  { id: "bubble",    name: "Bubble Wrap",     emoji: "🧇",  value: 14,  tier: "common",    play: "grid",    model3d: { shape: "popit", finish: "glass", colors: ["#dff3ff","#ffffff","#bfeaff"], params: { cols: 5, rows: 4 } } },
   { id: "stressball",name: "Stress Ball",     emoji: "🎾",  value: 11,  tier: "common",    play: "squish",  model3d: { shape: "ball", finish: "silicone", colors: ["#d7f542","#b8d332","#ffffff"] } },
   { id: "pebble",    name: "Worry Stone",     emoji: "🪨",  value: 9,   tier: "common",    play: "pet",     model3d: { shape: "ball", finish: "matte", colors: ["#8a94a6","#6b7280"] } },
   { id: "pushpop",   name: "Push Popper",     emoji: "🔴",  value: 13,  tier: "common",    play: "grid",    model3d: { shape: "popit", finish: "silicone", colors: ["#4caf78","#ffe14d"] } },
@@ -40,13 +43,13 @@ export const TOYS = [
   { id: "dice",      name: "Fidget Dice",     emoji: "🎲",  value: 34,  tier: "uncommon",  play: "cube",    model3d: { shape: "cube", finish: "gloss", colors: ["#ffffff","#22262e","#e63946"], params: { pips: true } } },
   { id: "mochi",     name: "Mochi Squish",    emoji: "🍡",  value: 36,  tier: "uncommon",  play: "squish",  parts: ["🍡","🌸"], model3d: { shape: "ball", finish: "silicone", colors: ["#ffd1dc","#fff0f5"], cute: true } },
   { id: "snap",      name: "Snap Bracelet",   emoji: "⌚",  value: 22,  tier: "uncommon",  play: "stretch", model3d: { shape: "capsule", finish: "gloss", colors: ["#ff5da2","#ffe14d","#3d8bfd"] } },
-  { id: "maze",      name: "Marble Maze",     emoji: "🟨",  value: 38,  tier: "uncommon",  play: "tangle",  model3d: { shape: "cube", finish: "silicone", colors: ["#4caf78","#3d8bfd","#c0c8d0"] } },
+  { id: "maze",      name: "Marble Maze",     emoji: "🟨",  value: 38,  tier: "uncommon",  play: "tangle",  model3d: { shape: "maze", finish: "silicone", colors: ["#4caf78","#3d8bfd","#c0c8d0"] } },
   { id: "chimes",    name: "Wacky Chimes",    emoji: "🎐",  value: 40,  tier: "uncommon",  play: "piano",   model3d: { shape: "cradle", finish: "chrome", colors: ["#c0c8d0","#ffe14d","#6ee7f0"] } },
   // ---- Rare ----
   { id: "slinky",    name: "Rainbow Slinky",  emoji: "🌈",  value: 55,  tier: "rare",      play: "coil",    model3d: { shape: "coil", finish: "gloss", colors: ["#ff5da2","#ffb020","#ffe14d","#4caf78","#3d8bfd","#b558f6"] } },
-  { id: "magnet",    name: "Magnet Balls",    emoji: "🧲",  value: 60,  tier: "rare",      play: "stretch", parts: ["⚫","✨"], model3d: { shape: "beads", finish: "chrome", colors: ["#c0c8d0","#8a94a6"] } },
+  { id: "magnet",    name: "Magnet Balls",    emoji: "🧲",  value: 60,  tier: "rare",      play: "stack",   parts: ["⚫","✨"], model3d: { shape: "beads", finish: "chrome", colors: ["#c0c8d0","#8a94a6"] } },
   { id: "boink",     name: "Springy Boink",   emoji: "🎈",  value: 48,  tier: "rare",      play: "coil",    model3d: { shape: "coil", finish: "gloss", colors: ["#7c5cff","#6ee7f0"] } },
-  { id: "sand",      name: "Kinetic Sand",    emoji: "⏳",  value: 52,  tier: "rare",      play: "snow", parts: ["✨","🟤"], model3d: { shape: "blob", finish: "matte", colors: ["#e0c9a6","#d4b483"] } },
+  { id: "sand",      name: "Kinetic Sand",    emoji: "⏳",  value: 52,  tier: "rare",      play: "snow",    parts: ["✨","🟤"], model3d: { shape: "hourglass", finish: "glass", colors: ["#f2b45a","#d98a3a","#8b5a2b"] } },
   { id: "cradle",    name: "Newton's Cradle", emoji: "🎱",  value: 64,  tier: "rare",      play: "piano",   model3d: { shape: "cradle", finish: "chrome", colors: ["#c0c8d0","#22262e"] } },
   { id: "wave",      name: "Liquid Motion",   emoji: "🌊",  value: 68,  tier: "rare",      play: "flick", parts: ["💧","🔵","🟣"], model3d: { shape: "orb", finish: "glass", colors: ["#3d8bfd","#ff5da2","#ffffff"], params: { bubbles: true } } },
   { id: "spinring",  name: "Spinner Ring",    emoji: "💍",  value: 58,  tier: "rare",      play: "flick",   model3d: { shape: "ring", finish: "chrome", colors: ["#c0c8d0","#ffd700"] } },
@@ -57,7 +60,7 @@ export const TOYS = [
   { id: "robot",     name: "Robot Spinner",   emoji: "🤖",  value: 130, tier: "epic",      play: "flick",   parts: ["🔩","⚡","💨"], model3d: { shape: "spinner", finish: "chrome", colors: ["#8a94a6","#00e5ff","#22262e"] } },
   { id: "lavalamp",  name: "Lava Lamp",       emoji: "🫙",  value: 120, tier: "epic",      play: "flick",   parts: ["🔴","🟠","🟣"], model3d: { shape: "capsule", finish: "glass", colors: ["#ff4500","#ff8c00","#4b0082"], params: { lava: true } } },
   { id: "musicbox",  name: "Music Box",       emoji: "🎵",  value: 105, tier: "epic",      play: "piano",   model3d: { shape: "chest", finish: "gloss", colors: ["#ffb6c1","#ffd700","#ffffff"] } },
-  { id: "kaleido",   name: "Kaleidoscope",    emoji: "🔭",  value: 140, tier: "epic",      play: "snow",    parts: ["🔺","🔷","⭐","🟡"], model3d: { shape: "capsule", finish: "holo", colors: ["#ff5da2","#ffe14d","#4caf78","#3d8bfd"] } },
+  { id: "kaleido",   name: "Kaleidoscope",    emoji: "🔭",  value: 140, tier: "epic",      play: "snow",    parts: ["🔺","🔷","⭐","🟡"], model3d: { shape: "kaleido", finish: "holo", colors: ["#ff5da2","#ffe14d","#4caf78","#3d8bfd"] } },
   { id: "goojar",    name: "Goo Jar",         emoji: "🧴",  value: 115, tier: "epic",      play: "squish",  parts: ["🟢","💚","✨"], model3d: { shape: "blob", finish: "goo", colors: ["#7cfc00","#b8ff70"] } },
   // ---- Legendary ----
   { id: "diamond",   name: "Diamond Fidget",  emoji: "💎",  value: 200, tier: "legendary", play: "flick",   parts: ["💎","✨"], model3d: { shape: "gem", finish: "glass", colors: ["#bfeaff","#ffffff","#6ee7f0"] } },
@@ -69,11 +72,11 @@ export const TOYS = [
   // ---- Mythic ----
   { id: "phoenix",   name: "Phoenix Popper",  emoji: "🔥",  value: 380, tier: "mythic",    play: "grid",    parts: ["🔥","🪶","🐣"], model3d: { shape: "popit", finish: "silicone", colors: ["#ff4500","#ffb020","#ffe14d"] } },
   { id: "rainbowd",  name: "Rainbow Dragon",  emoji: "🐉",  value: 460, tier: "mythic",    play: "squish",  parts: ["🌈","❤️","✨"], model3d: { shape: "ball", finish: "plush", colors: ["#ff5da2","#ffe14d","#4caf78","#3d8bfd"], cute: true } },
-  { id: "fairy",     name: "Fairy Dust",      emoji: "✨",  value: 420, tier: "mythic",    play: "shower",  parts: ["✨","⭐","🧚"], model3d: { shape: "orb", finish: "holo", colors: ["#ffd1dc","#ffe14d","#e6ccff"] } },
+  { id: "fairy",     name: "Fairy Dust",      emoji: "✨",  value: 420, tier: "mythic",    play: "shower",  parts: ["✨","⭐","🧚"], model3d: { shape: "orb", finish: "holo", colors: ["#ffd1dc","#ffe14d","#e6ccff"], params: { shower: "sparkle" } } },
   { id: "mermaid",   name: "Mermaid Tail",    emoji: "🧜‍♀️", value: 500, tier: "mythic",    play: "pet",     parts: ["🐚","🫧","🦪"], model3d: { shape: "capsule", finish: "plush", colors: ["#20c9b0","#7c5cff","#ff8ac8"], cute: true } },
   // ---- Cosmic ----
   { id: "blackhole", name: "Black Hole Cube", emoji: "🕳️",  value: 720, tier: "cosmic",    play: "cube",    parts: ["🌌","⭐","💫"], invert: true, model3d: { shape: "cube", finish: "holo", colors: ["#0b0b12","#7c5cff","#ff5da2"] } },
-  { id: "star",      name: "Shooting Star",   emoji: "⭐",  value: 900, tier: "cosmic",    play: "shower",  parts: ["⭐","🌠","💫"], model3d: { shape: "star", finish: "holo", colors: ["#ffe14d","#ffffff","#ffb020"] } },
+  { id: "star",      name: "Shooting Star",   emoji: "⭐",  value: 900, tier: "cosmic",    play: "shower",  parts: ["⭐","🌠","💫"], model3d: { shape: "star", finish: "holo", colors: ["#ffe14d","#ffffff","#ffb020"], params: { shower: "star" } } },
   { id: "saturn",    name: "Saturn Spinner",  emoji: "🪐",  value: 800, tier: "cosmic",    play: "flick",   parts: ["💫","🧊"], model3d: { shape: "spinner", finish: "holo", colors: ["#e0c9a6","#ffb020","#7c5cff"] } },
   { id: "comet",     name: "Comet Streak",    emoji: "☄️",  value: 1000,tier: "cosmic",    play: "flick",   parts: ["☄️","✨"], model3d: { shape: "orb", finish: "holo", colors: ["#6ee7f0","#ffffff","#3d8bfd"] } },
   { id: "alien",     name: "Alien Cube",      emoji: "👽",  value: 1100,tier: "cosmic",    play: "cube",    model3d: { shape: "cube", finish: "gloss", colors: ["#7cfc00","#0b3d0b","#00e5ff"] } },
@@ -83,7 +86,7 @@ export const TOYS = [
   { id: "amulet",    name: "Rainbow Amulet",  emoji: "🧿",  value: 1650,tier: "prismatic", play: "pet",     parts: ["🌈","✨","💫"], model3d: { shape: "gem", finish: "holo", colors: ["#ff5da2","#ffe14d","#4caf78","#7c5cff"] } },
   // ---- Divine ----
   { id: "halo",      name: "Angel Halo",      emoji: "😇",  value: 1900,tier: "divine",    play: "flick",   parts: ["😇","✨","💛"], model3d: { shape: "ring", finish: "metal", colors: ["#ffd700","#fff8dc"] } },
-  { id: "dove",      name: "Peace Dove",      emoji: "🕊️",  value: 2200,tier: "divine",    play: "shower",  parts: ["🕊️","✨","🌟"], model3d: { shape: "ball", finish: "plush", colors: ["#ffffff","#ffd700","#fff8dc"], cute: true } },
+  { id: "dove",      name: "Peace Dove",      emoji: "🕊️",  value: 2200,tier: "divine",    play: "shower",  parts: ["🕊️","✨","🌟"], model3d: { shape: "ball", finish: "plush", colors: ["#ffffff","#ffd700","#fff8dc"], cute: true, params: { wings: true, shower: "feather" } } },
   { id: "infinity",  name: "Infinity Star",   emoji: "🌟",  value: 2600,tier: "divine",    play: "flick",   parts: ["🌟","💫","⭐"], model3d: { shape: "star", finish: "holo", colors: ["#ffd700","#ffffff","#7c5cff","#ff5da2"] } },
   // ---- New fidgets ----
   { id: "rollerclick",name: "Click Roller",   emoji: "🎛️",  value: 14,  tier: "common",    play: "flick",   model3d: { shape: "ring", finish: "gloss", colors: ["#ff8c00","#22262e"] } },
@@ -94,7 +97,7 @@ export const TOYS = [
   { id: "axolotl",   name: "Axolotl Squish",  emoji: "🦎",  value: 120, tier: "epic",      play: "pet",     parts: ["💕","💧","✨"], model3d: { shape: "ball", finish: "plush", colors: ["#ffb6c1","#ff8ac8","#ffffff"], cute: true } },
   { id: "gyro",      name: "Gyro Sphere",     emoji: "🌐",  value: 240, tier: "legendary", play: "flick",   parts: ["✨","💫"], model3d: { shape: "orb", finish: "chrome", colors: ["#c0c8d0","#ffd700","#3d8bfd"] } },
   { id: "jellyfriend",name: "Jelly Jellyfish",emoji: "🪼",  value: 430, tier: "mythic",    play: "stretch", parts: ["🫧","💜","✨"], model3d: { shape: "blob", finish: "goo", colors: ["#e6ccff","#7c5cff","#6ee7f0"], cute: true } },
-  { id: "nebulasand",name: "Nebula Sand",     emoji: "🌠",  value: 950, tier: "cosmic",    play: "snow",    parts: ["✨","💫","⭐"], model3d: { shape: "blob", finish: "holo", colors: ["#2b1a5e","#7c5cff","#ff5da2","#ffe14d"] } },
+  { id: "nebulasand",name: "Nebula Sand",     emoji: "🌠",  value: 950, tier: "cosmic",    play: "snow",    parts: ["✨","💫","⭐"], model3d: { shape: "globe", finish: "holo", colors: ["#2b1a5e","#7c5cff","#ff5da2","#ffe14d"] } },
   { id: "starharp",  name: "Starlight Harp",  emoji: "🎶",  value: 2200,tier: "divine",    play: "piano",   parts: ["🎵","✨","⭐"], model3d: { shape: "cradle", finish: "metal", colors: ["#ffd700","#fff8dc","#bfeaff"] } },
 ];
 

@@ -31,6 +31,7 @@ export function createWorld(canvas, { games, ui, onPrompt, onInteract, avatar = 
   buildRoom(scene, obstacles, animated, interactables);
   buildKiosk(scene, obstacles, interactables, animated);
   buildPrizeCounter(scene, obstacles, interactables, animated);
+  buildIpadTable(scene, obstacles, interactables, animated);
   layoutCabinets(scene, games, obstacles, interactables, animated);
   // collapse static geometry into a few draw calls (room shell, cabinets, counters)
   let mergedCount = mergeStatic(scene);
@@ -330,6 +331,45 @@ function buildPrizeCounter(scene, obstacles, interactables, animated) {
   scene.add(g); obstacles.push({ x, z: z + 1.2, w: 9.4, d: 1.5 }); obstacles.push({ x, z: z - 0.6, w: 9.4, d: 1 });
   const it = { id: "prizes", kind: "prizes", label: "🏪 Trade tickets for prizes", front: new THREE.Vector3(x, 0, z + 2.6), eye: new THREE.Vector3(x, 1.7, z + 2.8), look: new THREE.Vector3(x, 1.8, z - 0.3), group: g, hit: [g] }; g.userData.interactable = it; interactables.push(it);
   animated.push((dt, t) => { clerk.group.position.y = Math.abs(Math.sin(t * 3)) * 0.04; clerk.parts.armR.rotation.z = -0.6 + Math.sin(t * 4) * 0.5; });
+}
+
+// ==========================================================================
+//  The iPad table — right behind where you start (turn around!). A little
+//  table with a big glowing iPad on a stand that plays Emmy's Fidget Trading.
+// ==========================================================================
+function ipadScreenTexture() {
+  const W = 512, H = 384, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+  const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#ff9a9e"); bg.addColorStop(0.5, "#a18cd1"); bg.addColorStop(1, "#74b9ff"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+  g.fillStyle = "rgba(255,255,255,.9)"; g.font = "300 44px system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("9:41", W / 2, 46);
+  g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 18; g.shadowOffsetY = 6; const ic = g.createLinearGradient(0, 90, 0, 250); ic.addColorStop(0, "#3ea16a"); ic.addColorStop(1, "#24734a"); g.fillStyle = ic; rr(W / 2 - 80, 92, 160, 160, 38); g.fill();
+  g.shadowColor = "transparent"; g.font = `110px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`; g.fillText("🦊", W / 2, 178);
+  g.fillStyle = "#fff"; g.font = "900 40px system-ui, sans-serif"; g.shadowColor = "rgba(0,0,0,.4)"; g.shadowBlur = 6; g.fillText("Fidget Trading", W / 2, 294);
+  g.fillStyle = "#ffd54a"; g.font = "900 30px system-ui, sans-serif"; g.fillText("✨ tap to play! ✨", W / 2, 340);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function buildIpadTable(scene, obstacles, interactables, animated) {
+  const x = -3.6, z = ROOM_D / 2 - 2.4; const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = Math.PI; // faces the middle of the arcade
+  const top = mat.wood(0xc48b4c), leg = mat.std(0x5a3a22), trim = mat.neon(0xff3dd6, 1.2);
+  g.add(box(1.8, 0.08, 1.0, top, 0, 0.82, 0)); g.add(box(1.84, 0.05, 1.04, trim, 0, 0.77, 0));
+  for (const [lx, lz] of [[-0.8, -0.4], [0.8, -0.4], [-0.8, 0.4], [0.8, 0.4]]) g.add(box(0.08, 0.78, 0.08, leg, lx, 0.39, lz));
+  // the iPad on a little stand, leaning back
+  const pad = new THREE.Group(); pad.position.set(0, 1.36, -0.05); pad.rotation.x = -0.22; pad.scale.setScalar(1.2); g.add(pad); pad.userData.noMerge = true;
+  pad.add(box(0.96, 0.72, 0.04, mat.gloss(0x1b1b1f), 0, 0, 0)); pad.add(sphere(0.012, mat.std(0x333), 0, 0.335, 0.021, 8));
+  const scrMat = new THREE.MeshBasicMaterial({ map: ipadScreenTexture(), toneMapped: false }); const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 0.64), scrMat); scr.position.z = 0.022; scr.userData.dyn = true; pad.add(scr);
+  g.add(box(0.3, 0.05, 0.22, mat.metal(), 0, 0.88, -0.12)); const arm = box(0.06, 0.5, 0.04, mat.metal(), 0, 1.1, -0.2); arm.rotation.x = -0.22; g.add(arm);
+  // soft glow behind the screen
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.3), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.25, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }));
+  halo.position.set(0, 1.36, -0.16); halo.scale.setScalar(1.2); halo.rotation.x = -0.22; halo.userData.dyn = true; g.add(halo);
+  // sign on a little backboard
+  g.add(box(0.08, 2.9, 0.08, leg, -0.85, 1.45, -0.52)); g.add(box(0.08, 2.9, 0.08, leg, 0.85, 1.45, -0.52));
+  const sign = textPlane(["📱 EMMY'S iPAD", "Fidget Trading", "FREE to play!"], 2.0, 1.0, { bg: "#24734a", color: "#fff", size: 74, glow: "#a5f3a0" }); sign.position.set(0, 2.5, -0.44); g.add(sign);
+  g.add(box(2.08, 0.06, 0.06, trim, 0, 3.02, -0.44)); g.add(box(2.08, 0.06, 0.06, trim, 0, 1.98, -0.44));
+  const fox = emojiSprite("🦊", 0.42); fox.position.set(0.72, 1.06, 0.18); g.add(fox); const star = emojiSprite("✨", 0.36); star.position.set(-0.6, 1.9, 0); g.add(star);
+  if (!LOW_TIER) { const pl = new THREE.PointLight(0x9fe8ff, 4, 5, 2); pl.position.set(0, 1.6, 0.6); g.add(pl); }
+  scene.add(g); obstacles.push({ x, z, w: 2.0, d: 1.2 });
+  const it = { id: "ipad", kind: "ipad", label: "📱 Play Emmy's Fidget Trading (FREE!)", front: new THREE.Vector3(x, 0, z - 1.6), eye: new THREE.Vector3(x, 1.6, z - 1.3), look: new THREE.Vector3(x, 1.3, z), group: g, hit: [g] }; g.userData.interactable = it; interactables.push(it);
+  animated.push((dt, t) => { halo.material.opacity = 0.18 + Math.sin(t * 2.2) * 0.1; star.position.y = 1.9 + Math.sin(t * 1.6) * 0.08; fox.position.y = 1.06 + Math.abs(Math.sin(t * 2.4)) * 0.05; });
 }
 
 // ==========================================================================

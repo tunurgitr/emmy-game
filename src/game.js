@@ -792,7 +792,24 @@ let fidgetToyObj = null;
 let fidgetCleanup = null; // teardown for the active emoji interaction
 let fidget3d = null;      // active 3D scene (if any)
 let use3d = localStorage.getItem("emmy.no3d") !== "1"; // can be disabled if WebGL fails
-const THREE_D_PLAYS = new Set(["grid", "flick", "squish", "cube", "coil", "tangle", "stretch", "pet", "piano"]);
+// EVERY toy opens as a real 3D model; the emoji FIDGETS are only the no-WebGL fallback.
+// 3D-specific tips (the 3D toys play a little differently from their 2D versions):
+const TIPS_3D = {
+  grid:   "👆 Pop the bubbles — drag across to pop a whole row!  🔄 Drag beside it to spin it",
+  cube:   "👆 Tap it to flip and bounce — mash for a combo!  🔄 Drag to spin it around",
+  piano:  "🎹 Tap different spots to play notes!  🔄 Drag to spin it around",
+  shower: "👆 Tap it to make it rain — then tap the falling bits to pop them!",
+  snow:   "↔️ Drag side to side to shake it — then watch it all settle...",
+  stack:  "👆 Tap to stack the balls — stack them ALL and... TIMBER!",
+  peel:   "⬆️ Drag the lid up (or tap) to peek inside — treasure!",
+};
+const TIPS_3D_BY_ID = {
+  cradle:   "👆 Tap the balls to set them swinging — clack clack! 🔄 Drag to turn it",
+  sand:     "👆 Tap to flip the sand timer — watch the sand pour! 🔄 Drag to turn it",
+  kaleido:  "↔️ Drag to twist the end — make magic patterns! Flick it to keep it spinning",
+  maze:     "🕹️ Drag to tilt the maze — roll the marble into the gold hole!",
+  clickpen: "👆 Click click click! Tap the pen  🔄 Drag to spin it",
+};
 
 // Emoji-particle burst wrapper the 3D scene can call (stage-relative 0..1 coords).
 function burstAt(stage, nx, ny, marks, n, spread) {
@@ -850,15 +867,9 @@ function openFidget(uid) {
   $("fidget").classList.add("show");
   SFX.tap();
 
-  // Play types with a solid 3D archetype get the real 3D toy; particle-heavy
-  // ones (shower/snow/stack/peel) keep their themed 2D interaction.
-  const wants3d = use3d && THREE_D_PLAYS.has(type);
-  if (wants3d && (type === "grid" || type === "cube" || type === "piano")) {
-    $("fidgetTip").textContent = (TIPS[type] || "👆 Play!") + "  🔄 Drag to spin it around!";
-  }
-  if (wants3d && fidgetToyObj.id === "cradle") {
-    $("fidgetTip").textContent = "👆 Tap the balls to set them swinging — clack clack! 🔄 Drag to turn it";
-  }
+  // Every toy gets its real 3D model (2D emoji play only if WebGL is unavailable).
+  const wants3d = use3d;
+  if (wants3d) $("fidgetTip").textContent = TIPS_3D_BY_ID[fidgetToyObj.id] || TIPS_3D[type] || TIPS[type] || "👆 Play with your toy!";
   if (wants3d) {
     const toy = fidgetToyObj;
     // lazy-load Three + the 3D module only when a toy is actually opened
@@ -877,11 +888,13 @@ function openFidget(uid) {
       } catch (err) {
         console.warn("3D fidget failed, using 2D:", err);
         use3d = false; localStorage.setItem("emmy.no3d", "1");
+        $("fidgetTip").textContent = TIPS[type] || "👆 Play with your toy!";
         openEmojiFidget(stage, toy);
       }
     }).catch((err) => {
       console.warn("3D module load failed, using 2D:", err);
       use3d = false;
+      $("fidgetTip").textContent = TIPS[type] || "👆 Play with your toy!";
       openEmojiFidget(stage, toy);
     });
   } else {
@@ -1418,9 +1431,9 @@ function openGuide() {
   $("guideList").innerHTML = order.map((tk) => {
     const t = TIERS[tk];
     const toys = TOYS.filter((x) => x.tier === tk);
-    // discovered toys show their emoji; undiscovered show a shadowy ❔
+    // discovered toys show their 3D model (emoji until it renders); undiscovered show a shadowy ❔
     const emojis = toys.map((x) => found.has(x.id)
-      ? x.emoji
+      ? `<span class="g-toy" data-thumb="${x.id}" title="${x.name}">${x.emoji}</span>`
       : `<span style="filter:grayscale(1) brightness(.5);opacity:.5">❔</span>`).join(" ");
     const fc = toys.filter((x) => found.has(x.id)).length;
     const values = toys.map((x) => x.value);
@@ -1437,6 +1450,7 @@ function openGuide() {
       </div>`;
   }).join("") + `<div style="text-align:center;margin-top:12px;font-weight:800;color:var(--muted)">Collected ${totalFound}/${TOYS.length} toys!</div>`;
   $("guide").classList.add("show");
+  hydrateThumbs();
   SFX.tap();
 }
 

@@ -10,6 +10,7 @@
 //    town.say(who, text) — a speech bubble over a shopkeeper ("keeper") or a townsperson
 //    town.setName(name) — your name on your house
 //    town.setFlock(hens) — pet chickens that follow you around
+//    town.travel(id) — 🚀 quick travel: a shop id (straight inside) or "catch" / "corral" / "yard" / "fountain"
 //
 //  Same engine as Dumpling Town: outdoors and each interior are groups in one
 //  scene and only the area you're in is visible.
@@ -152,23 +153,23 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
       if (dd > 0.1) { sp = 1.4; st.x += (dx / dd) * sp * dt; st.z += (dz / dd) * sp * dt; st.ch.group.rotation.y = Math.atan2(dx, dz); } else if ((st.wait -= dt) < 0) { st.wait = rnd(1, 5); st.tx = YARD.x + rnd(-YARD.w / 2 + 2.6, YARD.w / 2 - 0.7); st.tz = YARD.z + rnd(-YARD.d / 2 + 0.7, YARD.d / 2 - 0.7); }
       st.ch.group.position.set(st.x, 0, st.z); st.ch.update(dt, t + st.ph, sp / 1.4, sp === 0); }
   }
-  const carts = CART_SPOTS.map(([x, z], i) => { const g = makeCart(); g.position.set(x, 0, z); g.rotation.y = rnd(0, 6); outdoor.add(g); const c = { g, x, z, yaw: g.rotation.y, mode: "stray", t: 0, speed: 0, i }; if (i === 0) { const rider = makeChicken({ color: CHICKEN_COLORS[2] }); rider.group.position.set(0, 0.5, 0.05); rider.group.scale.setScalar(1.1); g.add(rider.group); c.rider = rider; } return c; });
+  const carts = CART_SPOTS.slice(0, 20).map(([x, z], i) => { const g = makeCart(); g.position.set(x, 0, z); g.rotation.y = rnd(0, 6); outdoor.add(g); const c = { g, x, z, yaw: g.rotation.y, mode: "stray", t: 0, speed: 0, i }; if (i === 0) { const rider = makeChicken({ color: CHICKEN_COLORS[2] }); rider.group.position.set(0, 0.5, 0.05); rider.group.scale.setScalar(1.1); g.add(rider.group); c.rider = rider; } return c; });
   const train = () => carts.filter((c) => c.mode === "follow").sort((a, b) => a.order - b.order);
   function updateCarts(dt, t) {
     const out = area === areas.out; let order = 0;
     for (const c of carts) {
       if (c.rider) c.rider.update(dt, t, 0, Math.sin(t * 0.9) > 0.4);
-      if (c.mode === "gone") { if ((c.t -= dt) <= 0) { const spot = pick(CART_SPOTS.filter(([x, z]) => Math.hypot(x - player.x, z - player.z) > 12)); c.x = spot[0]; c.z = spot[1]; c.g.position.set(c.x, 0, c.z); c.g.visible = true; c.mode = "stray"; } continue; }
-      if (c.mode === "stray" && out && Math.hypot(player.x - c.x, player.z - c.z) < 1.5 && train().length < 8) { c.mode = "follow"; c.order = performance.now(); onPickup && onPickup("cart", train().length); }
+      if (c.mode === "gone") { if ((c.t -= dt) <= 0) { const spot = pick(CART_SPOTS.filter(([x, z]) => Math.hypot(x - player.x, z - player.z) > 8 && !carts.some((o) => o !== c && o.mode === "stray" && Math.hypot(o.x - x, o.z - z) < 1.5)) || CART_SPOTS) || CART_SPOTS[0]; c.x = spot[0]; c.z = spot[1]; c.g.position.set(c.x, 0, c.z); c.g.visible = true; c.mode = "stray"; } continue; }
+      if (c.mode === "stray" && out && Math.hypot(player.x - c.x, player.z - c.z) < 2.1 && train().length < CART_MAX) { c.mode = "follow"; c.order = performance.now(); onPickup && onPickup("cart", train().length); }
     }
     const tr = train();
     tr.forEach((c, i) => {
       const lead = i ? tr[i - 1] : player; const dx = lead.x - c.x, dz = lead.z - c.z, d = Math.hypot(dx, dz), gap = i ? 1.15 : 1.4;
-      const want = d > gap ? Math.min(11, (d - gap) * 5) : 0; c.speed = approach(c.speed, want, 8, dt);
+      const want = d > gap ? Math.min(16, (d - gap) * 6) : 0; c.speed = approach(c.speed, want, 8, dt);
       if (c.speed > 0.05) { c.x += (dx / d) * c.speed * dt; c.z += (dz / d) * c.speed * dt; c.yaw = Math.atan2(dx, dz); }
       c.g.position.set(c.x, 0, c.z); let dy = c.yaw - c.g.rotation.y; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; c.g.rotation.y += dy * Math.min(1, dt * 8);
     });
-    if (out && tr.length && Math.hypot(player.x - CORRAL.x, player.z - CORRAL.z) < 3.2) { for (const c of tr) { c.mode = "gone"; c.t = rnd(20, 35); c.g.visible = false; } onCarts && onCarts(tr.length); }
+    if (out && tr.length && Math.hypot(player.x - CORRAL.x, player.z - CORRAL.z) < 3.2) { for (const c of tr) { c.mode = "gone"; c.t = rnd(...CART_BACK); c.g.visible = false; } onCarts && onCarts(tr.length); }
   }
   function dropCarts() { for (const c of carts) if (c.mode === "follow") c.mode = "stray"; }
   function updateCritters(dt, t) {
@@ -177,7 +178,7 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
     const tr = area === areas.out ? train() : [];
     chickens.forEach((c, i) => {
       const lead = i ? chickens[i - 1] : tr.length ? tr[tr.length - 1] : player; const dx = lead.x - c.x, dz = lead.z - c.z, d = Math.hypot(dx, dz), gap = i ? 1.15 : 1.5;
-      const want = d > gap ? Math.min(10.5, (d - gap) * 4.5) : 0; c.speed = approach(c.speed, want, 8, dt);
+      const want = d > gap ? Math.min(16, (d - gap) * 4.5) : 0; c.speed = approach(c.speed, want, 8, dt);
       if (c.speed > 0.05) { c.x += (dx / d) * c.speed * dt; c.z += (dz / d) * c.speed * dt; c.yaw = Math.atan2(dx, dz); }
       c.x = clamp(c.x, area.minX + 0.6, area.maxX - 0.6); c.z = clamp(c.z, area.minZ + 0.6, area.maxZ - 0.6);
       c.ch.group.position.set(c.x, 0, c.z); let dy = c.yaw - c.ch.group.rotation.y; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; c.ch.group.rotation.y += dy * Math.min(1, dt * 8);
@@ -218,7 +219,7 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
   function update(dt) {
     t += dt; for (const f of animated) f(dt, t); updateCritters(dt, t); updateCarts(dt, t); updateBubbles(dt); if (area === areas.out) { updateNpcs(dt, t); updateYard(dt, t); }
     doorCool = Math.max(0, doorCool - dt);
-    if (focus) { kid.group.rotation.y = camYaw; kid.walk(t, 0, dt); camPos.set(player.x + Math.sin(camYaw) * 3.2, 1.7, player.z + Math.cos(camYaw) * 3.2); clampCam(camPos); camera.position.lerp(camPos, Math.min(1, dt * 6)); camLook.set(player.x, 1.05, player.z); camera.lookAt(camLook); return; }
+    if (focus) { kid.group.rotation.y = camYaw; kid.walk(t, 0, dt); camPos.set(player.x + Math.sin(camYaw) * 3.2, 1.7, player.z + Math.cos(camYaw) * 3.2); if (area !== areas.out) { camPos.x = clamp(camPos.x, area.minX + 0.35, area.maxX - 0.35); camPos.z = clamp(camPos.z, area.minZ + 0.35, area.maxZ - 0.35); } camera.position.lerp(camPos, Math.min(1, dt * 6)); camLook.set(player.x, 1.05, player.z); camera.lookAt(camLook); return; }
     let mx = move.x + (pad.connected ? pad.lx : 0), mz = move.y + (pad.connected ? pad.ly : 0);
     if (!paused) { if (keys.has("w") || keys.has("ArrowUp")) mz -= 1; if (keys.has("s") || keys.has("ArrowDown")) mz += 1; if (keys.has("a") || keys.has("ArrowLeft")) mx -= 1; if (keys.has("d") || keys.has("ArrowRight")) mx += 1; if (keys.has("q")) camYaw += 1.8 * dt; }
     let l = Math.hypot(mx, mz); if (l > 1) { mx /= l; mz /= l; l = 1; } if (l > 0.05) { autoTarget = null; autoInteract = null; }
@@ -227,7 +228,7 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
     if (l > 0.05) { vx = mx * cy + mz * sy; vz = -mx * sy + mz * cy; }
     else if (autoTarget && !paused) { const dx = autoTarget.x - player.x, dz = autoTarget.z - player.z, d = Math.hypot(dx, dz); if (d < 0.25) { autoTarget = null; if (autoInteract) { const it = autoInteract; autoInteract = null; if (near(it) < 2.8) onInteract(it); } } else { vx = dx / d; vz = dz / d; l = Math.min(1, d);
       if ((stuckT += dt) > 0.5) { if (d > stuckD - 0.3) { const it = autoInteract; autoTarget = null; autoInteract = null; if (it && near(it) < 2.8) onInteract(it); } stuckT = 0; stuckD = d; } } }
-    const SP = (area === areas.out ? 8.2 : 5.4) * speedBoost;
+    const SP = (area === areas.out ? 10.5 : 6.6) * speedBoost; // brisk — Blind Bag Town is big
     player.speed = approach(player.speed, l > 0.05 || (autoTarget && !paused) ? SP * Math.max(0.35, l) : 0, 10, dt);
     if (player.speed > 0.01 && (vx || vz)) { player.x += vx * player.speed * dt; player.z += vz * player.speed * dt; player.yaw = Math.atan2(vx, vz); }
     player.x = clamp(player.x, area.minX + 0.6, area.maxX - 0.6); player.z = clamp(player.z, area.minZ + 0.6, area.maxZ - 0.6);
@@ -236,20 +237,61 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
     kid.group.position.set(player.x, 0, player.z);
     let dy = player.yaw - kid.group.rotation.y; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2; kid.group.rotation.y += dy * Math.min(1, dt * 12);
     kid.walk(t, player.speed / SP, dt);
-    const dist = area === areas.out ? camDist : 5.2;
-    camPos.set(player.x + Math.sin(camYaw) * Math.cos(camPitch) * dist, EYE + Math.sin(camPitch) * dist, player.z + Math.cos(camYaw) * Math.cos(camPitch) * dist); clampCam(camPos);
+    if (area === areas.out) swingCam(dt); placeCam(camPos, area === areas.out ? camDist : 5.2);
     camera.position.lerp(camPos, Math.min(1, dt * 8)); camLook.set(player.x, area === areas.out ? 1.3 : 1.7, player.z); camera.lookAt(camLook);
     let best = null, bd = 2.8; for (const it of area.interactables) { const d = near(it); if (d < bd) { bd = d; best = it; } }
     if (best !== nearest) { nearest = best; onPrompt(best); }
   }
   let speedBoost = 1;
   const near = (it) => Math.hypot(it.front.x - player.x, it.front.z - player.z);
-  function clampCam(p) { if (area === areas.out) { for (let k = 0; k < 14 && area.obstacles.some((o) => o.tall && Math.abs(p.x - o.x) < o.w / 2 + 0.4 && Math.abs(p.z - o.z) < o.d / 2 + 0.4); k++) { p.x += (player.x - p.x) * 0.18; p.z += (player.z - p.z) * 0.18; p.y = Math.max(p.y, EYE + 0.6); } return; } p.x = clamp(p.x, area.minX + 0.35, area.maxX - 0.35); p.z = clamp(p.z, area.minZ + 0.35, area.maxZ - 0.35); p.y = Math.min(p.y, area.ceil - 0.35); }
-  function snapCamera() { const dist = area === areas.out ? camDist : 5.2; camPos.set(player.x + Math.sin(camYaw) * Math.cos(camPitch) * dist, EYE + Math.sin(camPitch) * dist, player.z + Math.cos(camYaw) * Math.cos(camPitch) * dist); clampCam(camPos); camera.position.copy(camPos); camera.lookAt(player.x, area === areas.out ? 1.3 : 1.7, player.z); }
+  // ---- the camera: a comfy distance behind you, always ------------------------------
+  //  (It used to get shoved toward your head whenever it ended up inside a building —
+  //  which happened every time you walked out of a shop — so it kept "zooming in".)
+  //  Now it finds where a building starts between you and the camera and stops just
+  //  short of it, and — as soon as you're not dragging the view yourself — swings
+  //  round to an open view so it backs straight out to the full, comfy distance.
+  //  Leaving a shop picks an open view (no buildings, no trees) right away.
+  const CAM_MIN = 2.0, LOOK_OUT = 1.3;
+  const camOff = (yaw, pitch, d) => ({ x: Math.sin(yaw) * Math.cos(pitch) * d, y: EYE + Math.sin(pitch) * d - LOOK_OUT, z: Math.cos(yaw) * Math.cos(pitch) * d });
+  function camBlock(o3, leafy = false) { // how far (0..1) from you toward the camera the first building starts
+    let best = 1, top = 0;
+    for (const o of leafy ? [...area.obstacles, ...(area.leafy || [])] : area.obstacles) { if (!o.tall && !o.top) continue; const hw = o.w / 2 + 0.3, hd = o.d / 2 + 0.3; let t0 = 0, t1 = 1;
+      if (Math.abs(o3.x) < 1e-6) { if (Math.abs(player.x - o.x) > hw) continue; } else { let a = (o.x - hw - player.x) / o3.x, b = (o.x + hw - player.x) / o3.x; if (a > b) [a, b] = [b, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, b); }
+      if (Math.abs(o3.z) < 1e-6) { if (Math.abs(player.z - o.z) > hd) continue; } else { let a = (o.z - hd - player.z) / o3.z, b = (o.z + hd - player.z) / o3.z; if (a > b) [a, b] = [b, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, b); }
+      if (t0 > t1 || LOOK_OUT + o3.y * t0 > (o.top || 99)) continue; // misses it, or already up over the roof
+      if (t0 < best) { best = t0; top = o.top || 99; } }
+    return { t: best, top };
+  }
+  const camFree = (yaw, leafy = false) => camBlock(camOff(yaw, camPitch, camDist), leafy).t;
+  function bestCamYaw(base) { let best = base, bf = -1; for (const a of [0, 0.6, -0.6, 1.0, -1.0, 1.3, -1.3, 1.6, -1.6, 2.0, -2.0, Math.PI]) { const f = camFree(base + a, true); if (f > bf + 0.02) { bf = f; best = base + a; } if (f >= 1) break; } return best; }
+  function swingCam(dt) { // nudge the view round a building instead of zooming in on you
+    if (lookPid !== null || (pad.connected && (pad.rx || pad.ry))) return; const f0 = camFree(camYaw); if (f0 >= 1) return;
+    for (const a of [0.25, 0.5, 0.8, 1.2, 1.6, 2.2]) { const l = camFree(camYaw + a), r = camFree(camYaw - a); if (l > f0 + 0.01 || r > f0 + 0.01) { camYaw += (l >= r ? 1 : -1) * Math.min(a, 2.4 * dt); return; } }
+  }
+  function placeCam(p, dist) {
+    const o = camOff(camYaw, camPitch, dist);
+    if (area === areas.out) { const hit = camBlock(o); let k = 1; if (hit.t < 1) k = Math.max(hit.t - 0.35 / dist, Math.min(1, CAM_MIN / dist)); p.set(player.x + o.x * k, LOOK_OUT + o.y * k, player.z + o.z * k); if (k > hit.t) p.y = Math.max(p.y, hit.top + 0.9); return p; }
+    p.set(player.x + o.x, LOOK_OUT + o.y, player.z + o.z); p.x = clamp(p.x, area.minX + 0.35, area.maxX - 0.35); p.z = clamp(p.z, area.minZ + 0.35, area.maxZ - 0.35); p.y = Math.min(p.y, area.ceil - 0.35); return p;
+  }
+  function snapCamera() { placeCam(camPos, area === areas.out ? camDist : 5.2); camera.position.copy(camPos); camera.lookAt(player.x, area === areas.out ? 1.3 : 1.7, player.z); }
+  // ---- 🚀 quick travel: zip straight into a shop, or to a spot round town (carts come too) ----
+  const spots = {
+    catch: (() => { const it = areas.out.interactables.find((i) => i.id === "catch"); return { x: it.front.x, z: it.front.z, yaw: Math.atan2(BOOTH.x - it.front.x, BOOTH.z - it.front.z) }; })(),
+    corral: { x: CORRAL.x, z: CORRAL.z + 3.9, yaw: Math.PI },
+    yard: { x: YARD.x, z: YARD.z - YARD.d / 2 - 1.8, yaw: 0 },
+    fountain: { x: 0, z: 17, yaw: Math.PI },
+  };
+  function travel(id) {
+    const a = areas[id]; if (a && a.spawn) { if (area !== a) moveTo(a, a.spawn.x, a.spawn.z, Math.PI); return true; }
+    const P = spots[id]; if (!P) return false; const carry = area === areas.out ? train() : [];
+    moveTo(areas.out, P.x, P.z, P.yaw);
+    carry.forEach((c, i) => { c.x = P.x - Math.sin(P.yaw) * (1.4 + i * 1.15); c.z = P.z - Math.cos(P.yaw) * (1.4 + i * 1.15); c.yaw = P.yaw; c.speed = 0; c.g.position.set(c.x, 0, c.z); c.g.rotation.y = P.yaw; });
+    return true;
+  }
   function moveTo(next, x, z, yaw) {
     if (area === areas.out && next !== areas.out) dropCarts();
     area.group.visible = false; area = next; area.group.visible = true;
-    player.x = x; player.z = z; player.yaw = yaw; player.speed = 0; kid.group.rotation.y = yaw; camYaw = yaw + Math.PI + (area === areas.out ? 1.0 : 0); camPitch = area === areas.out ? 0.42 : 0.24;
+    player.x = x; player.z = z; player.yaw = yaw; player.speed = 0; kid.group.rotation.y = yaw; camPitch = area === areas.out ? 0.42 : 0.24; camYaw = area === areas.out ? bestCamYaw(yaw + Math.PI + 1.0) : yaw + Math.PI;
     chickens.forEach((c, i) => { c.x = x - Math.sin(yaw) * (1.5 + i * 1.1); c.z = z - Math.cos(yaw) * (1.5 + i * 1.1); c.speed = 0; });
     const outside = area === areas.out; scene.background = new THREE.Color(area.bg); scene.fog = outside ? outFog : null; hemi.intensity = outside ? 1.3 : 1.05; sun.intensity = outside ? 2.0 : 0.8; scene.environmentIntensity = outside ? 0.35 : 0.5;
     if (area.id === "home") refreshShelf(area, getOwned(), getGlam());
@@ -288,6 +330,8 @@ export function createTown(canvas, { ui, avatar = {}, name = "", onPrompt, onInt
     setAvatar(a) { const ry = kid.group.rotation.y; scene.remove(kid.group); const k = makeKid(a); kid.group = k.group; kid.walk = k.walk; kid.parts = k.parts; kid.group.position.set(player.x, 0, player.z); kid.group.rotation.y = ry; scene.add(kid.group); },
     focusPlayer(on) { focus = on; if (on) player.yaw = camYaw + Math.PI; },
     teleport(x, z) { player.x = x; player.z = z; },
+    travel, get spots() { return Object.keys(spots); },
+    camInfo: () => ({ dist: +camera.position.distanceTo(new THREE.Vector3(player.x, area === areas.out ? 1.3 : 1.7, player.z)).toFixed(2), yaw: camYaw, pitch: camPitch }),
     playerPos: () => ({ x: player.x, z: player.z }),
     size: () => ({ W: canvas.clientWidth || innerWidth, H: canvas.clientHeight || innerHeight }),
     stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, fps: Math.round(1 / emaDt), resScale, area: area.id }),
@@ -370,7 +414,7 @@ function buildBuilding(S, out, animated) {
   g.position.set(S.x, 0, S.z); g.rotation.y = S.ry; out.group.add(g);
   const deco = new THREE.Group(); deco.userData.noMerge = true; deco.position.copy(g.position); deco.rotation.y = S.ry; out.group.add(deco);
   roofDeco(S, deco, animated);
-  const c = Math.abs(Math.cos(S.ry)), s = Math.abs(Math.sin(S.ry)); out.obstacles.push({ x: S.x, z: S.z, w: w * c + d * s, d: w * s + d * c, tall: true });
+  const c = Math.abs(Math.cos(S.ry)), s = Math.abs(Math.sin(S.ry)); out.obstacles.push({ x: S.x, z: S.z, w: w * c + d * s, d: w * s + d * c, tall: true, top: h + (S.id === "bulk" ? 0.6 : Math.min(3, w * 0.22)) });
   const fwd = new THREE.Vector3(Math.sin(S.ry), 0, Math.cos(S.ry));
   const door = new THREE.Vector3(S.x, 0, S.z).addScaledVector(fwd, d / 2 + 0.25), outPos = new THREE.Vector3(S.x, 0, S.z).addScaledVector(fwd, d / 2 + 2.6);
   out.doors.push({ id: S.id, x: door.x, z: door.z, outX: outPos.x, outZ: outPos.z, yaw: S.ry, r: doorW > 3 ? 1.6 : 0.95 });
@@ -547,7 +591,9 @@ const TOWNSFOLK = [
 ];
 const CORRAL = { x: 13, z: -16 };
 const YARD = { x: -31, z: 35.5, w: 12, d: 7 };
-const CART_SPOTS = [[-12, -20], [-6, -13], [7, -22], [-15, -12], [2, -18], [19, -13], [-20, -16], [10, 14], [-11, 24], [24, 2], [-24, -2], [16, -24]];
+const CART_SPOTS = [[-12, -20], [-6, -13], [7, -22], [-15, -12], [2, -18], [19, -13], [-20, -16], [10, 14], [-11, 24], [24, 2], [-24, -2], [16, -24],
+  [-3, -21], [5, -15], [-9, -17], [17, -19], [-17, -21], [3, 22], [-12, 2], [12, 2], [-4, 33], [16, 34], [-26, -14], [27, -14]];
+const CART_MAX = 24, CART_BACK = [4, 8]; // how many carts you can push at once, and how fast (seconds) returned carts roll back out
 function buildOutdoor(g, a, animated) {
   const sky = canvasTex(4, 256, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#5fb6ff"); gr.addColorStop(0.55, "#bfe3ff"); gr.addColorStop(1, "#ffe6f1"); c.fillStyle = gr; c.fillRect(0, 0, w, h); });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(220, 32, 16), new THREE.MeshBasicMaterial({ map: sky, side: THREE.BackSide, fog: false, depthWrite: false })); dome.userData.dyn = true; g.add(dome);
@@ -574,7 +620,7 @@ function buildOutdoor(g, a, animated) {
   const cloudM = mat.std(0xffffff, { roughness: 1, emissive: 0xffffff, emissiveIntensity: 0.25 });
   for (let i = 0; i < 10; i++) { const c = new THREE.Group(); c.userData.dyn = true; c.userData.noMerge = true; for (let k = 0; k < 5; k++) c.add(sphere(rnd(2.5, 4.5), cloudM, k * 3 - 6, rnd(-0.8, 0.8), rnd(-1.5, 1.5), 14)); c.scale.y = 0.6; const an = (i / 10) * Math.PI * 2; c.position.set(Math.cos(an) * 110, rnd(34, 55), Math.sin(an) * 110); g.add(c); animated.push((dt) => { c.position.x += dt * 1.2; if (c.position.x > 150) c.position.x = -150; }); }
   const trunkM = mat.std(0x7a4f2e, { roughness: 1 }), pinkM = mat.std(0xffb7d5, { roughness: 0.9 }), pinkM2 = mat.std(0xff9ec6, { roughness: 0.9 }), leafM = mat.std(0x4caf50, { roughness: 0.9 }), leafM2 = mat.std(0x66bb6a, { roughness: 0.9 });
-  const tree = (x, z, blossom, s = 1) => { g.add(cyl(0.22 * s, 0.32 * s, 2.6 * s, trunkM, 10, x, 1.3 * s, z)); for (let k = 0; k < 4; k++) g.add(sphere(rnd(1.1, 1.6) * s, blossom ? (k % 2 ? pinkM : pinkM2) : k % 2 ? leafM : leafM2, x + rnd(-0.9, 0.9) * s, (3.1 + rnd(0, 1.1)) * s, z + rnd(-0.9, 0.9) * s, 14)); const sh = blobShadow(2 * s, 0.3); sh.position.set(x, 0.02, z); g.add(sh); a.obstacles.push({ x, z, w: 0.6 * s, d: 0.6 * s }); };
+  const tree = (x, z, blossom, s = 1) => { g.add(cyl(0.22 * s, 0.32 * s, 2.6 * s, trunkM, 10, x, 1.3 * s, z)); for (let k = 0; k < 4; k++) g.add(sphere(rnd(1.1, 1.6) * s, blossom ? (k % 2 ? pinkM : pinkM2) : k % 2 ? leafM : leafM2, x + rnd(-0.9, 0.9) * s, (3.1 + rnd(0, 1.1)) * s, z + rnd(-0.9, 0.9) * s, 14)); const sh = blobShadow(2 * s, 0.3); sh.position.set(x, 0.02, z); g.add(sh); a.obstacles.push({ x, z, w: 0.6 * s, d: 0.6 * s }); (a.leafy = a.leafy || []).push({ x, z, w: 3.4 * s, d: 3.4 * s, top: 5 * s }); };
   [[-43, -40], [-36, -41], [43, -40], [36, -41], [-43, -16], [43, -16], [-43, 12], [43, 12], [-44, 38], [44, 38], [28, 40], [22, 36], [-8, 36], [10, 38], [-22, -26], [22, -26], [-27, 5.5], [30, 8], [14, 22], [-6, 30]].forEach(([x, z], i) => tree(x, z, i % 3 !== 1, rnd(0.9, 1.25)));
   const postM = mat.std(0x2f3542, { roughness: 0.5, metalness: 0.5 }), bulbM = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffe08a, emissiveIntensity: 1 });
   for (const [x, z] of [[-6, 26], [6, 26], [-6, 38], [6, 38], [-22, -8], [-22, 0], [22, -8], [22, 0], [-18, -24], [18, -24], [-18, -12], [18, -12]]) { g.add(cyl(0.08, 0.12, 4, postM, 8, x, 2, z), sphere(0.3, bulbM, x, 4.15, z, 12), cyl(0.32, 0.18, 0.18, postM, 10, x, 4.45, z)); a.obstacles.push({ x, z, w: 0.3, d: 0.3 }); }
@@ -609,5 +655,26 @@ function buildOutdoor(g, a, animated) {
   const ys = textPlane(["🐔 MY CHICKEN YARD"], 4, 0.7, { bg: "#ff8ac8", color: "#ffffff", size: 90 }); ys.position.set(Y.x, 1.75, Y.z - yd - 0.05); ys.rotation.y = Math.PI; g.add(ys); g.add(box(0.12, 1.7, 0.12, fenceM, Y.x - 1.1, 0.85, Y.z - yd), box(0.12, 1.7, 0.12, fenceM, Y.x + 1.1, 0.85, Y.z - yd));
   a.obstacles.push({ x: Y.x, z: Y.z, w: Y.w + 0.2, d: Y.d + 0.2 });
   const yit = { id: "yard", kind: "yard", label: "🐔 My chicken yard", name: "My Chicken Yard", front: new THREE.Vector3(Y.x, 0, Y.z - yd - 1.6) }; hitZone(g, yit, Y.w, 2, Y.d, Y.x, 1, Y.z); a.interactables.push(yit);
+  buildBooth(g, a, animated);
   for (const S of SHOPS) buildBuilding(S, a, animated);
+}
+// the 🛒 Bag Catch booth, right by the gate (catch blind bags falling into a cart!)
+const BOOTH = { x: 12, z: 29, ry: -Math.PI / 2 };
+function buildBooth(out, a, animated) {
+  const g = new THREE.Group(), deco = new THREE.Group(); deco.userData.noMerge = true;
+  const pinkM = mat.std(0xff5da2, { roughness: 0.6 }), purpM = mat.std(0x7a3cff, { roughness: 0.6 }), goldM = mat.gloss(0xffd54a), whiteM = mat.std(0xffffff);
+  g.add(box(4.2, 1.1, 1.0, pinkM, 0, 0.55, 0.55), box(4.4, 0.14, 1.2, goldM, 0, 1.15, 0.55)); // the counter
+  for (const x of [-1.4, 0, 1.4]) g.add(box(0.9, 0.5, 0.04, whiteM, x, 0.6, 1.07));
+  g.add(box(4.2, 3.3, 0.2, purpM, 0, 1.65, -0.95)); // back wall
+  for (const [x, z] of [[-2.05, 0.95], [2.05, 0.95], [-2.05, -0.95], [2.05, -0.95]]) g.add(cyl(0.09, 0.09, 3.3, goldM, 8, x, 1.65, z));
+  const aw = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 2.6, 1, 4), new THREE.MeshStandardMaterial({ map: stripeTex("#ffffff", "#ff5da2"), side: THREE.DoubleSide, roughness: 0.8 })); aw.position.set(0, 3.45, 0.15); aw.rotation.x = -1.35; g.add(aw);
+  const sign = textPlane(["🛒 BAG CATCH!", "Catch the bags = 🪙"], 3.8, 1.05, { bg: "#7a3cff", color: "#fff3a0", size: 80 }); sign.position.set(0, 2.1, -0.83); g.add(sign);
+  [["snacks", -1.5], ["pets", -0.75], ["hunters", 0.75], ["ocean", 1.5]].forEach(([sid, x], i) => deco.add(miniBag(sid, 0.38, x, 1.22, 0.55, (i - 1.5) * 0.25)));
+  const big = makeBag("jumbo"); big.scale.setScalar(0.85); big.position.set(0, 3.75, 0.1); big.userData.noMerge = true; deco.add(big);
+  animated.push((dt, t) => { big.rotation.y = t * 1.2; big.position.y = 3.75 + Math.sin(t * 2.2) * 0.12; });
+  for (const o of [g, deco]) { o.position.set(BOOTH.x, 0, BOOTH.z); o.rotation.y = BOOTH.ry; out.add(o); }
+  const fwd = new THREE.Vector3(Math.sin(BOOTH.ry), 0, Math.cos(BOOTH.ry));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.3, 32), new THREE.MeshBasicMaterial({ color: 0xff5da2, transparent: true, opacity: 0.5, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.set(BOOTH.x + fwd.x * 2.4, 0.02, BOOTH.z + fwd.z * 2.4); ring.userData.dyn = true; out.add(ring); animated.push((dt, t) => { ring.material.opacity = 0.3 + Math.sin(t * 3) * 0.2; });
+  const c = Math.abs(Math.cos(BOOTH.ry)), s = Math.abs(Math.sin(BOOTH.ry)); a.obstacles.push({ x: BOOTH.x, z: BOOTH.z, w: 4.4 * c + 2.2 * s, d: 4.4 * s + 2.2 * c });
+  const it = { id: "catch", kind: "catch", label: "🛒 Play Bag Catch!", name: "Bag Catch", front: new THREE.Vector3(BOOTH.x + fwd.x * 2.6, 0, BOOTH.z + fwd.z * 2.6) }; hitZone(out, it, 4.4, 3.4, 2.4, BOOTH.x, 1.7, BOOTH.z).rotation.y = BOOTH.ry; a.interactables.push(it);
 }

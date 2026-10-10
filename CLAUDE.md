@@ -25,7 +25,7 @@ Notes that save time:
   `playwright` from outside the project, so import it by path:
   `import { chromium } from "file:///C:/Users/Jeff/source/repos/emmy-game/node_modules/playwright/index.mjs"`.
 - `arcade.html` exposes `window.__arcade` (`state`, `mode`, `world`, `interact`,
-  `startGame`, `closeGame`, `setMode`, `GAMES`) — drive and assert through it instead of
+  `startGame`, `closeGame`, `setMode`, `GAMES`, `openIpad`/`closeIpad`, `ipad` = the Fidget Trading iframe while open) — drive and assert through it instead of
   clicking through 3D scenes. Wait for it with
   `page.waitForFunction(() => window.__arcade && window.__arcade.state)`.
 - `dumplings.html` exposes `window.__dumplings` (`town`, `state`, `table`, `openSteamer(type)`,
@@ -35,14 +35,17 @@ Notes that save time:
   Wait for `window.__dumplings && window.__dumplings.town`.
 - `blindbags.html` exposes `window.__blindbags` (`town`, `state`, `opener`, `glow`, `startBags(bagId, price)`,
   `viewItem(id)`, `closeOpen`, `startGlow(item)`, `endGlow`, `finishGlow`, `openShop(id)`, `openBook`, `useDoor(id, 'in'|'out')`,
-  `CATALOG`, `BAGS`, `openYard`, `startStock`/`endStock`, `job`). `opener.ctrl.tear()` opens the bag, `opener.ctrl.mode` is the
+  `CATALOG`, `BAGS`, `openYard`, `startStock`/`endStock`, `job`, `startCatch`/`runCatch`/`endCatch`, `game`, `openTravel`/`travelTo(id)`, `PLACES`; `town.camInfo()` reports camera distance). `opener.ctrl.tear()` opens the bag, `opener.ctrl.mode` is the
   series' play mode (`act(id)` presses its buttons); `glow.ctrl.cleanAll()` finishes the scrubbing; `job.ctrl.finish()` ends the shift. Seed
   `emmy.blindbag.save.v1` with a `name` or the name prompt covers everything on a fresh profile.
+- `pizza.html` exposes `window.__pizza` (`town`, `state`, `opener`, `game`, `CATALOG`, `RARITIES`, `BAGS`, `openShop(id)`,
+  `buyBag(id)`/`openBag(id)`, `closeOpen`, `playGame(id)`/`closeGame`, `openBook`, `zoomTo(id)`). `opener.ctrl.open()` pops a box, `game.poke()` taps
+  the open clicker. Seed `emmy.pizza.save.v1` with `{"name":"Emmy"}` to skip the name prompt.
 - `game.html` opens the character picker over everything on a fresh profile; click
   `.avatar-opt` first or later clicks get intercepted.
 - Seed or inspect progress through `localStorage` — every key is namespaced `emmy.*`
   (`emmy.fidget.save.v2`, `emmy.arcade.save.v2.<mode>`, `emmy.arcade.mode`,
-  `emmy.arcade.avatar`, `emmy.dumpling.save.v1`, `emmy.dumpling.avatar`, `emmy.dumpling.music`, `emmy.blindbag.save.v1`, `emmy.blindbag.avatar`, `emmy.blindbag.voices`, `emmy.blindbag.voicepref`, `emmy.blindbag.music`, plus `emmy.muted` / `emmy.music` / `emmy.meterHidden` / `emmy.no3d`).
+  `emmy.arcade.avatar`, `emmy.dumpling.save.v1`, `emmy.dumpling.avatar`, `emmy.dumpling.music`, `emmy.blindbag.save.v1`, `emmy.blindbag.avatar`, `emmy.blindbag.voices`, `emmy.blindbag.voicepref`, `emmy.blindbag.music`, `emmy.pizza.save.v1`, `emmy.pizza.avatar`, `emmy.pizza.music`, plus `emmy.muted` / `emmy.music` / `emmy.meterHidden` / `emmy.no3d`).
 - Kill the preview server when finished (`netstat -ano | grep :4173`, then `taskkill //F //PID <pid>`).
 
 ## Conventions
