@@ -136,7 +136,7 @@ export function evaluate(theirs, yours) {
   else if (ratio >= 1.2) { rating = 4; label = "Great trade!";  emoji = "😄"; tone = "good"; }
   else if (ratio >= 0.95){ rating = 3; label = "Fair trade";    emoji = "🙂"; tone = "fair"; }
   else if (ratio >= 0.7) { rating = 2; label = "Not great...";  emoji = "😕"; tone = "bad"; }
-  else                   { rating = 1; label = "Bad trade!";    emoji = "😬"; tone = "awful"; }
+  else                   { rating = 1; label = "Not fair to you!"; emoji = "😬"; tone = "awful"; }
 
   return { get, give, net, ratio, rating, label, emoji, tone };
 }

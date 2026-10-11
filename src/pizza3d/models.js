@@ -191,6 +191,7 @@ export const BOX_LOOK = {
   box: { body: 0xfff4dc, trim: 0xf2483a, label: "🍕", word: "PIZZA" },
   party: { body: 0x9a6bff, trim: 0xffd23f, label: "🎉", word: "PARTY" },
   gold: { body: 0xffc93c, trim: 0xff8a3c, label: "👑", word: "GOLDEN" },
+  star: { body: 0x3b2f8f, trim: 0x8fd8ff, label: "🌠", word: "STARLIGHT" },
 };
 export function makeBox(kind = "box") {
   const L = BOX_LOOK[kind] || BOX_LOOK.box; const g = new THREE.Group(); const body = new THREE.Group(); g.add(body); let lid = null;

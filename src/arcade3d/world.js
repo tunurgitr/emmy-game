@@ -477,7 +477,7 @@ function buildCabinet(def) {
       g.add(box(1.5, 0.9, 1.5, body, 0, 0.45, 0)); g.add(box(1.5, 0.08, 1.5, mat.std(0x7cb342), 0, 0.92, 0));
       for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) { g.add(cyl(0.16, 0.16, 0.04, mat.std(0x3e2723), 14, -0.45 + k * 0.45, 0.97, -0.45 + r * 0.45)); }
       const m = emojiSprite("🐹", 0.45); m.position.set(0, 1.2, 0); g.add(m);
-      const sign = textPlane(["🐹 WHACK-A-MOLE"], 1.6, 0.45, { bg: `#${c.getHexString()}`, color: "#fff", size: 78 }); sign.position.set(0, 2.0, -0.6); g.add(sign); g.add(cyl(0.04, 0.04, 1.1, mat.metal(), 8, 0, 1.4, -0.6)); strip(0, 0.5, 0.78, 1.4, true); break; }
+      const sign = textPlane(["🐹 BOOP-A-MOLE"], 1.6, 0.45, { bg: `#${c.getHexString()}`, color: "#fff", size: 78 }); sign.position.set(0, 2.0, -0.6); g.add(sign); g.add(cyl(0.04, 0.04, 1.1, mat.metal(), 8, 0, 1.4, -0.6)); strip(0, 0.5, 0.78, 1.4, true); break; }
     case "hoops": {
       w = 1.6; d = 2.4;
       g.add(box(1.5, 0.4, 2.2, body, 0, 0.2, 0)); g.add(box(1.5, 2.4, 0.15, dark, 0, 1.6, -1.05));

@@ -3,6 +3,7 @@
 //  a machine to play it in first-person, load your card at the kiosk, buy
 //  snacks, work shifts for money (Regular mode) and trade tickets for prizes.
 // ==========================================================================
+import "./nozoom.js"; // first: no accidental Safari zoom
 import { createWorld } from "./arcade3d/world.js";
 import { wheel, claw, vr, race, laser } from "./arcade3d/games1.js";
 import { hockey, fish, skee, mole, hoops } from "./arcade3d/games2.js";

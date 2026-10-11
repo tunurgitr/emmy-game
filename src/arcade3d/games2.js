@@ -185,11 +185,11 @@ export const skee = {
 };
 
 // ==========================================================================
-//  🐹 WHACK-A-MOLE — a real mole table; tap the moles. 30 seconds.
+//  🐹 BOOP-A-MOLE — a real mole table; boop the moles to say hi. 30 seconds.
 // ==========================================================================
 export const mole = {
-  id: "mole", name: "Whack-a-Mole", emoji: "🐹", cost: 2, color: 0x8bc34a, cabinet: "moles", payout: "up to 60 🎟️",
-  tip: "🔨 Tap the moles as they pop up! Golden moles are worth 3. 30 seconds.",
+  id: "mole", name: "Boop-a-Mole", emoji: "🐹", cost: 2, color: 0x8bc34a, cabinet: "moles", payout: "up to 60 🎟️",
+  tip: "👆 Boop the moles as they pop up to say hi! Golden moles are worth 3. 30 seconds.",
   create(api) {
     const scene = baseScene(0x1f3a12); lightScene(scene, { ambient: 0.9, pos: [2, 8, 4] });
     const camera = fpCamera(api.W, api.H, [0, 2.4, 2.6], [0, 0.9, -0.2], 55);
@@ -206,8 +206,8 @@ export const mole = {
       // clip: moles below the table hide behind an opaque cover cylinder
       holes.push({ g, body, face, crown, x, z, up: 0, alive: false, life: 0, gold: false, bonk: 0 }); hitMeshes.push(body);
     }
-    const hammer = new THREE.Group(); hammer.add(cyl(0.03, 0.03, 0.6, mat.wood(0x8d5a2b), 8, 0, 0.3, 0)); hammer.add(cyl(0.12, 0.12, 0.3, mat.gloss(0x546e7a), 16, 0, 0.6, 0).rotateZ(Math.PI / 2)); hammer.position.set(0.7, 1.6, 0.6); hammer.rotation.z = -0.6; scene.add(hammer);
-    let time = 30, hits = 0, over = false, spawnT = 0, swing = 0, target = new THREE.Vector3(0.7, 1.6, 0.6); const faceOk = emojiSprite("🐹").material, faceKo = emojiSprite("😵").material;
+    const hammer = new THREE.Group(); hammer.add(cyl(0.03, 0.03, 0.6, mat.wood(0x8d5a2b), 8, 0, 0.3, 0)); hammer.add(sphere(0.13, mat.std(0xff8ac8, { roughness: 1 }), 0, 0.66, 0)); hammer.position.set(0.7, 1.6, 0.6); hammer.rotation.z = -0.6; scene.add(hammer); // a soft foam boop-wand, not a hammer
+    let time = 30, hits = 0, over = false, spawnT = 0, swing = 0, target = new THREE.Vector3(0.7, 1.6, 0.6); const faceOk = emojiSprite("🐹").material, faceKo = emojiSprite("😄").material;
     return std({
       scene, camera,
       onDown(p) {
@@ -222,7 +222,7 @@ export const mole = {
         spawnT -= dt; if (spawnT <= 0) { spawnT = rnd(0.35, 0.75) - Math.min(0.2, (30 - time) * 0.006); const h = pick(holes.filter((h) => !h.alive && h.up <= 0)); if (h) { h.alive = true; h.life = rnd(0.7, 1.4); h.gold = Math.random() < 0.15; h.crown.visible = h.gold; h.face.material = faceOk; } }
         for (const h of holes) { if (h.alive) { h.up = Math.min(1, h.up + dt * 6); h.life -= dt; if (h.life <= 0) h.alive = false; } else h.up = Math.max(0, h.up - dt * 5); if (h.bonk > 0) h.bonk -= dt; h.g.position.y = 0.45 + h.up * 0.55; h.g.visible = h.up > 0.05; h.g.scale.y = h.bonk > 0 ? 0.7 : 1; }
         api.setScore(`🐹 ${hits}   ${fmtT(time)}`);
-        if (time <= 0) { over = true; const tix = clamp(hits * 2, 0, 60); api.finish(tix, hits >= 20 ? "🔨 Mole master!" : "Time's up!", `${hits} bonks → ${tix} tickets`); }
+        if (time <= 0) { over = true; const tix = clamp(hits * 2, 0, 60); api.finish(tix, hits >= 20 ? "🐹 Mole master!" : "Time's up!", `${hits} boops → ${tix} tickets`); }
       },
     }, scene);
   },

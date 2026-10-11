@@ -1,9 +1,10 @@
 // ==========================================================================
 //  Emmy's Pizza Plus — hub. A teeny toon pizza plaza: buy mystery bags and
 //  pizza boxes at Box-O-Rama, open them, and every one holds a CLICKER GAME
-//  (39 of them, from Common all the way to Golden Crust). Clickers earn coins for more
+//  (100 of them, across 20 rarities from Common all the way to Infinity Pizza). Clickers earn coins for more
 //  boxes; every game you own lives in your Game Book and the Game Oven.
 // ==========================================================================
+import "./nozoom.js"; // first: no accidental Safari zoom
 import { createTown, SHOPS } from "./pizza3d/town.js";
 import { createOpen } from "./pizza3d/open.js";
 import { createClicker, fmt, GOALS } from "./pizza3d/clicker.js";
@@ -54,7 +55,7 @@ function confetti(n = 120, colors = ["#f2483a", "#ffd23f", "#4dbb5a", "#e8b26a",
   for (let i = 0; i < n; i++) confs.push({ x: Math.random() * cf.width, y: -20 - Math.random() * 200, vx: (Math.random() - 0.5) * 120, vy: 150 + Math.random() * 200, r: 4 + Math.random() * 6, c: colors[i % colors.length], a: Math.random() * 6, s: (Math.random() - 0.5) * 8, round: Math.random() < 0.4 });
   if (!cfRaf) { let last = performance.now(); const f = (now) => { const dt = Math.min(0.05, (now - last) / 1000); last = now; cg.clearRect(0, 0, cf.width, cf.height); confs = confs.filter((p) => p.y < cf.height + 30); for (const p of confs) { p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.s * dt; cg.save(); cg.translate(p.x, p.y); cg.rotate(p.a); cg.fillStyle = p.c; if (p.round) { cg.beginPath(); cg.arc(0, 0, p.r * 0.7, 0, 7); cg.fill(); } else cg.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); cg.restore(); } if (confs.length) cfRaf = requestAnimationFrame(f); else { cfRaf = 0; cg.clearRect(0, 0, cf.width, cf.height); } }; cfRaf = requestAnimationFrame(f); }
 }
-const rarCls = (R) => (R.rainbow ? "rainbow" : R.shine ? "goldshine" : "");
+const rarCls = (R) => R.cls || "";
 const rarChip = (r) => `<span class="rarchip ${rarCls(RARITIES[r])}" style="--rc:${RARITIES[r].color}">${RARITIES[r].name}</span>`;
 function renderPills() {
   $("coinsPill").textContent = `🪙 ${fmt(state.coins)}`; $("gCoins").textContent = `🪙 ${fmt(state.coins)}`; $("bookPill").textContent = `📖 ${ownedCount()}/${CATALOG.length}`;
@@ -100,7 +101,7 @@ const KEEPERS = {
 };
 function keeperSay(id, text) { const K = KEEPERS[id]; town && town.say(id, text); if (K) toast(`${K.face} ${K.who}: “${text}”`, 4200); }
 const keeperBox = (id, text) => { const K = KEEPERS[id]; return `<div class="keeper"><span class="face">${K.face}</span><div><b>${K.who}:</b> “${text}”</div></div>`; };
-const NPC_LINES = [(n) => `Hi ${n}!`, (n) => `Hey ${n}! Got any new games?`, (n) => `${n}! I heard there's a Cheesy Secret game!`, (n) => `Ooh hi ${n}! Love your hat!`, (n) => `${n}! Have you tried the Cheese Fountain? Don't drink it.`, (n) => `Ciao ${n}!`, (n) => `Hi ${n}! I just got the Angry Anchovy. It's SO grumpy!`];
+const NPC_LINES = [(n) => `Hi ${n}!`, (n) => `Hey ${n}! Got any new games?`, (n) => `${n}! I heard there's a Cheesy Secret game!`, (n) => `Ooh hi ${n}! Love your hat!`, (n) => `${n}! Have you tried the Cheese Fountain? Don't drink it.`, (n) => `Ciao ${n}!`, (n) => `Hi ${n}! I just got the Grumpy Anchovy. It's SO ticklish!`];
 const CHICKEN_LINES = [(n) => `BAWK! Hi ${n}!`, (n) => `Bawk bawk! ${n}, is that PIZZA?`, () => `Cluck. Cluck cluck. BAWK!`, (n) => `${n}! I laid an egg-stra cheesy egg!`, () => `Bok bok... I'm a pizza chicken now.`, (n) => `BAWK! ${n}! Have you seen my chicks?`, () => `Cluck! I'm not scared of the Pizza Kraken. Bawk.`];
 const CHICK_LINES = [() => `Peep!`, () => `Peep peep!`, (n) => `Peep! Hi ${n}!`, () => `Peep? Pizza? Peep!`, () => `*tiny peep*`];
 const PIGEON_LINES = [(n) => `Coo! ${n}! Got any crust?`, (n) => `Coo coo. Hi ${n}. I'm Gary.`, (n) => `${n}! The seagulls are my cousins. Don't tell anyone.`];
@@ -112,11 +113,11 @@ const PITY = 8, RAINBOW_PITY = 15;
 function rollRarity(odds) { const e = Object.entries(odds); let r = Math.random() * e.reduce((s, [, w]) => s + w, 0); for (const [k, w] of e) if ((r -= w) <= 0) return k; return e[0][0]; }
 function rollGame(bagId) {
   let rar = rollRarity(BAGS[bagId].odds);
-  if ((state.pity >= PITY - 1 || state.luck) && RARITIES[rar].order < 2) rar = rollRarity({ rare: 55, superrare: 15, epic: 18, legendary: 8, mythic: 3, secret: 1 });
+  if ((state.pity >= PITY - 1 || state.luck) && RARITIES[rar].order < RARITIES.rare.order) rar = rollRarity({ rare: 50, superrare: 18, sparkly: 12, epic: 10, mega: 5, legendary: 3, secret: 2 });
   if (state.rainbow >= RAINBOW_PITY - 1) rar = "secret";
   const pool = CATALOG.filter((g) => g.rar === rar); let g = pick(pool);
   if (state.owned[g.id] && Math.random() < 0.6) { const fresh = pool.filter((p) => !state.owned[p.id]); if (fresh.length) g = pick(fresh); } // a gentle nudge toward new ones
-  state.pity = RARITIES[g.rar].order >= 2 ? 0 : state.pity + 1; state.luck = false; state.rainbow = g.rar === "secret" ? 0 : (state.rainbow || 0) + 1;
+  state.pity = RARITIES[g.rar].order >= RARITIES.rare.order ? 0 : state.pity + 1; state.luck = false; state.rainbow = g.rar === "secret" ? 0 : (state.rainbow || 0) + 1;
   return g;
 }
 const oddsHtml = (odds) => Object.entries(odds).map(([r, w]) => `<div><b style="background:${RARITIES[r].rainbow ? "linear-gradient(90deg,#ff5d8f,#ffe066,#6ec6ff)" : RARITIES[r].color}"></b>${RARITIES[r].name}<span>${w}%</span></div>`).join("");
@@ -185,8 +186,8 @@ function reveal() {
   $("oPlay").onclick = () => { const id = g.id; closeOpen(true); playGame(id); };
   $("oAgain").onclick = () => { if (state.coins < B.price) { SFX.error(); return; } state.coins -= B.price; save(); renderPills(); SFX.buy(); closeOpen(true); startOpen(bagId); };
   $("oDone").onclick = () => closeOpen();
-  if (R.order >= RARITIES.mythic.order) { SFX.wow(); confetti(R.rainbow || R.shine ? 380 : 260, R.rainbow ? RAINBOW : R.shine ? ["#ffd23f", "#ffe98a", "#e0a800", "#fff"] : undefined); toast(`🤩 WOW! ${R.name}! ${g.name}!`, 3500); }
-  else if (R.order >= RARITIES.superrare.order) { SFX.wow(); confetti(170); } else if (R.order >= 2 || isNew) { SFX.win(); if (R.order >= 2) confetti(100); } else SFX.ding();
+  if (R.order >= RARITIES.mythic.order) { SFX.wow(); confetti(R.cls ? 380 : 260, R.rainbow ? RAINBOW : R.cls ? [R.color, "#ffe98a", "#fff", "#ffd23f"] : undefined); toast(`🤩 WOW! ${R.name}! ${g.name}!`, 3500); }
+  else if (R.order >= RARITIES.superrare.order) { SFX.wow(); confetti(170); } else if (R.order >= RARITIES.rare.order || isNew) { SFX.win(); if (R.order >= RARITIES.rare.order) confetti(100); } else SFX.ding();
   if (!isNew) flyTo($("coinsPill"), "🪙", 4);
 }
 function closeOpen(quick = false) {

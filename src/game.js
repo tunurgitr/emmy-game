@@ -1,3 +1,4 @@
+import "./nozoom.js"; // first: no accidental Safari zoom
 import {
   TIERS, TOYS, byId, sum, reseed, evaluate, TONE_COLORS,
   AVATARS, starterToys, makeFoxyOffer, makeFoxyReturn, foxyMood, askMoreOutcome, makeShopStock, sellPrice,

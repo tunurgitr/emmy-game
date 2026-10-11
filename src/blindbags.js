@@ -5,6 +5,7 @@
 //  the corral, play 🛒 Bag Catch, 🚀 zip anywhere in town, and have every
 //  shopkeeper in town say hi to you BY NAME.
 // ==========================================================================
+import "./nozoom.js"; // first: no accidental Safari zoom
 import { createTown } from "./blindbag3d/town.js";
 import { createOpen } from "./blindbag3d/open.js";
 import { createGlow, STICKERS } from "./blindbag3d/glow.js";
@@ -715,10 +716,6 @@ try {
   town.onPadButton((b) => { if (b === 0 && opener && opener.ctrl.phase === "bag") { opener.ctrl.tear(); return true; } if (b === 0 && job && $("jBanner").style.display !== "none" && $("jAgain")) { $("jAgain").click(); return true; } if (b === 0 && game && $("jBanner").style.display !== "none") { const btn = $("jPrize") || $("jGo") || $("jAgain"); if (btn) { btn.click(); return true; } } return false; });
 } catch (err) { console.error(err); $("loading").innerHTML = `<div class="d">😢</div>Blind Bag Town needs WebGL (3D) to run on this device.`; }
 $("interact").onclick = () => interact(town.nearest());
-// iPad Safari ignores user-scalable=no, so a pinch would zoom the whole page in (and it stays zoomed). Not here! (Double-tap zoom is off via touch-action in the CSS.)
-for (const ev of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
-document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
-document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
 window.addEventListener("gamepadconnected", () => toast("🎮 Controller connected! Left stick walks, right stick looks, A = shop / tear, B = back.", 4000));
 
 renderPills();

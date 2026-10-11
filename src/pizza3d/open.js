@@ -45,7 +45,7 @@ export function createOpen(game, kind, { sfx, rarity, onTap, onReveal } = {}) {
     if (taps >= NEED) open();
   }
   function open() {
-    if (phase !== "box") return; phase = "pop"; popT = 0; sfx && sfx.boxOpen(R.order || 0);
+    if (phase !== "box") return; phase = "pop"; popT = 0; sfx && sfx.boxOpen(Math.min(9, R.order || 0));
     burst(26 + (R.order || 0) * 8, R.rainbow ? [0xff5d8f, 0xffb347, 0xffe066, 0x7cffb0, 0x6ec6ff, 0xb18cff] : [rc.getHex(), 0xffffff, COL.cheese, COL.tomato], 1);
   }
   const ctrl = {

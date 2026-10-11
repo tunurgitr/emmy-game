@@ -152,11 +152,11 @@ export const claw = {
 };
 
 // ==========================================================================
-//  🥽 VR BLASTER — you're floating in space; drag to look, tap to blast.
+//  🥽 VR BUG BEAMER — you're floating in space; drag to look, tap to beam bugs home.
 // ==========================================================================
 export const vr = {
-  id: "vr", name: "VR Blaster", emoji: "🥽", cost: 4, color: 0x00e676, cabinet: "pod", payout: "up to 90 🎟️",
-  tip: "🥽 Drag to look around — you always shoot at the ring in the middle. Line a bug up until the ring turns gold, then tap to blast it! ⬅️➡️ arrows warn you about sneaky ones. Starts easy, gets wilder — 40 seconds!",
+  id: "vr", name: "VR Bug Beamer", emoji: "🥽", cost: 4, color: 0x00e676, cabinet: "pod", payout: "up to 90 🎟️",
+  tip: "🥽 Drag to look around — your beam always goes to the ring in the middle. Line a bug up until the ring turns gold, then tap to beam it back home! ⬅️➡️ arrows point out sneaky ones. Starts easy, gets wilder — 40 seconds!",
   create(api) {
     const scene = baseScene(0x020112); scene.add(new THREE.AmbientLight(0xffffff, 0.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(5, 3, 8); scene.add(sun);
     const camera = fpCamera(api.W, api.H, [0, 0, 0], [0, 0, -1], 70);
@@ -216,7 +216,7 @@ export const vr = {
       api.sfx.laser(); const hit = aim();
       const target = hit ? hit.position.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(40);
       for (const g of guns) { const from = g.getWorldPosition(new THREE.Vector3()); const geo = new THREE.BufferGeometry().setFromPoints([from, target]); const ln = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x00e676, transparent: true, opacity: 1 })); scene.add(ln); beams.push({ ln, t: 0.15 }); }
-      if (hit) { const d = hit.position.length(); const pts = Math.max(1, Math.round(d / 8)); score += pts; parts.burst(hit.position, 0x00e676, 30, 4, 1); scene.remove(hit); bugs.splice(bugs.indexOf(hit), 1); api.sfx.ding(); api.setTip(`💥 +${pts} (far shots score more!)`); }
+      if (hit) { const d = hit.position.length(); const pts = Math.max(1, Math.round(d / 8)); score += pts; parts.burst(hit.position, 0x00e676, 30, 4, 1); scene.remove(hit); bugs.splice(bugs.indexOf(hit), 1); api.sfx.ding(); api.setTip(`✨ +${pts} — beamed home! (far ones score more!)`); }
       else api.setTip("Missed! Line a bug up inside the ring — it turns gold — then tap. 🎯");
       api.setScore(`⭐ ${score}   ❤️ ${hp}`);
     };
@@ -249,7 +249,7 @@ export const vr = {
         const on = !!aim();
         if (on !== lockedOn) { lockedOn = on; const col = on ? 0xffd54a : 0x00e676; for (const m of retMats) { m.color.setHex(col); m.emissive && m.emissive.setHex(col); } reticle.scale.setScalar(on ? 1.35 : 1); if (on) api.sfx.tick(); }
         for (let i = bugs.length - 1; i >= 0; i--) { const b = bugs[i]; const d = b.position.length(); const step = b.userData.sp * dt; b.position.multiplyScalar(Math.max(0.01, (d - step) / d)); b.rotation.y += b.userData.spin * dt; b.lookAt(0, 0, 0); b.rotateY(b.userData.spin * performance.now() / 1000);
-          if (d < 2.5) { scene.remove(b); bugs.splice(i, 1); hp--; api.sfx.crash(); api.setTip("Ouch! One got through! 😵"); api.setScore(`⭐ ${score}   ❤️ ${hp}`); parts.burst(new THREE.Vector3(0, 0, -2), 0xff4444, 40, 3); if (hp <= 0) { over = true; api.finish(clamp(score, 0, 90), "Overrun by space bugs!", `${score} points → ${clamp(score, 0, 90)} tickets`); } } }
+          if (d < 2.5) { scene.remove(b); bugs.splice(i, 1); hp--; api.sfx.crash(); api.setTip("Whoosh! One zoomed past! 🫣"); api.setScore(`⭐ ${score}   ❤️ ${hp}`); parts.burst(new THREE.Vector3(0, 0, -2), 0xff4444, 40, 3); if (hp <= 0) { over = true; api.finish(clamp(score, 0, 90), "So many space bugs!", `${score} points → ${clamp(score, 0, 90)} tickets`); } } }
         for (let i = beams.length - 1; i >= 0; i--) { const b = beams[i]; b.t -= dt; b.ln.material.opacity = Math.max(0, b.t * 6); if (b.t <= 0) { scene.remove(b.ln); b.ln.geometry.dispose(); beams.splice(i, 1); } }
         planet.rotation.y += dt * 0.05; guns.forEach((g, i) => (g.position.y = -0.42 + Math.sin(performance.now() / 600 + i) * 0.01));
         if (time <= 0) { over = true; const tix = clamp(score, 0, 90); api.finish(tix, score >= 40 ? "🥽 Space hero!" : "Mission complete!", `${score} points → ${tix} tickets`); }
@@ -283,7 +283,7 @@ export const race = {
     const mkCar = (color) => { const g = new THREE.Group(); g.add(box(1.8, 0.7, 3.6, mat.gloss(color), 0, 0.6, 0)); g.add(box(1.5, 0.6, 1.8, mat.gloss(0x223344), 0, 1.2, -0.2)); for (const [x, z] of [[-0.9, 1.2], [0.9, 1.2], [-0.9, -1.2], [0.9, -1.2]]) { const w = cyl(0.35, 0.35, 0.3, mat.std(0x111), 12, x, 0.35, z); w.rotation.z = Math.PI / 2; g.add(w); } g.add(box(0.3, 0.2, 0.05, mat.neon(0xff2222, 1.5), -0.6, 0.7, 1.82)); g.add(box(0.3, 0.2, 0.05, mat.neon(0xff2222, 1.5), 0.6, 0.7, 1.82)); g.add(blobShadow(1.8, 0.4)); return g; };
     const cars = [], coins = []; let px = 0, targetX = 0, speed = 28, dist = 0, coinN = 0, time = 30, lives = 3, hurt = 0, spawnT = 0, over = false, tilt = 0;
     const spawn = () => { const lane = ri(0, 2); if (Math.random() < 0.65) { if (!cars.some((c) => c.lane === lane && c.g.position.z < -70)) { const g = mkCar(pick([0x3d8bfd, 0xffd54a, 0xf4433f, 0x9c27b0, 0x00c853])); g.position.set(LANES[lane], 0, -110); scene.add(g); cars.push({ g, lane, sp: rnd(9, 16) }); } } else { const c = cyl(0.4, 0.4, 0.08, mat.metal(0xffd54a, { emissive: 0xffd54a, emissiveIntensity: 0.4 }), 20, LANES[lane], 1.0, -110); c.rotation.x = Math.PI / 2; scene.add(c); coins.push(c); } };
-    const end = () => { const tix = clamp(Math.floor(dist / 25) + coinN * 2, 1, 80); api.finish(tix, lives > 0 ? "🏁 Finish line!" : "💥 Crashed out!", `${Math.floor(dist)}m and ${coinN} coins → ${tix} tickets`); };
+    const end = () => { const tix = clamp(Math.floor(dist / 25) + coinN * 2, 1, 80); api.finish(tix, lives > 0 ? "🏁 Finish line!" : "🚗 Out of hearts!", `${Math.floor(dist)}m and ${coinN} coins → ${tix} tickets`); };
     return std({
       scene, camera,
       onDown(p) { targetX = clamp(p.x * 7, -4.5, 4.5); }, onMove(p) { targetX = clamp(p.x * 7, -4.5, 4.5); },
@@ -313,7 +313,7 @@ export const race = {
 // ==========================================================================
 export const laser = {
   id: "laser", name: "Laser Tag", emoji: "🔫", cost: 3, color: 0x7a3cff, cabinet: "arena", payout: "up to 75 🎟️",
-  tip: "👆 Tap the robots 🤖 to zap them! Don't zap the kids 🧒. 30 seconds.",
+  tip: "👆 Tap the robots 🤖 to tag them! Don't tag the kids 🧒. 30 seconds.",
   create(api) {
     const scene = baseScene(0x07031a); scene.fog = new THREE.Fog(0x07031a, 20, 45); scene.add(new THREE.AmbientLight(0x8877ff, 0.5)); const pl = new THREE.PointLight(0xff3dd6, 30, 40); pl.position.set(0, 6, -6); scene.add(pl); const pl2 = new THREE.PointLight(0x00e5ff, 30, 40); pl2.position.set(0, 5, 4); scene.add(pl2);
     const camera = fpCamera(api.W, api.H, [0, 1.6, 4], [0, 1.2, -6], 62);
@@ -338,7 +338,7 @@ export const laser = {
         const from = gun.localToWorld(new THREE.Vector3(0, 0.05, -0.65)); const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints([from, target]), new THREE.LineBasicMaterial({ color: 0x00e5ff, transparent: true })); scene.add(ln); beams.push({ ln, t: 0.14 });
         if (hit) { let o = hit.object; let b = null; while (o) { b = bots.find((q) => q.g === o); if (b) break; o = o.parent; } if (b) { b.alive = false; b.t = 0.35;
           if (b.friend) { oops++; combo = 0; api.sfx.miss(); api.setTip("Oops! That was a friend! 😅 −3"); parts.burst(b.g.position.clone().setY(1.2), 0xf44336, 15, 2); }
-          else { combo++; hits++; api.sfx.ding(); parts.burst(b.g.position.clone().setY(1.0), 0x00e5ff, 30, 4); api.setTip(combo >= 3 ? `🔥 ${combo}x combo!` : "Zap! 🤖"); } } }
+          else { combo++; hits++; api.sfx.ding(); parts.burst(b.g.position.clone().setY(1.0), 0x00e5ff, 30, 4); api.setTip(combo >= 3 ? `🔥 ${combo}x combo!` : "Tagged! 🤖"); } } }
         else combo = 0;
       },
       onKey(k) { if (k === " ") this.onDown({ ray: new THREE.Raycaster(camera.position, camera.getWorldDirection(new THREE.Vector3())) }); },
@@ -350,7 +350,7 @@ export const laser = {
           b.g.position.y = -1.6 + b.up * 1.6; b.g.lookAt(camera.position.x, b.g.position.y, camera.position.z); }
         for (let i = beams.length - 1; i >= 0; i--) { const b = beams[i]; b.t -= dt; b.ln.material.opacity = Math.max(0, b.t * 7); if (b.t <= 0) { scene.remove(b.ln); b.ln.geometry.dispose(); beams.splice(i, 1); } }
         api.setScore(`🤖 ${hits}   😅 ${oops}   ${fmtT(time)}`);
-        if (time <= 0) { over = true; const tix = clamp(hits * 3 - oops * 3, 0, 75); api.finish(tix, hits >= 15 ? "🏆 Laser champion!" : "Game over!", `${hits} robots zapped, ${oops} oopsies → ${tix} tickets`); }
+        if (time <= 0) { over = true; const tix = clamp(hits * 3 - oops * 3, 0, 75); api.finish(tix, hits >= 15 ? "🏆 Laser champion!" : "Game over!", `${hits} robots tagged, ${oops} oopsies → ${tix} tickets`); }
       },
     }, scene);
   },

@@ -41,19 +41,19 @@ export const GAMES_B = [
     id: "goblin", name: "Oven Goblin", rar: "rare", ico: "🧌", unit: "logs", base: 2, bg: ["#ffe2c4", "#ff9e6b"],
     blurb: "A goblin lives in the pizza oven. Feed it logs to bake pizzas — and give it what it WANTS.",
     ups: [["tap", "Bigger Logs", "🪵"], ["auto", "Goblin Grandma", "👵"], ["crit", "Toasty Fire", "🔥"]],
-    win: ["The goblin did a little dance. It was awful. It was perfect.", "The goblin says you're 'not bad, for a human'.", "The goblin has named a sock after you.", "The goblin baked you a pizza. It's shaped like the goblin.", "Goblins from other ovens are jealous.", "The goblin wants to be your best friend. It gave you a pebble.", "Goblin party at the oven tonight! You're invited!", "The goblin calls you 'Boss' now.", "You are now the Goblin King/Queen. Long may you bake!"],
+    win: ["The goblin did a little dance. It was wobbly. It was perfect.", "The goblin says you're 'the best human ever'.", "The goblin has named a sock after you.", "The goblin baked you a pizza. It's shaped like the goblin.", "Goblins from other ovens are jealous.", "The goblin wants to be your best friend. It gave you a pebble.", "Goblin party at the oven tonight! You're invited!", "The goblin calls you 'Boss' now.", "You are now the Goblin King/Queen. Long may you bake!"],
     init(G) { Object.assign(G.s, { fire: 40, wish: null, wishT: 3, choices: [], bake: 0, pies: 0, mood: "smug", moodT: 0, log: null }); },
     logPos(G) { return { x: G.u * 14, y: G.H - G.u * 26 }; },
     btn(G, i) { return { x: G.cx + (i - 1) * G.u * 22, y: G.H - G.u * 24, r: G.u * 9 }; },
     down(G, x, y) { const s = G.s;
       if (s.wish) for (let i = 0; i < 3; i++) { const b = this.btn(G, i); if (dist(x, y, b.x, b.y) < b.r * 1.2) { const ok = s.choices[i] === s.wish;
-        if (ok) { G.add(10, b.x, b.y, { color: "#ffd23f" }); SFX.win(); s.mood = "joy"; G.say(`Yesss! A ${s.wish}! Mine!`, G.cx, G.H * 0.3, 1.5); G.burst(G.cx, G.H * 0.4, [s.wish, "✨"], 8); } else { SFX.error(); s.mood = "angry"; G.say(`Not THAT! I wanted ${s.wish}!`, G.cx, G.H * 0.3, 1.5); G.burst(G.cx, G.H * 0.4, "💨", 5); }
+        if (ok) { G.add(10, b.x, b.y, { color: "#ffd23f" }); SFX.win(); s.mood = "joy"; G.say(`Yesss! A ${s.wish}! Mine!`, G.cx, G.H * 0.3, 1.5); G.burst(G.cx, G.H * 0.4, [s.wish, "✨"], 8); } else { SFX.error(); s.mood = "wow"; G.say(`Ooh, close! I wanted ${s.wish}!`, G.cx, G.H * 0.3, 1.5); G.burst(G.cx, G.H * 0.4, "💨", 5); }
         s.moodT = 1.5; s.wish = null; s.wishT = rnd(4, 7); return; } }
       s.fire = Math.min(100, s.fire + 9); s.log = { t: 0.35 }; G.add(1 + (s.fire > 60 ? 1 : 0), G.cx, G.H * 0.42); G.noise(0.25, { vol: 0.12, f0: 2500, f1: 500, type: "bandpass" });
       if (s.fire > 60) { s.bake += 0.14; if (s.bake >= 1) { s.bake = 0; s.pies++; G.add(6, G.cx, G.H * 0.5, { color: "#ffd23f" }); SFX.ding(); G.burst(G.cx, G.H * 0.48, "🍕", 5); } } },
-    update(G, dt) { const s = G.s; s.fire = Math.max(0, s.fire - dt * 6); s.moodT -= dt; if (s.moodT <= 0) s.mood = s.fire < 20 ? "sad" : "smug"; if (s.log && (s.log.t -= dt) <= 0) s.log = null;
+    update(G, dt) { const s = G.s; s.fire = Math.max(0, s.fire - dt * 6); s.moodT -= dt; if (s.moodT <= 0) s.mood = s.fire < 20 ? "sleep" : "smug"; if (s.log && (s.log.t -= dt) <= 0) s.log = null;
       if (!s.wish) { s.wishT -= dt; if (s.wishT <= 0) { s.wish = pick(["🧦", "🎵", "🍪", "🦆", "🎩", "🧸", "🥒", "🎈"]); const others = ["🧦", "🎵", "🍪", "🦆", "🎩", "🧸", "🥒", "🎈"].filter((e) => e !== s.wish).sort(() => Math.random() - 0.5).slice(0, 2); s.choices = [s.wish, ...others].sort(() => Math.random() - 0.5); s.wishT = 7; G.say(`I WANT A ${s.wish}!`, G.cx, G.H * 0.3, 1.5); SFX.squeak(); } }
-      else { s.wishT -= dt; if (s.wishT <= 0) { s.wish = null; s.wishT = rnd(4, 7); s.mood = "grumpy"; s.moodT = 1.2; G.say("Hmph. Fine.", G.cx, G.H * 0.3, 1); } } },
+      else { s.wishT -= dt; if (s.wishT <= 0) { s.wish = null; s.wishT = rnd(4, 7); s.mood = "happy"; s.moodT = 1.2; G.say("Maybe next time! Hee hee.", G.cx, G.H * 0.3, 1); } } },
     draw(G, g) { const s = G.s, ox = G.cx, oy = G.H * 0.5, R = Math.min(G.W * 0.36, G.u * 36);
       g.beginPath(); g.arc(ox, oy, R, Math.PI, 0); g.lineTo(ox + R, oy + R * 0.3); g.lineTo(ox - R, oy + R * 0.3); g.closePath(); g.fillStyle = "#d96b4a"; g.fill(); g.strokeStyle = INK; g.lineWidth = 5; g.stroke();
       for (let i = 0; i < 10; i++) rr(g, ox - R * 0.8 + (i % 5) * R * 0.34 + (Math.floor(i / 5) % 2) * R * 0.17, oy - R * 0.75 + Math.floor(i / 5) * R * 0.25, R * 0.26, R * 0.11, 4, "#e8875f", null);
@@ -71,7 +71,7 @@ export const GAMES_B = [
     id: "tower", name: "Leaning Tower of Pizza", rar: "rare", ico: "🗼", unit: "boxes", base: 2, bg: ["#d8f0ff", "#fff1e0"],
     blurb: "Tap to drop pizza boxes on the stack. Perfect drops = big points. How tall before TIMBERRR?",
     ups: [["tap", "Sticky Cheese Glue", "🍯"], ["auto", "Box Delivery Crew", "🚚"], ["mult", "Famous Tower", "📸"]],
-    win: ["Your tower is taller than a giraffe!", "Tourists are taking photos of your tower.", "Your tower leans more than the real one. Show-off.", "Birds are building nests on your tower.", "Your tower has its own postcode.", "The tower can be seen from three towns away.", "Clouds bump into your tower and say sorry.", "NASA asked you to stop. You did not stop.", "The Leaning Tower of Pizza is the 8th Wonder of the World!"],
+    win: ["Your tower is taller than a giraffe!", "Tourists are taking photos of your tower.", "Your tower leans more than the real one. Fancy!", "Birds are building nests on your tower.", "Your tower has its own postcode.", "The tower can be seen from three towns away.", "Clouds bump into your tower and say sorry.", "NASA asked you to stop. You did not stop.", "The Leaning Tower of Pizza is the 8th Wonder of the World!"],
     init(G) { Object.assign(G.s, { stack: [0], drop: null, fall: [], topple: 0, best: 0 }); },
     bw(G) { return Math.min(G.W * 0.34, G.u * 36); }, bh(G) { return G.u * 7; },
     moverX(G) { const n = G.s.stack.length; return G.cx + Math.sin(G.t * (1.4 + n * 0.06)) * G.W * 0.22; },
@@ -106,7 +106,7 @@ export const GAMES_B = [
     update(G, dt) { const s = G.s; s.spawn -= dt; if (s.spawn <= 0) { s.spawn = rnd(0.8, 1.8); if (s.gulls.length < 4) this.spawnGull(G); }
       for (const sl of s.slots) if (!sl.has) { sl.t += dt; if (sl.t > 4) { sl.has = true; sl.t = 0; } }
       for (let i = s.gulls.length - 1; i >= 0; i--) { const gl = s.gulls[i]; gl.flap += dt * 14;
-        if (gl.mode === "in") { const p = this.slotPos(G, gl.slot); if (!s.slots[gl.slot].has) { gl.mode = "flee"; continue; } const dx = p.x - gl.x, dy = p.y - G.u * 4 - gl.y, d = Math.hypot(dx, dy); const sp = gl.sp * G.H * dt; gl.x += (dx / d) * sp; gl.y += (dy / d) * sp + Math.sin(G.t * 4 + i) * G.u * 0.3; if (d < G.u * 3) { s.slots[gl.slot].has = false; s.slots[gl.slot].t = 0; gl.carry = true; gl.mode = "flee"; SFX.squawk(); G.say("HA HA! Pizza!", gl.x, gl.y - G.u * 8, 1); } }
+        if (gl.mode === "in") { const p = this.slotPos(G, gl.slot); if (!s.slots[gl.slot].has) { gl.mode = "flee"; continue; } const dx = p.x - gl.x, dy = p.y - G.u * 4 - gl.y, d = Math.hypot(dx, dy); const sp = gl.sp * G.H * dt; gl.x += (dx / d) * sp; gl.y += (dy / d) * sp + Math.sin(G.t * 4 + i) * G.u * 0.3; if (d < G.u * 3) { s.slots[gl.slot].has = false; s.slots[gl.slot].t = 0; gl.carry = true; gl.mode = "flee"; SFX.squawk(); G.say("Ooh, pizza! Yum!", gl.x, gl.y - G.u * 8, 1); } }
         else { gl.y -= G.H * 0.5 * dt; gl.x += (gl.x < G.cx ? -1 : 1) * G.W * 0.3 * dt; if (gl.y < -G.u * 20) s.gulls.splice(i, 1); } } },
     autoTick(G) { const gl = G.s.gulls.find((g) => g.mode === "in"); if (gl) { gl.mode = "flee"; G.burst(gl.x, gl.y, "🦀", 1, { size: 0.6 }); } },
     draw(G, g) { const s = G.s; g.fillStyle = "#4aa8ff"; g.fillRect(0, G.H * 0.5, G.W, G.H * 0.12); g.fillStyle = "#ffe0a0"; g.fillRect(0, G.H * 0.62, G.W, G.H); E(g, "☀️", G.W - G.u * 12, G.u * 12, G.u * 16); E(g, "⛱️", G.u * 12, G.H * 0.62, G.u * 20);
@@ -215,7 +215,7 @@ export const GAMES_B = [
         if (bonus === 2) G.float("SPEEDY!", G.cx, G.H * 0.25, "#ffd23f", 0.9);
         if (s.streak % 10 === 0) { s.pies++; G.add(12, G.cx, G.H * 0.6, { color: "#ffd23f" }); SFX.ding(); G.say("*DING* PIZZA COMPLETE!", G.cx, G.H * 0.18, 1.5); G.burst(G.cx, G.H * 0.55, ["🍕", "⚙️"], 8); }
         let n; do n = Math.floor(rnd(0, 4)); while (n === s.lit); s.lit = n; s.litT = 0; }
-      else { s.streak = 0; s.stun = 0.9; s.scr = "dizzy"; SFX.error(); G.shake(1.5); G.burst(G.cx, G.H * 0.3, ["⚡", "💥"], 6); G.say(pick(["BEEP. I AM NOW A TOASTER.", "ERROR 404: CHEESE NOT FOUND", "Does not compute… I love you?", "INITIATING… CHICKEN DANCE", "Making… a shoe pizza?", "Reboooooting…"]), G.cx, G.H * 0.18, 1.6); } },
+      else { s.streak = 0; s.stun = 0.9; s.scr = "wow"; SFX.boop(); G.burst(G.cx, G.H * 0.3, ["❓", "✨"], 6); G.say(pick(["BEEP. I AM NOW A TOASTER.", "ERROR 404: CHEESE NOT FOUND", "Does not compute… I love you?", "INITIATING… CHICKEN DANCE", "Making… a shoe pizza?", "Reboooooting…"]), G.cx, G.H * 0.18, 1.6); } },
     update(G, dt) { const s = G.s; s.litT += dt; s.arm = Math.max(0, s.arm - dt * 3); if (s.stun > 0) { s.stun -= dt; if (s.stun <= 0) s.scr = "happy"; } else if (s.arm <= 0 && s.scr === "joy") s.scr = "happy"; },
     draw(G, g) { const s = G.s, W = Math.min(G.u * 52, G.W * 0.55), hx = G.cx, hy = G.H * 0.26;
       rr(g, hx - W / 2, G.H * 0.4, W, G.H * 0.48, G.u * 6, "#cfd6e2"); for (const sd of [-1, 1]) { g.save(); g.translate(hx + sd * W * 0.5, G.H * 0.48); g.rotate(sd * (0.4 + (sd > 0 ? s.arm : 0) * -1.2)); rr(g, -G.u * 3, 0, G.u * 6, G.u * 22, G.u * 3, "#aeb7c8"); g.restore(); }
@@ -285,7 +285,7 @@ export const GAMES_B = [
     down(G, x, y) { const s = G.s, by = this.beltY(G); const it = s.items.find((i) => !i.hop && dist(x, y, i.x, by) < G.u * 9); if (!it) { SFX.boop(); return; }
       if (it.e === s.order[s.idx]) { it.hop = 0.01; s.idx++; s.placed.push(it.e); G.add(2, it.x, by - G.u * 8); SFX.pop(1.1);
         if (s.idx >= s.order.length) { s.served++; s.cheer = 1.5; s.speed = Math.min(2.6, s.speed + 0.12); G.add(12, G.W * 0.8, G.H * 0.8, { color: "#ffd23f" }); SFX.win(); G.say(pick(["Mmm! Perfect!", "Exactly what I ordered!", "Bravo!", "5 stars!"]), G.W * 0.8, G.H * 0.72, 1.4); setTimeout(() => this.newOrder(G), 700); } }
-      else if (this.JUNK.includes(it.e)) { it.hop = 0.01; it.junk = true; G.add(1, it.x, by - G.u * 8, { quiet: true }); SFX.boing(); G.say(pick([`EW! A ${it.e}!`, "That's not a topping!", "Into the bin!", "Who ordered THAT?!"]), it.x, by - G.u * 10, 1); }
+      else if (this.JUNK.includes(it.e)) { it.hop = 0.01; it.junk = true; G.add(1, it.x, by - G.u * 8, { quiet: true }); SFX.boing(); G.say(pick([`A ${it.e}? Silly!`, "Hee hee, not a topping!", "Oopsie! Try another!", "That's a funny pizza!"]), it.x, by - G.u * 10, 1); }
       else { SFX.error(); G.say(`Not yet! Find ${s.order[s.idx]}`, it.x, by - G.u * 10, 0.9); } },
     update(G, dt) { const s = G.s; s.cheer = Math.max(0, s.cheer - dt); s.spawn -= dt; if (s.spawn <= 0) { s.spawn = 0.75 / s.speed; this.addItem(G); }
       for (let i = s.items.length - 1; i >= 0; i--) { const it = s.items[i]; if (it.hop) { it.hop += dt * 2.2; if (it.hop >= 1) s.items.splice(i, 1); continue; } it.x += G.u * 16 * s.speed * dt; if (it.x > G.W + G.u * 10) s.items.splice(i, 1); } },

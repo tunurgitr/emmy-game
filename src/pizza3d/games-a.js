@@ -21,7 +21,7 @@ export const GAMES_A = [
     pos(G, p) { const P = PZ(G); return { x: P.x + p.x * P.r, y: P.y + p.y * P.r, r: P.r * 0.13 * Math.min(1, p.g) * (p.mega ? 1.8 : 1) }; },
     down(G, x, y) {
       for (const p of G.s.peps) { const q = this.pos(G, p); if (dist(x, y, q.x, q.y) < q.r + G.u * 4 && p.g > 0.3) {
-        if (p.mega && --p.hp > 0) { p.wob = 1; G.add(1, q.x, q.y); SFX.pop(0.6); G.shake(0.6); return; }
+        if (p.mega && --p.hp > 0) { p.wob = 1; G.add(1, q.x, q.y); SFX.pop(0.6); return; }
         G.s.peps.splice(G.s.peps.indexOf(p), 1); G.s.combo++; G.add(p.mega ? 10 : 1, q.x, q.y, { color: p.mega ? "#ffd23f" : "#fff" }); G.dots(q.x, q.y, ["#d8343a", "#9a1f24", "#ffd23f"], p.mega ? 22 : 10); SFX.pop(1 + Math.min(1, G.s.combo * 0.04));
         if (G.s.combo % 10 === 0) G.float(`${G.s.combo} POP COMBO!`, G.cx, G.u * 14, "#ffd23f", 1.3); return; } }
       G.s.combo = 0; SFX.boop(); G.float("boop!", x, y, "#fff", 0.7);
@@ -30,7 +30,7 @@ export const GAMES_A = [
       for (let i = s.peps.length - 1; i >= 0; i--) { const p = s.peps[i]; p.g = Math.min(1, p.g + dt * 2.2); p.age += dt; p.wob = Math.max(0, p.wob - dt * 3); if (p.age > 4.5 && !p.mega) { const q = this.pos(G, p); G.burst(q.x, q.y, "💨", 2, { size: 0.6 }); s.peps.splice(i, 1); } } },
     autoTick(G) { const p = G.s.peps.find((p) => !p.mega && p.g > 0.5); if (p) { const q = this.pos(G, p); G.dots(q.x, q.y, ["#d8343a"], 6); G.s.peps.splice(G.s.peps.indexOf(p), 1); } },
     draw(G, g) { const P = PZ(G); pizza(g, P.x, P.y, P.r, { peps: 0 }); E(g, "♨️", P.x - P.r * 0.9, P.y - P.r * 0.85, G.u * 8, Math.sin(G.t * 2) * 0.2);
-      for (const p of G.s.peps) { const q = this.pos(G, p), w = 1 + Math.sin(G.t * 18) * 0.08 * p.wob + (p.age > 3.5 ? Math.sin(G.t * 30) * 0.06 : 0); circ(g, q.x, q.y, q.r * w, p.mega ? "#ff4040" : "#d8343a", "#8a1a1f"); if (q.r > G.u * 2) face(g, q.x, q.y, q.r * 0.8, p.mega ? "angry" : p.age > 3.5 ? "wow" : "happy", { blush: false }); if (p.mega) txt(g, "MEGA", q.x, q.y - q.r - G.u * 2, G.u * 3, "#fff", { stroke: INK }); }
+      for (const p of G.s.peps) { const q = this.pos(G, p), w = 1 + Math.sin(G.t * 18) * 0.08 * p.wob + (p.age > 3.5 ? Math.sin(G.t * 30) * 0.06 : 0); circ(g, q.x, q.y, q.r * w, p.mega ? "#ff4040" : "#d8343a", "#8a1a1f"); for (let k = 0; k < 3; k++) circ(g, q.x + Math.cos(k * 2.1 + 0.5) * q.r * 0.45, q.y + Math.sin(k * 2.1 + 0.5) * q.r * 0.45, q.r * 0.13, "#9a1f24", null); if (p.mega) txt(g, "MEGA", q.x, q.y - q.r - G.u * 2, G.u * 3, "#fff", { stroke: INK }); }
       if (G.s.combo > 2) txt(g, `🔥 ${G.s.combo} in a row!`, G.cx, G.H - G.u * 18, G.u * 4.5, "#fff", { stroke: INK }); },
     hot(G) { const p = G.s.peps.find((p) => p.g > 0.3); return p ? this.pos(G, p) : PZ(G); },
   },
@@ -118,30 +118,30 @@ export const GAMES_A = [
       txt(g, "🌀 Swirl round and round!", G.cx, G.H - G.u * 16, G.u * 4.2, "#fff", { stroke: INK }); },
   },
   {
-    id: "grater", name: "Giggly Cheese Grater", rar: "common", ico: "🧀", unit: "shreds", base: 1, bg: ["#fff8d6", "#ffe08a"],
-    blurb: "Grate the cheese! This cheese has always dreamed of being sprinkled on a pizza. It giggles the whole time.",
+    id: "grater", name: "Cheesy Snow Day", rar: "common", ico: "🧀", unit: "snowflakes", base: 1, bg: ["#fff8d6", "#ffe08a"],
+    blurb: "Turn the big cheese block into fluffy CHEESE SNOW and cover the pizza! Mozzy the mouse thinks it's the best day ever.",
     ups: [["tap", "Turbo Grater", "⚙️"], ["auto", "Cheese Mouse", "🐭"], ["crit", "Fancy Cheese", "🎩"]],
-    win: ["That cheese says THANK YOU!", "You made a mountain of cheese. A cheese-tain.", "The cheeses are lining up for a turn.", "Mice are naming their babies after you.", "You grated a cheese the size of a car. It giggled for an hour.", "Cheese avalanche warning!", "The Big Cheese says you're the BIGGER cheese.", "All cheese loves you. Officially.", "You have grated the moon. It was cheese after all."],
+    win: ["It's snowing cheese! Mozzy is dancing.", "You made a mountain of cheese snow. A cheese-tain!", "Mozzy built a tiny cheese snowman.", "Mice from all over town came to play in the cheese snow.", "So much cheese snow the pizza needs a scarf!", "Cheese snow day! No school for mice!", "The Big Cheese says you're the BIGGER cheese.", "Mozzy made you a cheese snow angel.", "You made it snow cheese on the whole moon!"],
     init(G) { Object.assign(G.s, { hp: 10, max: 10, lvl: 1, pile: 0, scr: 0, n: 0 }); },
     down(G, x, y) { const s = G.s; s.scr = 1; s.n++; s.hp--; s.pile = Math.min(1, s.pile + 0.012); SFX.scrape(); G.add(1, G.cx, G.cy);
       for (let i = 0; i < 6; i++) G.parts.push({ x: G.cx + rnd(-G.u * 10, G.u * 10), y: G.cy + G.u * 6, vx: rnd(-40, 40), vy: rnd(0, 60), life: 0.9, max: 0.9, c: pick(["#ffd23f", "#f5b52a"]), size: G.u * 0.9, grav: 1 });
-      if (s.n % 4 === 1) G.say(pick(["Hee hee, that tickles!", "Wheee! Sprinkle me!", "I'm going on a PIZZA!", "This is un-brie-lievable!", "Grate. Just grate!", "My dream is coming true!", "I'm feeling shreddy… in a good way!", "You have such gouda manners!", "Say cheese! Oh wait, I AM cheese!"]), G.cx + G.u * 14, G.cy - G.u * 18 - (s.hp / s.max) * G.u * 10, 1.3);
-      if (s.hp <= 0) { s.lvl++; s.max = 10 + s.lvl * 4; s.hp = s.max; G.add(5 + s.lvl, G.cx, G.cy - G.u * 20, { color: "#ffd23f" }); SFX.pop(0.7); G.burst(G.cx, G.cy - G.u * 10, ["🧀", "💨"], 8); G.float("All sprinkled! Here comes a BIGGER cheese!", G.cx, G.u * 14, "#ff5a5f", 1.2); } },
+      if (s.n % 4 === 1) G.say(pick(["Wheee! Cheese snow!", "Squeak! It's snowing!", "This is un-brie-lievable!", "Grate job!", "Best. Day. EVER!", "Can I make a cheese snowman?", "You have such gouda ideas!", "Catch it on your tongue! Squeak!"]), G.W * 0.18, G.H * 0.62 - G.u * 12, 1.3);
+      if (s.hp <= 0) { s.lvl++; s.max = 10 + s.lvl * 4; s.hp = s.max; G.add(5 + s.lvl, G.cx, G.cy - G.u * 20, { color: "#ffd23f" }); SFX.pop(0.7); G.burst(G.cx, G.cy - G.u * 10, ["🧀", "💨"], 8); G.float("All snowed! Here comes a BIGGER cheese block!", G.cx, G.u * 14, "#ff5a5f", 1.2); } },
     update(G, dt) { G.s.scr = Math.max(0, G.s.scr - dt * 5); },
     autoTick(G) { G.burst(G.cx + rnd(-G.u * 20, G.u * 20), G.H * 0.85, "🐭", 1, { size: 0.6 }); },
     draw(G, g) { const s = G.s, gx = G.cx, gy = G.cy + G.u * 4; const ph = s.pile * G.u * 22; oval(g, G.cx, G.H - G.u * 10, G.u * 38, ph + G.u * 2, "#ffd23f", "#c99a1a");
       g.save(); g.translate(gx, gy); g.rotate(0.08); rr(g, -G.u * 16, -G.u * 2, G.u * 32, G.u * 34, G.u * 4, "#cfd6e2"); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) oval(g, -G.u * 10 + c * G.u * 7, G.u * 4 + r * G.u * 7, G.u * 2, G.u * 1, "#7d8597", null); rr(g, -G.u * 5, -G.u * 9, G.u * 10, G.u * 8, G.u * 3, "#ff5a5f"); g.restore();
       const ch = (G.u * 14 + (s.hp / s.max) * G.u * 12) * (1 + s.lvl * 0.03), cw = G.u * 22 + s.lvl * G.u * 0.5, cy = gy - G.u * 4 - ch / 2 + s.scr * G.u * 3;
       rr(g, gx - cw / 2, cy - ch / 2, cw, ch, G.u * 3, "#ffd23f"); for (const [a, b, r] of [[-0.3, -0.2, 2], [0.25, 0.1, 2.6], [-0.1, 0.3, 1.5]]) circ(g, gx + a * cw, cy + b * ch, G.u * r, "#f5b52a", null);
-      face(g, gx, cy, Math.min(cw, ch) * 0.42, s.scr > 0.3 ? "joy" : "happy");
-      txt(g, `Cheese #${s.lvl}`, G.cx, G.u * 6, G.u * 4, INK); bar(g, G.cx - G.u * 20, G.u * 10, G.u * 40, G.u * 4, s.hp / s.max, "#ffd23f"); },
+      E(g, "🐭", G.W * 0.18, G.H * 0.62 - Math.abs(Math.sin(G.t * (s.scr > 0 ? 14 : 3))) * G.u * 3, G.u * 16);
+      txt(g, `🧀 Cheese block #${s.lvl}`, G.cx, G.u * 6, G.u * 4, INK); bar(g, G.cx - G.u * 20, G.u * 10, G.u * 40, G.u * 4, s.hp / s.max, "#ffd23f"); },
     hot(G) { return { x: G.cx, y: G.cy - G.u * 10 }; },
   },
   {
     id: "olive", name: "Olive Drop", rar: "common", ico: "🫒", unit: "olives", base: 1, bg: ["#e6f6d6", "#bfe3a8"],
     blurb: "The olive swings, the pizza slides. Tap to drop! Missed olives go to the dog.",
     ups: [["tap", "Olive Oil", "🫙"], ["auto", "Olive Cannon", "💥"], ["mult", "Lucky Olive", "🍀"]],
-    win: ["Plop! You're a natural olive dropper.", "The dog is getting a bit chubby from all your misses.", "Olive you SO much!", "Your aim is so good, olives land on pizzas you can't even see.", "Olive trees bow when you walk by.", "You have dropped more olives than there are olives.", "The Olive Olympics gave you a gold olive.", "Olive-ing the dream.", "Olives rain from the sky in your honour."],
+    win: ["Plop! You're a natural olive dropper.", "The dog does a happy dance for every olive. Woof!", "Olive you SO much!", "Your aim is so good, olives land on pizzas you can't even see.", "Olive trees bow when you walk by.", "You have dropped more olives than there are olives.", "The Olive Olympics gave you a gold olive.", "Olive-ing the dream.", "Olives rain from the sky in your honour."],
     init(G) { Object.assign(G.s, { drop: null, on: [], wait: 0, misses: 0, done: 0, dogT: 0 }); },
     ox(G) { return G.cx + Math.sin(G.t * 1.9) * G.W * 0.36; },
     pzx(G) { return G.cx + Math.sin(G.t * 0.8 + 1) * G.W * 0.24; },
@@ -184,7 +184,7 @@ export const GAMES_A = [
     id: "meatball", name: "Grandma's Meatball Scoop", rar: "uncommon", ico: "🧆", unit: "scoops", base: 1, bg: ["#fff1e6", "#f7c9a8"],
     blurb: "Giggly meatballs pop out of Grandma's pots. Scoop them into the bowl with the spoon! (The cat just wants pets.)",
     ups: [["tap", "Wooden Spoon", "🥄"], ["auto", "Grandpa Joins In", "👴"], ["crit", "Golden Meatballs", "✨"]],
-    win: ["Mamma mia! Grandma is proud!", "Grandma pinched your cheeks. Twice.", "The meatballs love riding on your spoon.", "Grandma says you can have extra dessert.", "SCOOP! The whole family is cheering!", "Grandma made you a medal out of pasta.", "Grandpa woke up just to watch you.", "Every meatball made it to the bowl. Dinner time!", "You are now Grandma's favourite. Don't tell the cousins."],
+    win: ["Mamma mia! Grandma is proud!", "Grandma gave you a big squishy hug. Twice.", "The meatballs love riding on your spoon.", "Grandma says you can have extra dessert.", "SCOOP! The whole family is cheering!", "Grandma made you a medal out of pasta.", "Grandpa woke up just to watch you.", "Every meatball made it to the bowl. Dinner time!", "You are now Grandma's favourite. Don't tell the cousins."],
     init(G) { G.s.pots = Array.from({ length: 6 }, () => ({ st: "idle", t: 0, k: "m" })); G.s.spawn = 0.3; G.s.streak = 0; G.s.spoon = null; Object.assign(G.s.pots[1], { st: "up", t: 2, k: "m" }); },
     potPos(G, i) { const c = i % 3, r = Math.floor(i / 3), w = Math.min(G.W * 0.27, G.u * 30); return { x: G.cx + (c - 1) * w, y: G.H * 0.42 + r * G.u * 26, w: w * 0.8 }; },
     down(G, x, y) { const s = G.s; for (let i = 0; i < 6; i++) { const p = s.pots[i]; if (p.st !== "up") continue; const q = this.potPos(G, i); if (Math.abs(x - q.x) < q.w * 0.6 && y > q.y - G.u * 22 && y < q.y + G.u * 6) {
@@ -214,7 +214,7 @@ export const GAMES_A = [
     win: ["The argument has begun. It will never end.", "Families are arguing about it at dinner now.", "The news is calling it 'The Great Pineapple Debate'.", "Pineapples have hired a lawyer.", "Pizza purists are holding signs that say NO.", "The debate is so loud the fish are taking sides.", "It went to the Supreme Pizza Court. Still undecided.", "Aliens arrived to settle it. Now THEY are arguing.", "The answer is… we'll never know. And that's beautiful."],
     init(G) { Object.assign(G.s, { p: 0, drift: 0, dT: 0, winsP: 0, winsN: 0, bounce: [0, 0], flip: 0 }); },
     down(G, x, y) { const s = G.s, left = x < G.cx, heat = 1 + (1 - Math.abs(s.p)) * 1.6; s.p = clamp(s.p + (left ? 0.11 : -0.11), -1, 1); s.bounce[left ? 0 : 1] = 1;
-      const PRO = ["Pineapple is sweet AND juicy!", "It's a fruit party!", "Sweet and salty is the best!", "I'm basically sunshine!", "Ham loves me!", "I have a crown. I'm royalty!"], CON = ["Fruit? On PIZZA?!", "My grandma would faint!", "Pizza is not a fruit salad!", "Next you'll want gummy bears on it!", "Absolutely NOT!", "This is a pizza, not a smoothie!"];
+      const PRO = ["Pineapple is sweet AND juicy!", "It's a fruit party!", "Sweet and salty is the best!", "I'm basically sunshine!", "Ham loves me!", "I have a crown. I'm royalty!"], CON = ["Fruit? On PIZZA?!", "My grandma would gasp!", "Pizza is not a fruit salad!", "Next you'll want gummy bears on it!", "Absolutely NOT!", "This is a pizza, not a smoothie!"];
       G.say(pick(left ? PRO : CON), left ? G.W * 0.27 : G.W * 0.73, G.H * 0.4, 1.4); G.add(heat, left ? G.W * 0.27 : G.W * 0.73, G.H * 0.55); G.tone(left ? 520 : 300, 0.1, { type: "square", vol: 0.07, slideTo: left ? 700 : 220 });
       if (Math.abs(s.p) >= 1) { const pw = s.p > 0; pw ? s.winsP++ : s.winsN++; s.p = 0; s.flip = 1.5; SFX.win(); G.add(8, G.cx, G.cy, { color: "#ffd23f" }); G.float(pw ? "🍍 PINEAPPLE WINS! (for now)" : "🍕 NO-PINEAPPLE WINS! (for now)", G.cx, G.u * 22, "#ff5a5f", 1.1); G.burst(G.cx, G.cy, pw ? ["🍍", "🎉"] : ["🍕", "🎉"], 12); } },
     update(G, dt) { const s = G.s; s.dT -= dt; if (s.dT <= 0) { s.dT = rnd(1.5, 3); s.drift = rnd(-0.12, 0.12); } s.p = clamp(s.p + s.drift * dt, -0.99, 0.99); s.bounce = s.bounce.map((b) => Math.max(0, b - dt * 4)); s.flip = Math.max(0, s.flip - dt); },
@@ -238,7 +238,7 @@ export const GAMES_A = [
       if (dist(x, y, fx, fy) < this.size(G) * 1.4) { s.anger++; G.add(1 + s.anger, fx, fy); SFX.giggle(); G.tone(400 + s.anger * 60, 0.12, { type: "triangle", vol: 0.06 }); s.tx = rnd(0.15, 0.85); s.ty = rnd(0.25, 0.8); s.hop = 1;
         G.say(pick(["Hee… I mean, hmph!", "That tickles!", "Blub-hee-hee!", "I'm NOT smiling! …OK a little.", "Stop making me giggle! Hee hee!", "I'm a very serious fish! Hee!"]), fx, fy - this.size(G), 1);
         if (s.anger >= 10) { s.anger = 0; s.booms++; SFX.wow(); G.flash("#ffd6ef"); G.burst(fx, fy, ["🎉", "💖", "🐟", "✨"], 26, { speed: 1.5 }); G.add(25, fx, fy, { color: "#ffd23f" }); G.say(pick(["HA HA HA! OK, you win!", "OK fine. We're friends now.", "I feel SO much better! Thanks!"]), G.cx, G.cy - G.u * 10, 2); } }
-      else { SFX.boop(); if (Math.random() < 0.4) G.say(pick(["Ha! Missed me!", "Too slow!", "Blub blub ha ha!"]), fx, fy - this.size(G), 0.8); } },
+      else { SFX.boop(); if (Math.random() < 0.4) G.say(pick(["Whoops! Over here!", "Hee hee, try again!", "Blub blub! So close!"]), fx, fy - this.size(G), 0.8); } },
     update(G, dt) { const s = G.s, sp = 0.6 + s.anger * 0.25; s.x += (s.tx - s.x) * Math.min(1, dt * sp); s.y += (s.ty - s.y) * Math.min(1, dt * sp); s.hop = Math.max(0, s.hop - dt * 2); if (Math.hypot(s.tx - s.x, s.ty - s.y) < 0.02) { s.tx = rnd(0.15, 0.85); s.ty = rnd(0.25, 0.8); } s.face = s.tx > s.x ? 1 : -1; },
     autoTick(G) { G.burst(G.s.x * G.W, G.s.y * G.H, "😆", 1, { size: 0.6 }); },
     draw(G, g) { const s = G.s, x = s.x * G.W, y = s.y * G.H - Math.sin(s.hop * Math.PI) * G.u * 6, r = this.size(G), a = s.anger / 10;
@@ -256,7 +256,7 @@ export const GAMES_A = [
     id: "cutter", name: "Slice-o-Matic", rar: "uncommon", ico: "🍽️", unit: "slices", base: 1, bg: ["#ffe4e1", "#ffc9b5"],
     blurb: "Swipe across the pizza to slice it (or just tap). Eight slices and it's served!",
     ups: [["tap", "Sharper Wheel", "⚙️"], ["auto", "Robot Arm", "🦾"], ["mult", "Party Size", "🎉"]],
-    win: ["Slice slice baby!", "Every slice is perfectly equal. Mathematicians are weeping.", "You sliced a pizza into 1,000 pieces. Everyone got a crumb.", "The pizza cutter is your best friend now.", "Slicing so fast the cutter is on fire. Kind of.", "You cut a pizza the size of a trampoline!", "Your slices are in a museum.", "The pizza cutter has retired. You ARE the pizza cutter.", "Legend of the Slice!"],
+    win: ["Slice slice baby!", "Every slice is perfectly equal. Mathematicians are cheering.", "You sliced a pizza into 1,000 pieces. Everyone got a crumb.", "The pizza cutter is your best friend now.", "Slicing so fast the cutter is sparkling!", "You cut a pizza the size of a trampoline!", "Your slices are in a museum.", "The pizza cutter has retired. You ARE the pizza cutter.", "Legend of the Slice!"],
     init(G) { Object.assign(G.s, { cuts: [], start: null, serve: 0, served: 0, wheel: null }); },
     cut(G, ang) { const s = G.s; if (s.serve > 0) return; ang = ((ang % Math.PI) + Math.PI) % Math.PI; if (s.cuts.some((c) => Math.abs(c - ang) < 0.2 || Math.abs(c - ang) > Math.PI - 0.2)) ang = (s.cuts[s.cuts.length - 1] + Math.PI / 4) % Math.PI; s.cuts.push(ang); s.wheel = { a: ang, t: 0.35 };
       G.add(s.cuts.length, G.cx, G.cy - G.u * 4); SFX.scrape(); SFX.whoosh(); if (s.cuts.length >= 4) { s.serve = 1.3; s.served++; SFX.win(); G.add(10, G.cx, G.cy, { color: "#ffd23f" }); G.float("8 SLICES! SERVED!", G.cx, G.u * 14, "#ffd23f", 1.3); } },
@@ -272,20 +272,20 @@ export const GAMES_A = [
   },
   {
     id: "hotsauce", name: "Too Much Hot Sauce", rar: "uncommon", ico: "🌶️", unit: "drips", base: 1, bg: ["#fff0e0", "#ffb38a"],
-    blurb: "Shake on more hot sauce for more points… but too much and Henry breathes FIRE! Milk helps.",
+    blurb: "Henry LOVES spicy food! Shake on more hot sauce for more points… fill the spice meter and Henry does his favourite trick: DRAGON BREATH! Milk cools him down.",
     ups: [["tap", "Extra Drippy", "💧"], ["auto", "Spicy Cousin", "🥵"], ["crit", "Ghost Pepper", "👻"]],
-    win: ["Henry says it's 'a little warm'.", "Henry's ears are whistling like a kettle.", "Henry can now see through time. Spicy time.", "The fire department knows Henry by name.", "Henry's eyebrows flew away. They'll be back.", "Henry is now officially a dragon.", "Hot sauce companies want to sponsor Henry.", "Henry drank 400 glasses of milk. The cows are tired.", "Henry is the spiciest person in the universe. He's very proud."],
+    win: ["Henry says it's 'a little warm'.", "Henry's ears whistle a happy song like a kettle.", "Henry can now see through time. Spicy time.", "Henry toasted 100 marshmallows with one breath.", "Henry's hair now stands up like a flame. He loves it.", "Henry is now officially a dragon.", "Hot sauce companies want to sponsor Henry.", "Henry drank 400 glasses of milk. The cows threw him a party.", "Henry is the spiciest person in the universe. He's very proud."],
     init(G) { Object.assign(G.s, { spice: 0, fire: 0, shake: 0, fires: 0 }); },
     bottle(G) { return { x: G.W * 0.78, y: G.H * 0.36 }; }, milk(G) { return { x: G.W * 0.18, y: G.H * 0.78 }; },
     down(G, x, y) { const s = G.s, m = this.milk(G); if (s.fire > 0) return;
       if (dist(x, y, m.x, m.y) < G.u * 11) { s.spice = Math.max(0, s.spice - 40); SFX.slurp(); G.say("Ahhh… milk. 🥛", G.cx, G.H * 0.3, 1.2); G.burst(m.x, m.y, "🥛", 3, { size: 0.7 }); return; }
       s.spice += 7; s.shake = 1; const b = this.bottle(G); G.add(1 + s.spice / 30, b.x, b.y); G.tone(900, 0.05, { type: "sine", vol: 0.05 }); for (let i = 0; i < 3; i++) G.parts.push({ x: b.x - G.u * 6, y: b.y + G.u * 8, vx: rnd(-200, -80), vy: rnd(-40, 60), life: 0.7, max: 0.7, c: "#e5261e", size: G.u * 1.3, grav: 1 });
-      if (s.spice > 60 && Math.random() < 0.3) G.say(pick(["It's fine. It's FINE.", "Is it hot in here?", "My tongue is dancing!", "Yummy! (help)"]), G.cx, G.H * 0.3, 1);
-      if (s.spice >= 100) { s.spice = 0; s.fire = 1.4; s.fires++; SFX.boom(); G.flash("#ffb04a", 0.4); G.shake(3); G.add(15, G.cx, G.cy, { color: "#ffd23f" }); G.float("🔥 AAAAH! SPICY! 🔥", G.cx, G.u * 16, "#ff5a5f", 1.5); } },
+      if (s.spice > 60 && Math.random() < 0.3) G.say(pick(["Ooh, tingly!", "Is it warm in here? I love it!", "My tongue is dancing!", "Yummy! More please!"]), G.cx, G.H * 0.3, 1);
+      if (s.spice >= 100) { s.spice = 0; s.fire = 1.4; s.fires++; SFX.wow(); G.flash("#ffb04a", 0.4); G.add(15, G.cx, G.cy, { color: "#ffd23f" }); G.float("🔥 DRAGON BREATH! 🔥", G.cx, G.u * 16, "#ff5a5f", 1.5); } },
     update(G, dt) { const s = G.s; s.shake = Math.max(0, s.shake - dt * 5); s.spice = Math.max(0, s.spice - dt * 3); if (s.fire > 0) { s.fire -= dt; if (Math.random() < 0.7) G.parts.push({ x: G.cx, y: G.H * 0.5, vx: rnd(-60, 60) + (G.u * 50), vy: rnd(-60, 30), life: 0.8, max: 0.8, e: "🔥", size: G.u * rnd(5, 9), rot: 0, vr: 2, grav: -0.2 }); } },
     draw(G, g) { const s = G.s, a = Math.min(1, s.spice / 100), r = Math.min(G.u * 22, G.W * 0.2), x = G.cx - G.u * 6, y = G.H * 0.5;
-      circ(g, x, y, r, `rgb(255,${220 - a * 150},${190 - a * 160})`); face(g, x, y, r * 0.75, s.fire > 0 ? "wow" : a > 0.6 ? "dizzy" : "happy");
-      E(g, "👨‍🍳", x, y - r * 1.05, r * 1.0); if (a > 0.4) E(g, "💦", x + r * 0.8, y - r * 0.5, G.u * 7); if (a > 0.6) for (const sd of [-1, 1]) E(g, "♨️", x + sd * r * 1.1, y - r * 0.2 - Math.sin(G.t * 9) * G.u * 2, G.u * 8);
+      circ(g, x, y, r, `rgb(255,${220 - a * 150},${190 - a * 160})`); face(g, x, y, r * 0.75, s.fire > 0 ? "joy" : a > 0.6 ? "wow" : "happy");
+      E(g, "👨‍🍳", x, y - r * 1.05, r * 1.0); if (a > 0.4) E(g, "✨", x + r * 0.8, y - r * 0.5, G.u * 7); if (a > 0.6) for (const sd of [-1, 1]) E(g, "♨️", x + sd * r * 1.1, y - r * 0.2 - Math.sin(G.t * 9) * G.u * 2, G.u * 8);
       slice(g, x + r * 0.2, y + r * 1.5, r * 0.8, { rot: 0.4 });
       const b = this.bottle(G); g.save(); g.translate(b.x, b.y); g.rotate(-1.9 + Math.sin(G.t * 30) * 0.2 * s.shake); rr(g, -G.u * 6, -G.u * 12, G.u * 12, G.u * 22, G.u * 4, "#e5261e"); rr(g, -G.u * 3, -G.u * 18, G.u * 6, G.u * 7, G.u * 2, "#3b3346"); rr(g, -G.u * 4.5, -G.u * 5, G.u * 9, G.u * 8, G.u * 2, "#fff4dc", INK, 2); g.restore(); E(g, "🌶️", b.x, b.y, G.u * 6);
       const m = this.milk(G); E(g, "🥛", m.x, m.y, G.u * 16); txt(g, "milk!", m.x, m.y + G.u * 11, G.u * 3.2, "#fff", { stroke: INK });
@@ -294,14 +294,14 @@ export const GAMES_A = [
   },
   {
     id: "garlic", name: "Garlic Knot Untangle", rar: "uncommon", ico: "🧄", unit: "knots", base: 1, bg: ["#f6f0ff", "#e2d3ff"],
-    blurb: "The garlic knot is all tangled! Tap the dots in order: 1, 2, 3… The vampire hates it.",
+    blurb: "The garlic knot is all tangled! Tap the dots in order: 1, 2, 3… (A silly vampire nearby is NOT a garlic fan.)",
     ups: [["tap", "Nimble Fingers", "🤌"], ["auto", "Knot Expert", "🧶"], ["crit", "Extra Garlicky", "🧄"]],
-    win: ["One knot down. A billion to go!", "The vampire moved to another town.", "Your fingers are basically garlic ninjas.", "You untangled a knot so tricky even the knot was confused.", "Garlic breath detected for 3 miles!", "Vampires have put up 'WANTED' posters of you.", "Knot a problem!", "You could untangle headphones in your sleep.", "The Garlic Knot Council crowns you Supreme Untangler."],
+    win: ["One knot down. A billion to go!", "The vampire went on holiday until the garlic smell wears off.", "Your fingers are basically garlic ninjas.", "You untangled a knot so tricky even the knot was confused.", "Garlic breath detected for 3 miles!", "The vampires sent you a polite note: 'less garlic, please!'", "Knot a problem!", "You could untangle headphones in your sleep.", "The Garlic Knot Council crowns you Supreme Untangler."],
     init(G) { G.s.round = 0; this.newRound(G); },
     newRound(G) { const s = G.s, n = 4 + Math.min(4, s.round); s.dots = []; for (let i = 0; i < n; i++) { let p, k = 0; do { p = { x: rnd(0.15, 0.85), y: rnd(0.25, 0.8) }; k++; } while (k < 40 && s.dots.some((d) => Math.hypot(d.x - p.x, (d.y - p.y) * 0.7) < 0.16)); s.dots.push({ ...p, n: i + 1, ok: false }); }
       s.knot = [...s.dots].sort(() => Math.random() - 0.5); s.next = 1; s.done = 0; s.vamp = 0; },
     down(G, x, y) { const s = G.s; if (s.done > 0) return; const d = s.dots.find((d) => !d.ok && dist(x, y, d.x * G.W, d.y * G.H) < G.u * 8);
-      if (!d) { SFX.boop(); return; } if (d.n !== s.next) { G.shake(0.8); SFX.error(); G.say("That's a knot! Find " + s.next, d.x * G.W, d.y * G.H - G.u * 6, 0.9); return; }
+      if (!d) { SFX.boop(); return; } if (d.n !== s.next) { SFX.boop(); G.say("Almost! Find " + s.next, d.x * G.W, d.y * G.H - G.u * 6, 0.9); return; }
       d.ok = true; s.next++; G.add(d.n, d.x * G.W, d.y * G.H); SFX.note(d.n * 2); G.dots(d.x * G.W, d.y * G.H, ["#fff4c2", "#c9a26b"], 8);
       if (s.next > s.dots.length) { s.done = 1.6; s.round++; s.vamp = 1.6; G.add(s.dots.length * 2, G.cx, G.cy, { color: "#ffd23f" }); SFX.win(); G.float("UNTANGLED! Ahh, much better.", G.cx, G.u * 14, "#9a6bff", 1.2); G.say("EEK! GARLIC!", G.W * 0.85, G.H * 0.2, 1.5); } },
     update(G, dt) { const s = G.s; s.vamp = Math.max(0, s.vamp - dt); if (s.done > 0) { s.done -= dt; if (s.done <= 0) this.newRound(G); } },

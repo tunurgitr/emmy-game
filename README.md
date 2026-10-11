@@ -6,7 +6,7 @@ Five cheerful, [neal.fun](https://neal.fun)-style browser games for kids (built 
 - **🕹️ Emmy's Arcade** — a *Sneaky Sasquatch*-style arcade simulator: load an arcade card with (unlimited!) money, win tickets in 10 mini-games, and trade them for prizes you can actually play with.
 - **🥟 Emmy's Dumpling Town** — walk around a 3D market square, buy mystery bamboo steamers, lift the lid to see which of **221 squishy dumplings** you got, squish them (slow rise!), pull them apart to see the filling… and buy a chicken.
 - **🛍️ Emmy's Blind Bag Town** — walk to silly stores, buy blind bags, tear them open and collect **269 toys** across nine series and nine rarities (with a secret chicken in every series) — and every series plays its own way. Hatch dino eggs, stretch slime, feed fish, give Glow-Up Faces a makeover, stock shelves for coins, keep chickens in your own yard, and hear every shopkeeper say hi to you by name.
-- **🍕 Emmy's Pizza Plus** — a tiny cartoon pizza plaza (cel-shaded, chunky outlines, everything has a face) where mystery pizza boxes hold **39 silly clicker games** across ten rarities — from Pepperoni Popper to Pizza Cat Supreme.
+- **🍕 Emmy's Pizza Plus** — a tiny cartoon pizza plaza (cel-shaded, chunky outlines, everything has a face) where mystery pizza boxes hold **100 silly clicker games** across twenty rarities — from Pepperoni Popper to Pizza Cat Supreme.
 
 **▶ Play it live: https://tunurgitr.github.io/emmy-game/**
 
@@ -91,10 +91,10 @@ Plug in any standard gamepad: left stick walks, right stick looks, **A** interac
 | | |
 |---|---|
 | **🏎️ Turbo Racer** — sit-down bike, first-person highway | **🦾 Claw Machine** — a real claw crane full of *shaped* plushies (bear, panda, frog, dino, octopus, whale, star, gift, unicorn, duck); what you grab goes on your shelf |
-| **🥽 VR Blaster** — drag to look, blast UFOs and asteroids | **🎡 Ticket Wheel** — a real spinning prize wheel, 2–200 tickets |
+| **🥽 VR Bug Beamer** — drag to look, beam space bugs back home | **🎡 Ticket Wheel** — a real spinning prize wheel, 2–200 tickets |
 | **🔫 Laser Tag** — neon arena, robots behind barriers | **🏒 Air Hockey** — drag your paddle, first to 5 |
 | **🎣 Gone Fishin'** — dock, animated water, 3D reel gauge | **🎳 Skee-Ball** — roll up the lane into tilted rings |
-| **🐹 Whack-a-Mole** · **🏀 Hoop Shot** | **🪙 Coin Pusher** — drop coins, the bar shoves the pile off the edge |
+| **🐹 Boop-a-Mole** · **🏀 Hoop Shot** | **🪙 Coin Pusher** — drop coins, the bar shoves the pile off the edge |
 | **🎈 Balloon Darts** — swipe to throw darts at drifting balloons | **🎳 Bowling** — swipe to roll, curve with a sideways swipe, strikes pay big |
 | **🕺 Dance Floor** — rhythm game on a lit dance floor (tap pads or arrow keys) | **🧗 Rock Wall** — FREE: tap the glowing holds to climb to the bell |
 | **🦆 Duck Pond Toss** — toss soft beanbags to splash the ducks, targets and gold stars gliding by | **🔨 Strongman Hammer** — time the power meter, ring the bell |
@@ -236,9 +236,9 @@ Inspired by the viral **squishy dumpling** blind-box toys: each one comes in a l
 
 A tiny, cute 3D pizza plaza with a different look from the other towns: **cel shading with chunky outlines**, a checkered picnic-blanket floor, rounded toy-like shops and blinking faces on everything, all around a **Cheese Fountain**. Shops sit close together and the **🛵 Zoom to…** button pops you to any of them.
 
-- **📦 Box-O-Rama** (Papa Pepperoni): Snack Bag 🪙12, Mystery Pizza Box 🪙30 (first one free), Party Box 🪙75 (Rare+), Golden Oven Crate 🪙180 (Epic+). Odds printed; every 8th box without a Rare is Rare or better. Tap the box 3 times to open it.
-- **🧀 Topping Tower** (Mozzy): Double Cheese, Hot Sauce Helpers and Lucky Basil power-ups. **🥤 Fizzy Pop Soda**: a free soda with coins every minute, plus Zoomy Soda. **🔥 The Game Oven** (Granny Garlic): your Game Book. **🎩 Hat Hut** (Sir Meatball): hats and the My look mirror.
-- **39 clicker games across 10 rarities** (Common · Uncommon · Rare · Super Rare · Epic · Legendary · Mythic · Cosmic · Cheesy Secret · Golden Crust) — Pepperoni Popper, Toss the Dough (too high!), Pineapple Argument, Oven Goblin, Seagull Heist, Disco Pepperoni, Robo-Chef 3000, The Pizza Kraken, The Cheese Wizard, Infinity Pizza Portal, Pizza Cat Supreme and more. Each has its own tap target, 3 upgrades (more per tap, helpers, a multiplier or "CHEESY" ×5 taps), 9 funny goals with bonus coins, and its own sounds. Duplicates give a game a ⭐ (+25% points, up to 5).
+- **📦 Box-O-Rama** (Papa Pepperoni): Snack Bag 🪙12, Mystery Pizza Box 🪙30 (first one free), Party Box 🪙75 (Rare+), Golden Oven Crate 🪙180 (Epic+), Starlight Capsule 🪙400 (Mythic+). Odds printed; every 8th box without a Rare is Rare or better, and the 🌈 Rainbow meter makes the 15th box without a Cheesy Secret into one. Tap the box 3 times to open it.
+- **🧀 Topping Tower** (Mozzy): Double Cheese, Hot Sauce Helpers and Lucky Basil power-ups. **🥤 Fizzy Pop Soda**: a free soda with a few coins every 3 minutes, plus Zoomy Soda. **🔥 The Game Oven** (Granny Garlic): your Game Book. **🎩 Hat Hut** (Sir Meatball): hats and the My look mirror.
+- **100 clicker games across 20 rarities** (Common · Uncommon · Shiny · Rare · Super Rare · Sparkly · Epic · Mega · Legendary · Ultra · Mythic · Magical · Cosmic · Galactic · Cheesy Secret · Golden Crust · Diamond Dough · Royal Pepperoni · Celestial · Infinity Pizza) — Pepperoni Popper, Toss the Dough (too high!), Pineapple Argument, Oven Goblin, Seagull Heist, Disco Pepperoni, Robo-Chef 3000, The Pizza Kraken, The Cheese Wizard, Infinity Pizza Portal, Pizza Cat Supreme, Chicken Snack Time, Queen Clucksalot's Golden Eggs, Chickens in Space!, The Rainbow Chicken, The Infinite Pizza and more. Every game is gentle: nobody ever gets bonked, squished or hurt. Each has its own tap target, 3 upgrades (more per tap, helpers, a multiplier or "CHEESY" ×5 taps), 9 funny goals with bonus coins, and its own sounds. Duplicates give a game a ⭐ (+25% points, up to 5).
 
 ---
 
@@ -289,7 +289,7 @@ npm run preview  # preview the production build
 | `src/blindbag3d/catch.js` | Bag Catch — the booth catching game |
 | `pizza.html` + `src/pizza.js` | Pizza Plus — HUD, shops, boxes, Game Book, save |
 | `src/pizza3d/toon.js`, `models.js`, `town.js` | The cel-shaded look (toon materials + outlines), models, and the plaza |
-| `src/pizza3d/open.js`, `clicker.js`, `games*.js`, `audio.js` | Box opening, the shared clicker engine, the 39 clicker games, sounds & music |
+| `src/pizza3d/open.js`, `clicker.js`, `games*.js`, `audio.js` | Box opening, the shared clicker engine, the 100 clicker games, sounds & music |
 | `src/toys.js` | Toy catalog, rarity tiers, and trade/offer/box logic |
 | `src/fidget3d.js` | Lazy-loaded Three.js scene — procedural 3D toy archetypes |
 | `mockups.html`, `mockup-a.html`, `mockup-b.html` | Early design mockups (kept for reference) |

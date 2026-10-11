@@ -7,7 +7,7 @@ import { E, circ, oval, rr, txt, bar, face, pizza, rnd, pick, clamp, dist, INK }
 import { SFX } from "./audio.js";
 
 const RAINBOW = ["#ff5d8f", "#ffb347", "#ffe066", "#7cffb0", "#6ec6ff", "#b18cff"];
-const stars = (G, g, n = 50, speed = 4) => { for (let i = 0; i < n; i++) { const tw = 0.5 + Math.sin(G.t * 3 + i) * 0.5; circ(g, (i * 137.5) % G.W, (i * 71.3 + G.t * speed * (1 + (i % 3))) % G.H, G.u * (0.25 + (i % 3) * 0.2) * (0.6 + tw * 0.6), "#fff", null); } };
+const stars = (G, g, n = 50, speed = 4) => { for (let i = 0; i < n; i++) { const tw = 0.5 + Math.sin(G.t * 3 + i) * 0.5; circ(g, (i * 137.508 + (i * i * 0.618) % 97) % G.W, (i * 71.3 + G.t * speed * (1 + (i % 3))) % G.H, G.u * (0.25 + (i % 3) * 0.2) * (0.6 + tw * 0.6), "#fff", null); } };
 
 export const GAMES_D = [
   // ------------------------------------------------------------------------
@@ -71,7 +71,7 @@ export const GAMES_D = [
   // ------------------------------------------------------------------------
   {
     id: "ufo", name: "Alien Pizza Delivery", rar: "cosmic", ico: "🛸", unit: "deliveries", base: 10, bg: ["#120b33", "#2b1a66"], noDots: true,
-    blurb: "Drive a flying saucer full of pizza! Tap the hungry planet (the one with the 🍕 bubble) before it gets grumpy. Get a streak for big bonuses!",
+    blurb: "Drive a flying saucer full of pizza! Tap the hungry planet (the one with the 🍕 bubble) before its timer runs out. Get a streak for big bonuses!",
     ups: [["tap", "Turbo Saucer", "🚀"], ["auto", "Robot Co-Pilot", "🤖"], ["mult", "Galaxy Oven", "🌌"]],
     win: ["Blorp! The aliens love you!", "You got a 5-star review from Planet Zorp.", "The aliens named a moon after you.", "Your saucer now has cup holders.", "Fastest delivery in seven galaxies!", "The aliens learned to say 'pizza'. It sounds like 'BLEEP'.", "You delivered a pizza to a black hole. It said thanks.", "The Galactic Council gave you a shiny badge.", "Ruler of Cosmic Pizza Delivery!"],
     COLS: ["#7cffb0", "#ff86b3", "#6ec6ff", "#ffb347"],
@@ -86,12 +86,12 @@ export const GAMES_D = [
       if (dist(x, y, s.ux, G.H * 0.26) < G.u * 14) { G.add(1, x, y); SFX.beep(Math.floor(rnd(0, 5))); G.burst(x, y, "✨", 3); return; }
       s.tx = x; SFX.whoosh(); },
     update(G, dt) { const s = G.s; s.ux += (s.tx - s.ux) * Math.min(1, dt * 6); s.beam = Math.max(0, s.beam - dt); for (let i = 0; i < 4; i++) s.sulk[i] = Math.max(0, s.sulk[i] - dt);
-      if ((s.wt -= dt) <= 0) { const p = this.planet(G, s.want); G.say("Too slow… blorp.", p.x, p.y - p.r * 1.4, 1.2); s.streak = 0; s.want = (s.want + 1 + Math.floor(Math.random() * 3)) % 4; s.wt = 5; } },
+      if ((s.wt -= dt) <= 0) { const p = this.planet(G, s.want); G.say("Blorp! We'll get the next one!", p.x, p.y - p.r * 1.4, 1.2); s.streak = 0; s.want = (s.want + 1 + Math.floor(Math.random() * 3)) % 4; s.wt = 5; } },
     autoTick(G) { this.deliver(G, G.s.want); },
     draw(G, g) { const s = G.s, uy = G.H * 0.26; stars(G, g, 60, 3); E(g, "🪐", G.W * 0.86, G.H * 0.12, G.u * 12);
       if (s.beam > 0) { const p = this.planet(G, s.bi); g.globalAlpha = s.beam * 0.8; g.fillStyle = "#b7ffde"; g.beginPath(); g.moveTo(s.ux - G.u * 4, uy + G.u * 3); g.lineTo(s.ux + G.u * 4, uy + G.u * 3); g.lineTo(p.x + p.r, p.y - p.r * 0.3); g.lineTo(p.x - p.r, p.y - p.r * 0.3); g.fill(); g.globalAlpha = 1; }
       for (let i = 0; i < 4; i++) { const p = this.planet(G, i), want = i === s.want; circ(g, p.x, p.y, p.r, this.COLS[i]); oval(g, p.x, p.y, p.r * 1.5, p.r * 0.3, null, "rgba(255,255,255,.6)", 3, -0.2);
-        face(g, p.x, p.y, p.r * 0.6, s.sulk[i] > 0 ? "grumpy" : want ? (s.wt < 1.5 ? "wow" : "joy") : "happy");
+        face(g, p.x, p.y, p.r * 0.6, s.sulk[i] > 0 ? "wow" : want ? (s.wt < 1.5 ? "wow" : "joy") : "happy");
         if (want) { const by = p.y - p.r * 1.7 + Math.sin(G.t * 4) * G.u; circ(g, p.x, by, G.u * 6, "#fffaf0"); E(g, "🍕", p.x, by, G.u * 7); bar(g, p.x - p.r, p.y + p.r * 1.3, p.r * 2, G.u * 3, s.wt / 5, s.wt < 1.5 ? "#ff5a5f" : "#7cffb0"); } }
       g.save(); g.translate(s.ux, uy + Math.sin(G.t * 3) * G.u); g.rotate((s.tx - s.ux) * 0.002);
       oval(g, 0, -G.u * 3, G.u * 6, G.u * 5, "rgba(190,240,255,.8)"); E(g, "👽", 0, -G.u * 3.5, G.u * 7); oval(g, 0, G.u, G.u * 14, G.u * 4, "#c9d3e8"); for (let i = 0; i < 5; i++) circ(g, (i - 2) * G.u * 5, G.u * 1.5, G.u * 1.1, RAINBOW[(i + Math.floor(G.t * 6)) % 6], null);

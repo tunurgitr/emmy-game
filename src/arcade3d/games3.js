@@ -214,7 +214,7 @@ export const climb = {
         if (over) return; const hit = hitTest(p.ray, holds);
         if (hit && hit.object === holds[idx]) { const h = holds[idx]; (idx % 2 ? handL : handR).position.set(h.position.x + (idx % 2 ? -0.1 : 0.1), h.position.y, 0.3); idx++; api.sfx.click(); parts.burst(h.position, 0xffffff, 10, 1.5, 0.5); glow(); api.setTip(idx >= holds.length ? "🔔 DING! You made it!" : `Nice grip! ${holds.length - idx} to go`);
           if (idx >= holds.length) { over = true; api.sfx.win(); parts.burst(bell.position, 0xffd54a, 60, 4, 1.2); const tix = clamp(Math.round(60 - time * 1.2), 15, 60); setTimeout(() => api.finish(tix, "🧗 Top of the wall!", `${Math.round(time)}s climb → ${tix} tickets`), 900); } }
-        else if (hit) { wrong++; shake = 0.4; api.sfx.miss(); api.setTip("Wrong hold — that one's loose! Tap the GLOWING one."); if (wrong % 3 === 0 && idx > 0) { idx--; glow(); api.setTip("Slipped down one! 😬"); } }
+        else if (hit) { wrong++; shake = 0.4; api.sfx.miss(); api.setTip("Wrong hold — that one's loose! Tap the GLOWING one."); if (wrong % 3 === 0 && idx > 0) { idx--; glow(); api.setTip("Whoops, down one — keep climbing! 💪"); } }
       },
       update(dt) {
         if (!over) time += dt; parts.update(dt); shake = Math.max(0, shake - dt);
@@ -264,7 +264,7 @@ export const snackjob = {
           api.sfx.ding(); bellM.position.y = 1.02;
           const ok = tray.length === order.length && tray.every((t, i) => t.e === order[i].e);
           if (ok) { served++; const tip = orderT < 6 ? 1 : orderT < 10 ? 0.5 : 0; if (tip) perfect++; pay += 2 + tip; api.setTip(tip ? `Perfect order! $2 + $${tip.toFixed(2)} tip 🤩` : "Order served! $2 😊"); parts.burst(new THREE.Vector3(0, 1.8, -1.5), 0x00c853, 30, 2.5); api.sfx.coin(); if (cust) cust.k.parts.armR.rotation.z = -1.5; }
-          else { api.setTip("That's not what they ordered! 😬 No pay for that one."); api.sfx.miss(); }
+          else { api.setTip("Oops, that's a different order! No pay for that one — next! 🙂"); api.sfx.miss(); }
           hud(); clearTray(); cust.leaving = true; if (custBubble) custBubble.visible = false; waitT = 0.8;
         }
       },
@@ -272,7 +272,7 @@ export const snackjob = {
         if (over) return; time -= dt; parts.update(dt); bellM.position.y = approach(bellM.position.y, 1.08, 10, dt); orderT += dt;
         if (cust) { if (cust.arriving) { custG.position.z += 2.2 * dt; cust.k.walk(performance.now() / 1000, 1, dt); if (custG.position.z >= -1.6) { cust.arriving = false; custBubble.visible = true; orderT = 0; api.setTip(`Order up: ${order.map((o) => o.n).join(" + ")}. Tap the snacks in order, then 🛎️!`); } }
           else if (cust.leaving) { custG.position.x += 2.5 * dt; custG.rotation.y = Math.PI / 2; cust.k.walk(performance.now() / 1000, 1, dt); if (custG.position.x > 4) { cust = null; waitT = 0.5; } }
-          else { cust.k.walk(performance.now() / 1000, 0, dt); if (orderT > 14) { api.setTip("Too slow — they left! 😢"); cust.leaving = true; custBubble.visible = false; } } }
+          else { cust.k.walk(performance.now() / 1000, 0, dt); if (orderT > 14) { api.setTip("That customer had to go — here comes the next one! 👋"); cust.leaving = true; custBubble.visible = false; } } }
         else { waitT -= dt; if (waitT <= 0) newCustomer(); }
         hud();
         if (time <= 0) { over = true; const stars = served >= 6 ? "⭐⭐⭐" : served >= 3 ? "⭐⭐" : "⭐"; api.finish(pay, `Shift over! ${stars}`, `${served} orders served (${perfect} speedy) → you earned $${pay.toFixed(2)}`); }
@@ -313,7 +313,7 @@ export const prizejob = {
         if (over) return; time -= dt; parts.update(dt); orderT += dt; for (const a of [...anims]) a.update(dt);
         if (cust) { if (cust.arriving) { custG.position.z += 2.4 * dt; cust.k.walk(performance.now() / 1000, 1, dt); if (custG.position.z >= -2.8) { cust.arriving = false; custBubble.visible = true; orderT = 0; api.setTip(`They want the ${PLUSH_INFO[want].emoji} ${PLUSH_INFO[want].name} — tap it on the shelf!`); } }
           else if (cust.leaving) { custG.position.x += 2.5 * dt; custG.rotation.y = Math.PI / 2; cust.k.walk(performance.now() / 1000, 1, dt); if (custG.position.x > 4.5) { cust = null; waitT = 0.4; } }
-          else { cust.k.walk(performance.now() / 1000, 0, dt); if (orderT > 12) { api.setTip("Too slow — they wandered off! 😢"); cust.leaving = true; custBubble.visible = false; } } }
+          else { cust.k.walk(performance.now() / 1000, 0, dt); if (orderT > 12) { api.setTip("That kid had to go — here comes the next one! 👋"); cust.leaving = true; custBubble.visible = false; } } }
         else { waitT -= dt; if (waitT <= 0) newCustomer(); }
         hud();
         if (time <= 0) { over = true; const stars = served >= 8 ? "⭐⭐⭐" : served >= 4 ? "⭐⭐" : "⭐"; api.finish(pay, `Shift over! ${stars}`, `${served} happy kids → you earned $${pay.toFixed(2)}`); }

@@ -251,7 +251,7 @@ export const race = {
         if (time <= 0) { over = true; this.end(); }
         return true;
       },
-      end() { const tix = clamp(Math.floor(distTr / 300) + coins * 2, 1, 80); api.finish(tix, lives > 0 ? "🏁 Finish line!" : "💥 Crashed out!", `${Math.floor(distTr / 100)}m and ${coins} coins → ${tix} tickets`); },
+      end() { const tix = clamp(Math.floor(distTr / 300) + coins * 2, 1, 80); api.finish(tix, lives > 0 ? "🏁 Finish line!" : "🚗 Out of hearts!", `${Math.floor(distTr / 100)}m and ${coins} coins → ${tix} tickets`); },
       draw(g) {
         g.fillStyle = "#2e7d32"; g.fillRect(0, 0, W, H);
         for (let i = -1; i < 9; i++) { emoji(g, "🌳", 60, i * 80 + scroll, 40); emoji(g, "🌲", W - 60, i * 80 + scroll + 40, 40); }
@@ -273,7 +273,7 @@ export const race = {
 // ==========================================================================
 export const laser = {
   id: "laser", name: "Laser Tag", emoji: "🔫", cost: 3, c1: "#7a3cff", c2: "#22105a", payout: "up to 75 🎟️",
-  tip: "👆 Tap the robots 🤖 to zap them! Don't zap the kids 🧒. 30 seconds.",
+  tip: "👆 Tap the robots 🤖 to tag them! Don't tag the kids 🧒. 30 seconds.",
   create(api) {
     const { W, H } = api; let time = 30, hits = 0, oops = 0, spawnT = 0, over = false, combo = 0;
     const bots = [], beams = [], parts = makeParts();
@@ -285,7 +285,7 @@ export const laser = {
         let hit = null; for (const b of bots) if (b.alive && dist(p.x, p.y, b.x, b.y - b.up * 20) < 38 + b.up * 10) hit = b;
         if (hit) { hit.alive = false; hit.t = 0.4;
           if (hit.friend) { oops++; combo = 0; api.sfx.miss(); api.setTip("Oops! That was a friend! 😅 −3"); parts.burst(hit.x, hit.y, "#f44336", 10); }
-          else { combo++; hits++; api.sfx.ding(); parts.burst(hit.x, hit.y, "#00e5ff", 18); api.setTip(combo >= 3 ? `🔥 ${combo}x combo!` : "Zap! 🤖"); }
+          else { combo++; hits++; api.sfx.ding(); parts.burst(hit.x, hit.y, "#00e5ff", 18); api.setTip(combo >= 3 ? `🔥 ${combo}x combo!` : "Tagged! 🤖"); }
         } else combo = 0;
         api.setScore(`🤖 ${hits}   😅 ${oops}`);
       },
@@ -296,7 +296,7 @@ export const laser = {
           if (b.alive) { b.up = Math.min(1, b.up + dt * 5); b.life -= dt; if (b.life <= 0) { b.alive = false; b.t = 0.25; } }
           else { b.t -= dt; b.up = Math.max(0, b.up - dt * 4); if (b.t <= 0) bots.splice(i, 1); } }
         for (let i = beams.length - 1; i >= 0; i--) { beams[i].t -= dt; if (beams[i].t <= 0) beams.splice(i, 1); }
-        if (time <= 0) { over = true; const tix = clamp(hits * 3 - oops * 3, 0, 75); api.finish(tix, hits >= 15 ? "🏆 Laser champion!" : "Game over!", `${hits} robots zapped, ${oops} oopsies → ${tix} tickets`); }
+        if (time <= 0) { over = true; const tix = clamp(hits * 3 - oops * 3, 0, 75); api.finish(tix, hits >= 15 ? "🏆 Laser champion!" : "Game over!", `${hits} robots tagged, ${oops} oopsies → ${tix} tickets`); }
         return true;
       },
       draw(g) {

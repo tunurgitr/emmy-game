@@ -47,6 +47,10 @@
     #oCard .rar, .rarchip { display: inline-block; font-size: 13px; font-weight: 700; color: #fff; background: var(--rc); padding: 2px 12px; border-radius: 999px; letter-spacing: .5px; text-transform: uppercase; border: 2px solid var(--ink); }
     .goldshine { background: linear-gradient(100deg, #e0a800 20%, #fff3a8 45%, #ffd23f 55%, #e0a800 80%) !important; background-size: 250% 100% !important; animation: goldshine 2.2s linear infinite; color: var(--ink) !important; }
     @keyframes goldshine { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+    .iceshine { background: linear-gradient(100deg, #5fd3f3 20%, #ffffff 45%, #bff0ff 55%, #5fd3f3 80%) !important; background-size: 250% 100% !important; animation: goldshine 1.8s linear infinite; color: var(--ink) !important; }
+    .royalshine { background: linear-gradient(100deg, #b0174a 20%, #ffd23f 45%, #ff6f9a 55%, #b0174a 80%) !important; background-size: 250% 100% !important; animation: goldshine 2.4s linear infinite; }
+    .pastelshine { background: linear-gradient(100deg, #c99cff, #ffd6f5, #bfe8ff, #fff2b0, #c99cff) !important; background-size: 300% 100% !important; animation: goldshine 3s linear infinite; color: var(--ink) !important; }
+    .infinityshine { background: linear-gradient(90deg, #ff5d8f, #ffb347, #ffe066, #7cffb0, #6ec6ff, #b18cff, #ff5d8f) !important; background-size: 300% 100% !important; animation: goldshine 1.2s linear infinite; color: var(--ink) !important; box-shadow: 0 0 10px #ffe066; }
     .rainbow { background: linear-gradient(90deg, #ff5d8f, #ffb347, #ffe066, #7cffb0, #6ec6ff, #b18cff) !important; color: var(--ink) !important; }
     #oCard h2 { font-size: clamp(20px, 5vw, 28px); margin: 6px 0 2px; line-height: 1.1; }
     #oCard .meta { font-size: 14px; color: var(--muted); font-weight: 600; }
@@ -77,9 +81,10 @@
     .up .uc { font-weight: 700; font-size: 14px; background: var(--cheese); border: 2px solid var(--ink); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
     .up.no { opacity: .55; } .up.no .uc { background: #eee; }
     .up .lv { font-size: 11px; font-weight: 700; color: #fff; background: var(--ink); border-radius: 999px; padding: 0 6px; margin-left: 4px; }
-    #gGoalPop { position: fixed; left: 50%; top: 22%; transform: translateX(-50%) scale(.7); opacity: 0; pointer-events: none; z-index: 14; background: #fff; border: 4px solid var(--ink); border-radius: 22px; box-shadow: 0 6px 0 var(--ink); padding: 12px 18px; text-align: center; width: min(420px, 90vw); transition: transform .4s cubic-bezier(.2,1.6,.4,1), opacity .25s; }
-    #gGoalPop.show { opacity: 1; transform: translateX(-50%) scale(1); }
-    #gGoalPop h3 { font-size: 22px; } #gGoalPop p { font-size: 15px; font-weight: 600; margin-top: 4px; } #gGoalPop .won { font-size: 20px; font-weight: 700; color: #b07800; margin-top: 4px; }
+    /* goal banner sits over the title bar, so it never covers what a game's characters are saying */
+    #gGoalPop { position: fixed; left: 50%; top: max(4px, env(safe-area-inset-top)); transform: translate(-50%, -140%); opacity: 0; pointer-events: none; z-index: 14; background: #fff; border: 4px solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 var(--ink); padding: 6px 14px; text-align: center; width: min(560px, 96vw); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 10px; transition: transform .35s cubic-bezier(.3,1.6,.5,1), opacity .25s; }
+    #gGoalPop.show { opacity: 1; transform: translate(-50%, 0); }
+    #gGoalPop h3 { font-size: 17px; } #gGoalPop p { font-size: 14px; font-weight: 600; } #gGoalPop .won { font-size: 17px; font-weight: 700; color: #b07800; }
     @media (max-width: 600px) { .up { flex-direction: column; text-align: center; gap: 2px; padding: 5px 4px; } .up small { white-space: normal; font-size: 10px; } .up b { font-size: 12px; white-space: normal; } .gtitle .ico { font-size: 26px; } }
 
     #fade { position: fixed; inset: 0; background: #fff7ea; opacity: 0; pointer-events: none; transition: opacity .22s; z-index: 15; }
@@ -88,7 +93,7 @@
     .modal.show { display: flex; }
     .mbox { position: relative; background: var(--cream); border-radius: 28px; padding: 22px 18px; width: 100%; max-width: 780px; max-height: 92vh; overflow: auto; text-align: center; border: 4px solid var(--ink); box-shadow: 0 8px 0 var(--ink); animation: mpop .3s cubic-bezier(.2,1.5,.4,1); }
     @keyframes mpop { from { transform: scale(.85); opacity: .4; } }
-    .mbox.wide { max-width: 1000px; }
+    .mbox.wide { max-width: 1080px; } .mbox.wide .item { width: 178px; } /* all five boxes fit in one row on a laptop */
     .mclose { position: absolute; top: 12px; right: 12px; border: 3px solid var(--ink); background: #fff; color: var(--ink); font-weight: 700; font-size: 17px; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; z-index: 3; box-shadow: 0 3px 0 var(--ink); }
     .mbox h2 { font-size: 26px; margin-bottom: 4px; }
     .mbox p.sub { color: var(--muted); font-size: 15px; margin-bottom: 12px; line-height: 1.35; font-weight: 500; }
@@ -138,7 +143,7 @@
     .namerow { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     #toast { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 90px); transform: translateX(-50%) translateY(20px); background: #fff; color: var(--ink); font-weight: 600; padding: 9px 18px; border-radius: 999px; border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); opacity: 0; transition: .25s; z-index: 40; pointer-events: none; max-width: 92vw; text-align: center; font-size: 16px; }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    body.ingame #toast { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 120px); }
+    body.ingame #toast { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 8px); } /* over the upgrade buttons, never over the game itself */
     #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 35; }
     .fly { position: fixed; font-size: 26px; z-index: 36; pointer-events: none; animation: fly 1s ease-in forwards; }
     @keyframes fly { to { transform: translate(var(--dx), var(--dy)) scale(.5); opacity: .4; } }

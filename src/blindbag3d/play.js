@@ -86,7 +86,7 @@ function eggs(ctx) {
 }
 function rubber(ctx) {
   let n = 0, stretch = 0;
-  return { hint: "🤡 Squeeze the Rubber Chicken! (Tap it.)", up(p, tap, hit) { if (!tap || !hit) return false; n++; stretch = 1; ctx.sfx.squeak && ctx.sfx.squeak(); ctx.setStatus(n > 10 ? `SQUAAAAAWK ×${n}! Your ears okay?` : `SQUAAAWK! ×${n}`); return true; },
+  return { hint: "🤡 Squeeze the Rubber Chicken! (Tap it.)", up(p, tap, hit) { if (!tap || !hit) return false; n++; stretch = 1; ctx.sfx.squeak && ctx.sfx.squeak(); ctx.setStatus(n > 10 ? `SQUAAAAAWK ×${n}! What a honker!` : `SQUAAAWK! ×${n}`); return true; },
     update(dt) { stretch = Math.max(0, stretch - dt * 2.5); ctx.toy.scale.y *= 1 + Math.sin(stretch * Math.PI) * 0.35; } };
 }
 
@@ -139,7 +139,7 @@ function hatch(ctx) {
     act() { if (hatched) roar(); },
     start() { if (!hatched) ctx.setStatus("🥚 Tap the egg to crack it open!"); },
     down(p) { if (hatched) return false; const hit = p.ray.intersectObject(egg, true)[0]; if (!hit) return true; taps++; wob = 1; egg.userData.crack(2); ctx.sfx.crack && ctx.sfx.crack(); ctx.parts.burst(hit.point, 0xfff6e4, 8, 1.2, 0.6, 4);
-      ctx.setStatus(taps < NEED ? `🥚 Crack… ${"🔨".repeat(taps)}${" ·".repeat(NEED - taps)}` : "🐣 It's hatching!");
+      ctx.setStatus(taps < NEED ? `🥚 Crack… ${"✨".repeat(taps)}${" ·".repeat(NEED - taps)}` : "🐣 It's hatching!");
       if (taps >= NEED) { hatched = true; fly = { t: 0 }; ctx.toy.visible = true; ctx.sfx.pop && ctx.sfx.pop(); setTimeout(() => { roar(); ctx.reveal(); }, 350); } return true; },
     up(p, tap, hit) { if (hatched && tap && hit) { roar(); return true; } return !hatched; },
     move() { return !hatched; },

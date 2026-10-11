@@ -4,6 +4,7 @@
 //  you got, squish it (slow rise!), pull it apart to see the filling, fill
 //  your shelf, swap extras for coins… and buy a chicken. Or ten.
 // ==========================================================================
+import "./nozoom.js"; // first: no accidental Safari zoom
 import { createTown } from "./dumpling3d/town.js";
 import { createTable } from "./dumpling3d/table.js";
 import { createCatch } from "./dumpling3d/catch.js";
@@ -311,7 +312,7 @@ function reveal(quiet = false) {
 }
 function renderTableButtons() {
   const { type } = table, peek = table.ctrl.peeking, S = type && STEAMERS[type];
-  $("tButtons").innerHTML = `<button class="act btn-pink" id="tPeek">${peek ? "🥟 Put it back together" : "✂️ Pull it apart!"}</button>${S ? `<button class="act btn-red" id="tAgain" ${state.coins < S.price ? "disabled" : ""}>${S.ico} Another! 🪙 ${S.price}</button>` : ""}<button class="act btn-green" id="tDone">✓ Done</button>`;
+  $("tButtons").innerHTML = `<button class="act btn-pink" id="tPeek">${peek ? "🥟 Put it back together" : "👀 Peek inside!"}</button>${S ? `<button class="act btn-red" id="tAgain" ${state.coins < S.price ? "disabled" : ""}>${S.ico} Another! 🪙 ${S.price}</button>` : ""}<button class="act btn-green" id="tDone">✓ Done</button>`;
   $("tPeek").onclick = () => { const on = !table.ctrl.peeking; table.ctrl.peek(on); if (!on) $("tFill").style.display = "none"; renderTableButtons(); };
   if ($("tAgain")) $("tAgain").onclick = () => { if (state.coins < S.price) { SFX.error(); return; } state.coins -= S.price; save(); renderPills(); SFX.buy(); closeTable(true); openSteamer(type); };
   $("tDone").onclick = () => closeTable();
@@ -407,7 +408,7 @@ function endDelivery(quit = false) {
   state.bestDeliveries = Math.max(state.bestDeliveries || 0, j.delivered); save();
   if (quit) { toast(`🛵 Shift ended early — you delivered ${j.delivered} and earned 🪙 ${j.earned}.`, 3500); return; }
   if (j.delivered >= 5) confetti(120); SFX.win();
-  $("shopBody").innerHTML = `<h2>🛵 Shift over!</h2><div class="keeper">👨‍🍳 <b>Chef Bo:</b> “${j.delivered >= 8 ? "WOW! You're the fastest delivery kid in town!" : j.delivered >= 4 ? "Great job — the whole town is full of dumplings!" : "Thanks for the help! Practice makes perfect."}”</div>
+  $("shopBody").innerHTML = `<h2>🛵 Shift over!</h2><div class="keeper">👨‍🍳 <b>Chef Bo:</b> “${j.delivered >= 8 ? "WOW! You're the fastest delivery kid in town!" : j.delivered >= 4 ? "Great job — the whole town is full of dumplings!" : "Thanks for the help! Every dumpling counts!"}”</div>
     <p style="font-size:22px;font-weight:900;margin:10px 0">📦 ${j.delivered} deliveries · 🪙 +${j.earned}</p><p class="sub">Your best shift: ${state.bestDeliveries} deliveries</p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="act btn-green" id="jobAgain">🛵 Another shift!</button><button class="act btn-blue" id="jobDone">👍 Done</button></div>`;
   $("jobDone").onclick = () => { SFX.tap(); closeModal(); };
